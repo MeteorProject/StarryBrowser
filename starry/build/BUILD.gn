@@ -1,0 +1,16 @@
+# Copyright 2026 The Starry Browser Authors
+
+import("//starry/build/version.gni")
+
+action("win_version_file") {
+  script = "//starry/build/version.py"
+  inputs = [ starry_version_file ]
+  outputs = [ starry_windows_version_file ]
+  args = [
+    "--version-file",
+    rebase_path(starry_version_file, root_build_dir),
+    "--format=win-version-file",
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}

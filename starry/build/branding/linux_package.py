@@ -2,10 +2,20 @@
 
 """Starry additions to Chromium's Linux package configuration."""
 
+from pathlib import Path
+
+from starry.build import version as starry_version
+
 
 def configure_package(config):
     if 'PRODUCT_ID' not in config.branding_vars:
         return
+    # Use Starry's own SemVer package version instead of Chromium's version.
+    version = starry_version.read_version(
+        Path(__file__).resolve().parents[2] / 'VERSION'
+    )
+    config.version = version.linux_package_version
+    config.versionfull = f'{config.version}-{config.package_release}'
     # Until Starry has its own repository, packages must not enroll in an
     # upstream repository or install upstream signing keys.
     config.repoconfig = ''

@@ -1,16 +1,17 @@
 diff --git a/chrome/installer/mini_installer/BUILD.gn b/chrome/installer/mini_installer/BUILD.gn
-index df9408bb16..9809336ce2 100644
+index df9408bb16..dbb37550aa 100644
 --- a/chrome/installer/mini_installer/BUILD.gn
 +++ b/chrome/installer/mini_installer/BUILD.gn
-@@ -7,6 +7,7 @@ import("//build/config/python.gni")
+@@ -7,6 +7,8 @@ import("//build/config/python.gni")
  import("//build/config/ui.gni")
  import("//build/timestamp.gni")
  import("//chrome/process_version_rc_template.gni")
 +import("//starry/build/branding/branding.gni")
++import("//starry/build/version.gni")
  import("//third_party/dawn/scripts/dawn_features.gni")
  import("//third_party/ffmpeg/ffmpeg_options.gni")
  import("//third_party/icu/config.gni")
-@@ -146,12 +147,12 @@ if (enable_uncompressed_archive) {
+@@ -146,12 +148,12 @@ if (enable_uncompressed_archive) {
  action("mini_installer_archive") {
    script = "//chrome/tools/build/win/create_installer_archive.py"
  
@@ -26,10 +27,26 @@ index df9408bb16..9809336ce2 100644
      "$root_out_dir/locales/en-US.pak",
      "$root_out_dir/setup.exe",
      "//chrome/tools/build/win/makecab.py",
-@@ -197,6 +198,7 @@ action("mini_installer_archive") {
+@@ -188,6 +190,14 @@ action("mini_installer_archive") {
+     #"--verbose",
+   ]
+ 
++  if (!is_chrome_branded) {
++    inputs += [ starry_windows_version_file ]
++    args += [
++      "--version_file",
++      rebase_path(starry_windows_version_file, root_build_dir),
++    ]
++  }
++
+   deps = [
+     ":chrome_runtime_deps",
+     ":setup_runtime_deps",
+@@ -197,6 +207,8 @@ action("mini_installer_archive") {
      "//chrome/chrome_elf",
      "//chrome/common/win:eventlog_provider",
      "//chrome/installer/setup",
++    "//starry/build:win_version_file",
 +    "//starry/build/branding:windows_installer_file_list",
      "//third_party/icu:icudata",
    ]

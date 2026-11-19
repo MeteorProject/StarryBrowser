@@ -91,9 +91,10 @@ scripts/patches.sh check      # 校验 chromium/src 与 patches/ 是否一致
 scripts/patches.sh revert     # 还原补丁修改过的上游文件
 ```
 
-## 品牌、图标与打包
+## 品牌、版本、图标与打包
 
 - 品牌标识与产品名集中在 [`starry/app/theme/BRANDING`](../starry/app/theme/BRANDING)，由 `common.gni` 中的 `branding_file_path` 选用。
+- Starry 产品版本号位于 [`starry/VERSION`](../starry/VERSION)（采用 SemVer，与 [`chromium.version`](../chromium.version) 锁定的 Chromium 内核版本分离），通过 `//starry/common:version` 供 C++ 代码读取，并统一驱动 `scripts/package.sh` 发布包命名、macOS `Info.plist` 版本号、Windows 安装器/PE 资源/控制面板版本，以及 Linux `.deb` / `.rpm` 包版本。
 - 应用图标源文件位于 `starry/app/icon/`，在 macOS 上可通过 `scripts/app-icon.sh` 重新生成各平台图标并导出补丁。
 - 使用 `scripts/package.sh` 为当前平台打包（仅支持 `Release` 非组件构建，产物输出到 `dist/`）：
 

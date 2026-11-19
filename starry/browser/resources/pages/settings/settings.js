@@ -1662,7 +1662,8 @@ class StarrySettings extends LitElement {
   developer_(s) {
     return [
       group('engine', L('settings.developer.engine.title'), [
-        entry('engineVersion', L('settings.developer.engine.version'), html`<span class="value-text">${s.version}</span>`,
+        entry('engineVersion', L('settings.developer.engine.version'),
+              html`<span class="value-text">${s.engineVersion ? `Chromium ${s.engineVersion}` : ''}</span>`,
               {keywords: L('settings.developer.engine.keywords')}),
         entry('flags', L('settings.developer.flags.title'),
               detailButton(L('common.openEllipsis'), '', () => openUrl('starry://flags', 'foreground')),

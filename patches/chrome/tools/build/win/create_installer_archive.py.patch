@@ -1,8 +1,35 @@
 diff --git a/chrome/tools/build/win/create_installer_archive.py b/chrome/tools/build/win/create_installer_archive.py
-index d11825421e..cb141fccda 100755
+index d11825421e..002c70b8ad 100755
 --- a/chrome/tools/build/win/create_installer_archive.py
 +++ b/chrome/tools/build/win/create_installer_archive.py
-@@ -288,11 +288,11 @@ def GetPrevVersion(build_dir, temp_dir, last_chrome_installer, output_name):
+@@ -43,7 +43,7 @@ VERSION_FILE = "VERSION"
+ g_archive_inputs = []
+ 
+ 
+-def BuildVersion():
++def BuildVersion(version_file_path=None):
+     """Returns the full build version string constructed from information in
+     VERSION_FILE.  Any segment not found in that file will default to '0'.
+     """
+@@ -51,10 +51,13 @@ def BuildVersion():
+     minor = 0
+     build = 0
+     patch = 0
+-    # The version file is located at the directory ${CHROMIUM_SRC}/chrome.
+-    version_file_path = os.path.join(
+-        os.path.dirname(__file__), '../../..', VERSION_FILE
+-    )
++    # The default version file is located at the directory ${CHROMIUM_SRC}/chrome.
++    if not version_file_path:
++        version_file_path = os.path.join(
++            os.path.dirname(__file__), '../../..', VERSION_FILE
++        )
++    else:
++        g_archive_inputs.append(version_file_path)
+     for line in open(version_file_path, 'r'):
+         line = line.rstrip()
+         if line.startswith('MAJOR='):
+@@ -288,11 +291,11 @@ def GetPrevVersion(build_dir, temp_dir, last_chrome_installer, output_name):
          'x',
          '-o"%s"' % temp_dir,
          prev_archive_file,
@@ -16,3 +43,23 @@ index d11825421e..cb141fccda 100755
      )
      return os.path.split(os.path.split(dll_path[0])[0])[1]
  
+@@ -713,7 +716,7 @@ def main(options):
+     """Main method that reads input file, creates archive file and writes
+     resource input file.
+     """
+-    current_version = BuildVersion()
++    current_version = BuildVersion(options.version_file)
+ 
+     config = Readconfig(options.input_file, current_version)
+ 
+@@ -958,6 +961,10 @@ def _ParseOptions():
+         help='Epoch second in string. If set, overwrite the timestamp for '
+         'files archived, to keep output artifacts deterministic.',
+     )
++    parser.add_option(
++        '--version_file',
++        help='Path to a VERSION file overriding chrome/VERSION.',
++    )
+     parser.add_option(
+         '-v', '--verbose', action='store_true', dest='verbose', default=False
+     )

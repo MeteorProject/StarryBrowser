@@ -1,5 +1,5 @@
 diff --git a/chrome/BUILD.gn b/chrome/BUILD.gn
-index f1d133b6cd..ac63e6ec42 100644
+index f1d133b6cd..d2fc9e4849 100644
 --- a/chrome/BUILD.gn
 +++ b/chrome/BUILD.gn
 @@ -81,18 +81,20 @@ if (is_win && enable_resource_allowlist_generation) {
@@ -45,7 +45,15 @@ index f1d133b6cd..ac63e6ec42 100644
    } else {
      _chrome_output_name = "chrome"
    }
-@@ -435,7 +439,7 @@ if (is_win) {
+@@ -235,6 +239,7 @@ if (!is_android && !is_mac) {
+         "//sandbox",
+         "//sandbox/policy",
+         "//sandbox/policy/mojom",
++        "//starry/common:version",
+         "//third_party/crashpad/crashpad/util",
+       ]
+ 
+@@ -435,7 +440,7 @@ if (is_win) {
        "app/startup_timestamps.h",
      ]
  
@@ -54,7 +62,44 @@ index f1d133b6cd..ac63e6ec42 100644
  
      deps = [
        ":chrome_dll_manifest",
-@@ -684,8 +688,8 @@ if (is_win) {
+@@ -540,10 +545,35 @@ if (is_win) {
+     }
+   }
+ 
++  if (!is_chrome_branded) {
++    import("//starry/build/version.gni")
++
++    action("starry_app_plist") {
++      script = "//starry/build/version.py"
++      deps = [ ":chrome_app_plist" ]
++      _input_plists = get_target_outputs(":chrome_app_plist")
++      inputs = [ starry_version_file ] + _input_plists
++      outputs = [ "$target_gen_dir/starry_app_plist.plist" ]
++      args = [
++        "--version-file",
++        rebase_path(starry_version_file, root_build_dir),
++        "--format=mac-plist",
++        "--input",
++        rebase_path(_input_plists[0], root_build_dir),
++        "--output",
++        rebase_path(outputs[0], root_build_dir),
++      ]
++    }
++  }
++
+   mac_app_bundle("chrome_app") {
+     output_name = chrome_product_full_name
+ 
+-    info_plist_target = ":chrome_app_plist"
++    if (is_chrome_branded) {
++      info_plist_target = ":chrome_app_plist"
++    } else {
++      info_plist_target = ":starry_app_plist"
++    }
+     extra_substitutions = [
+       "CHROMIUM_BUNDLE_ID=$chrome_mac_bundle_id",
+       "CHROMIUM_SHORT_NAME=$chrome_product_short_name",
+@@ -684,8 +714,8 @@ if (is_win) {
  
    bundle_data("chrome_resources") {
      sources = [
@@ -64,7 +109,7 @@ index f1d133b6cd..ac63e6ec42 100644
      ]
      outputs = [ "{{bundle_resources_dir}}/{{source_file_part}}" ]
      public_deps = [
-@@ -693,6 +697,7 @@ if (is_win) {
+@@ -693,6 +723,7 @@ if (is_win) {
        ":chrome_app_strings",
        ":chrome_asset_catalog",
        "//components/policy:chrome_manifest_bundle",
@@ -72,7 +117,7 @@ index f1d133b6cd..ac63e6ec42 100644
      ]
    }
  
-@@ -1661,6 +1666,14 @@ group("dependencies") {
+@@ -1661,6 +1692,14 @@ group("dependencies") {
      "//v8:v8_headers",
    ]
  
@@ -87,7 +132,7 @@ index f1d133b6cd..ac63e6ec42 100644
    if (enable_printing) {
      public_deps += [ "//printing" ]
    }
-@@ -1679,12 +1692,22 @@ group("dependencies") {
+@@ -1679,12 +1718,22 @@ group("dependencies") {
  
  if (is_win) {
    process_version_rc_template("chrome_exe_version") {
@@ -112,7 +157,7 @@ index f1d133b6cd..ac63e6ec42 100644
      output = "$target_gen_dir/chrome_dll_version.rc"
    }
  
-@@ -1702,12 +1725,26 @@ if (is_win) {
+@@ -1702,12 +1751,26 @@ if (is_win) {
    }
  }
  
@@ -140,7 +185,7 @@ index f1d133b6cd..ac63e6ec42 100644
  
    if (is_chrome_branded) {
      sources += [
-@@ -1854,7 +1891,7 @@ if (is_android) {
+@@ -1854,7 +1917,7 @@ if (is_android) {
  if (is_win && enable_resource_allowlist_generation) {
    generate_resource_allowlist("resource_allowlist") {
      deps = [ ":chrome_dll" ]

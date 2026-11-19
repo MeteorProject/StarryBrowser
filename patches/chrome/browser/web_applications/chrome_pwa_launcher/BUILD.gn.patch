@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/web_applications/chrome_pwa_launcher/BUILD.gn b/chrome/browser/web_applications/chrome_pwa_launcher/BUILD.gn
+index 8a2eca6075..55d61137b3 100644
+--- a/chrome/browser/web_applications/chrome_pwa_launcher/BUILD.gn
++++ b/chrome/browser/web_applications/chrome_pwa_launcher/BUILD.gn
+@@ -57,6 +57,7 @@ source_set("util") {
+     "//chrome/common:non_code_constants",
+     "//chrome/installer/util:with_no_strings",
+     "//components/version_info:generate_version_info",
++    "//starry/common:version",
+   ]
+ }
+ 

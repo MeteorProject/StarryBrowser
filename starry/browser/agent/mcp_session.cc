@@ -10,6 +10,7 @@
 #include "base/json/json_writer.h"
 #include "base/no_destructor.h"
 #include "base/strings/string_util.h"
+#include "starry/common/version.h"
 
 namespace starry::agent {
 
@@ -17,7 +18,6 @@ namespace {
 
 constexpr char kServerName[] = "starry-browser";
 constexpr char kServerTitle[] = "Starry Browser";
-constexpr char kServerVersion[] = "1.0";
 
 std::string Write(const base::DictValue& message) {
   return base::WriteJson(message).value_or("{}");
@@ -178,7 +178,7 @@ void McpSession::Initialize(const base::Value& id,
   result.Set("serverInfo", base::DictValue()
                                .Set("name", kServerName)
                                .Set("title", kServerTitle)
-                               .Set("version", kServerVersion));
+                               .Set("version", starry::kVersion));
   std::string instructions = provider_->Instructions(this);
   if (!instructions.empty()) {
     result.Set("instructions", std::move(instructions));

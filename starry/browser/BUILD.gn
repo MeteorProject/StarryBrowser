@@ -513,6 +513,7 @@ source_set("browser") {
     "//starry/browser/ui/design:theme",
     "//starry/browser/ui/glass",
     "//starry/browser/ui/motion",
+    "//starry/common:version",
     "//starry/components/content_filter",
     "//starry/components/content_filter/mojom",
     "//starry/components/privacy/mojom",

@@ -1,0 +1,42 @@
+diff --git a/chrome/process_version_rc_template.gni b/chrome/process_version_rc_template.gni
+index 8d7edf5044..756447825a 100644
+--- a/chrome/process_version_rc_template.gni
++++ b/chrome/process_version_rc_template.gni
+@@ -6,6 +6,10 @@ import("//build/config/chrome_build.gni")
+ import("//build/util/lastchange.gni")
+ import("//build/util/process_version.gni")
+ 
++if (is_win && !is_chrome_branded) {
++  import("//starry/build/version.gni")
++}
++
+ # This is a wrapper around process_version() that eases the task of processing
+ # a .rc.version file (used especially on Windows).
+ #
+@@ -46,16 +50,26 @@ template("process_version_rc_template") {
+     branding_file_path,
+     lastchange_file,
+   ]
++  _deps = []
++  if (is_win && !is_chrome_branded) {
++    _sources += [ starry_windows_version_file ]
++    _deps += [ "//starry/build:win_version_file" ]
++  }
+   if (defined(invoker.sources)) {
+     _sources += invoker.sources
+   }
++  if (defined(invoker.deps)) {
++    _deps += invoker.deps
++  }
+ 
+   process_version(target_name) {
+     template_file = _template_file
+     sources = _sources
++    deps = _deps
+     forward_variables_from(invoker,
+                            "*",
+                            [
++                             "deps",
+                              "sources",
+                              "template_file",
+                            ])

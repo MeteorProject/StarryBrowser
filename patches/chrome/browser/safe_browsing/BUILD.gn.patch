@@ -1,0 +1,16 @@
+diff --git a/chrome/browser/safe_browsing/BUILD.gn b/chrome/browser/safe_browsing/BUILD.gn
+index 735d498c99..cfc475e331 100644
+--- a/chrome/browser/safe_browsing/BUILD.gn
++++ b/chrome/browser/safe_browsing/BUILD.gn
+@@ -558,7 +558,10 @@ static_library("safe_browsing") {
+           "incident_reporting/module_integrity_verifier_win.cc",
+           "incident_reporting/platform_state_store_win.cc",
+         ]
+-        deps += [ "//chrome/browser/install_verification" ]
++        deps += [
++          "//chrome/browser/install_verification",
++          "//starry/common:version",
++        ]
+       }
+ 
+       deps += [

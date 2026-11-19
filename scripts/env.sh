@@ -6,7 +6,8 @@
 #   STARRY_DEPOT_TOOLS    depot_tools 目录（默认 <仓库>/vendor/depot_tools）
 
 STARRY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CHROMIUM_VERSION="$(tr -d ' \n' < "$STARRY_ROOT/chromium.version")"
+STARRY_VERSION="$(tr -d ' \r\n' < "$STARRY_ROOT/starry/VERSION")"
+CHROMIUM_VERSION="$(tr -d ' \r\n' < "$STARRY_ROOT/chromium.version")"
 CHROMIUM_ROOT="${STARRY_CHROMIUM_ROOT:-$STARRY_ROOT/chromium}"
 CHROMIUM_SRC="$CHROMIUM_ROOT/src"
 DEPOT_TOOLS="${STARRY_DEPOT_TOOLS:-$STARRY_ROOT/vendor/depot_tools}"
@@ -20,6 +21,22 @@ export DEPOT_TOOLS_METRICS=0
 # Framework 的名字都从它来。
 STARRY_PRODUCT_NAME="$(sed -n 's/^PRODUCT_FULLNAME=//p' "$STARRY_ROOT/starry/app/theme/BRANDING")"
 STARRY_PRODUCT_ID="$(sed -n 's/^PRODUCT_ID=//p' "$STARRY_ROOT/starry/app/theme/BRANDING")"
+
+# 把 SemVer 映射成 Debian / RPM 包版本：去掉 +build，-prerelease 变成 ~prerelease
+# （内部 '-' 转 '.'），让包管理器把预发布版排在正式版之前。
+starry_linux_package_version() {
+    local v="${1%%+*}"
+    case "$v" in
+        *-*)
+            local base="${v%%-*}"
+            local pre="${v#*-}"
+            printf '%s~%s' "$base" "$(printf '%s' "$pre" | tr '-' '.')"
+            ;;
+        *)
+            printf '%s' "$v"
+            ;;
+    esac
+}
 
 # 浏览器的主程序：starry_browser_binary <配置>
 starry_browser_binary() {

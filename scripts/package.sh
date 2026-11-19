@@ -44,8 +44,10 @@ if printf '%s\n' "$gn_args" | grep -q '^starry_devtools = true'; then
     starry_die "$config 启用了 starry_devtools，发布包不能包含调试代码；先运行 scripts/gen.sh $config --no-local"
 fi
 
-# 版本号取自 Chromium 的 chrome/VERSION。
-version="$(sed -nE 's/^(MAJOR|MINOR|BUILD|PATCH)=//p' "$CHROMIUM_SRC/chrome/VERSION" | paste -sd. -)"
+# 版本号取自 starry/VERSION（SemVer，与 Chromium 内核版本分离）。
+version="$STARRY_VERSION"
+[ -n "$version" ] || starry_die "starry/VERSION 为空"
+linux_version="$(starry_linux_package_version "$version")"
 case "$(uname -m)" in
     arm64 | aarch64) arch=arm64 ;;
     x86_64 | amd64 | AMD64) arch=x64 ;;
@@ -68,12 +70,17 @@ package_mac() {
     [ -d "$app" ] || starry_die "没有 ${app}"
     [ -d "$packaging" ] || starry_die "没有 ${packaging}（chrome/installer/mac 没编）"
 
-    # 构建时就要设好默认数据目录，直接打开 out 里的 App 和打包后保持一致。
+    # 构建时就要设好默认数据目录和 Starry 版本号，直接打开 out 里的 App 和打包后保持一致。
     local product_dir
     product_dir="$(/usr/libexec/PlistBuddy -c 'Print :CrProductDirName' \
         "$app/Contents/Info.plist")" || starry_die "App 没有品牌数据目录，请重新编译"
     [ "$product_dir" = "$STARRY_PRODUCT_NAME" ] ||
         starry_die "App 的数据目录不是 ${STARRY_PRODUCT_NAME}，请重新编译"
+    local app_version
+    app_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
+        "$app/Contents/Info.plist")" || starry_die "App 没有版本号，请重新编译"
+    [ "$app_version" = "$version" ] ||
+        starry_die "App 的版本号是 ${app_version}，和 starry/VERSION（${version}）不一致，请重新编译"
 
     # 不用 local：退出时的 trap 要用到它。
     work="$(mktemp -d "${TMPDIR:-/tmp}/starry-package.XXXXXX")"
@@ -148,6 +155,10 @@ package_mac() {
         grep -E '^(Identifier|Authority|Signature|TeamIdentifier)' >&2 || true
     /usr/libexec/PlistBuddy -c "Print :CrProductDirName" \
         "$mount/$STARRY_PRODUCT_NAME.app/Contents/Info.plist" >&2
+    /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
+        "$mount/$STARRY_PRODUCT_NAME.app/Contents/Info.plist" >&2
+    /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" \
+        "$mount/$STARRY_PRODUCT_NAME.app/Contents/Info.plist" >&2
     hdiutil detach "$mount" >/dev/null
     starry_log "完成：$target"
     starry_log "      $dist/$name-$version-mac-$arch.zip"
@@ -170,8 +181,8 @@ package_linux() {
     fi
     build_targets "${targets[@]}"
     local file found=0
-    for file in "$out/${STARRY_PRODUCT_ID}-stable_${version}-1_"*.deb \
-                "$out/${STARRY_PRODUCT_ID}-stable-${version}-1."*.rpm; do
+    for file in "$out/${STARRY_PRODUCT_ID}-stable_${linux_version}-1_"*.deb \
+                "$out/${STARRY_PRODUCT_ID}-stable-${linux_version}-1."*.rpm; do
         [ -f "$file" ] || continue
         cp "$file" "$dist/$name-$version-linux-$arch.${file##*.}"
         starry_log "完成：$dist/$name-$version-linux-$arch.${file##*.}"

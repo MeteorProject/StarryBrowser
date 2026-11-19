@@ -1,20 +1,23 @@
 diff --git a/chrome/installer/linux/BUILD.gn b/chrome/installer/linux/BUILD.gn
-index 2a75b4c07d..90ed298364 100644
+index 2a75b4c07d..8612fe7b19 100644
 --- a/chrome/installer/linux/BUILD.gn
 +++ b/chrome/installer/linux/BUILD.gn
-@@ -14,6 +14,7 @@ import("//chrome/installer/installers.gni")
+@@ -14,6 +14,8 @@ import("//chrome/installer/installers.gni")
  import("//chrome/version.gni")
  import("//components/optimization_guide/features.gni")
  import("//services/on_device_model/on_device_model.gni")
 +import("//starry/build/branding/branding.gni")
++import("//starry/build/version.gni")
  import("//third_party/angle/gni/angle.gni")
  import("//third_party/widevine/cdm/widevine.gni")
  import("//ui/gl/features.gni")
-@@ -111,10 +112,22 @@ packaging_files_binaries = packaging_files_executables + packaging_files_shlibs
+@@ -111,10 +113,24 @@ packaging_files_binaries = packaging_files_executables + packaging_files_shlibs
  # (e.g. all locales, resources, etc.)
  packaging_files = packaging_files_binaries + [
                      "common/installer.py",
++                    "//starry/VERSION",
 +                    "//starry/build/branding/linux_package.py",
++                    "//starry/build/version.py",
                      "$root_out_dir/locales/en-US.pak",
                      "$root_out_dir/MEIPreload/manifest.json",
                      "$root_out_dir/MEIPreload/preloaded_data.pb",
@@ -33,7 +36,7 @@ index 2a75b4c07d..90ed298364 100644
  if (enable_swiftshader) {
    packaging_files += [ "$root_out_dir/vk_swiftshader_icd.json" ]
  }
-@@ -322,7 +335,7 @@ action("deb_repo_package") {
+@@ -322,7 +338,7 @@ action("deb_repo_package") {
    if (is_chrome_branded) {
      package = "google-chrome-repo"
    } else {
@@ -42,7 +45,7 @@ index 2a75b4c07d..90ed298364 100644
    }
  
    outputs = [ "$root_out_dir/${package}_${deb_arch}.deb" ]
-@@ -374,7 +387,15 @@ copy("common_packaging_files") {
+@@ -374,7 +390,15 @@ copy("common_packaging_files") {
    if (is_chrome_branded) {
      sources += [ "common/google-chrome.info" ]
    } else {
@@ -59,7 +62,7 @@ index 2a75b4c07d..90ed298364 100644
    }
  
    outputs = [ "$root_out_dir/installer/common/{{source_file_part}}" ]
-@@ -398,7 +419,6 @@ copy("deb_packaging_files") {
+@@ -398,7 +422,6 @@ copy("deb_packaging_files") {
  copy("theme_files") {
    visibility = [ ":*" ]
    sources = [
@@ -67,7 +70,7 @@ index 2a75b4c07d..90ed298364 100644
      "$branding_dir/linux/product_logo_128.png",
      "$branding_dir/linux/product_logo_24.png",
      "$branding_dir/linux/product_logo_256.png",
-@@ -406,6 +426,7 @@ copy("theme_files") {
+@@ -406,6 +429,7 @@ copy("theme_files") {
      "$branding_dir/linux/product_logo_64.png",
      "$branding_dir_100/linux/product_logo_16.png",
      "$branding_dir_100/linux/product_logo_32.png",
@@ -75,12 +78,42 @@ index 2a75b4c07d..90ed298364 100644
    ]
    if (is_chrome_branded) {
      sources += [
-@@ -565,7 +586,7 @@ template("linux_package") {
+@@ -564,8 +588,10 @@ template("linux_package") {
+ 
    if (is_chrome_branded) {
      package = "google-chrome"
++    package_version = chrome_version_full
    } else {
 -    package = "chromium-browser"
 +    package = starry_product_id
++    package_version = starry_linux_package_version
    }
  
    deb_target_name = "${target_name}_deb"
+@@ -575,7 +601,7 @@ template("linux_package") {
+     script = "debian/build.py"
+ 
+     inputs = packaging_files
+-    outputs = [ "$root_out_dir/${package}-${channel}_${chrome_version_full}-1_${deb_arch}.deb" ]
++    outputs = [ "$root_out_dir/${package}-${channel}_${package_version}-1_${deb_arch}.deb" ]
+ 
+     args = [
+       "-a",
+@@ -613,7 +639,7 @@ template("linux_package") {
+       script = "rpm/build.py"
+ 
+       inputs = packaging_files
+-      outputs = [ "$root_out_dir/${package}-${channel}-${chrome_version_full}-1.${rpm_arch}.rpm" ]
++      outputs = [ "$root_out_dir/${package}-${channel}-${package_version}-1.${rpm_arch}.rpm" ]
+ 
+       args = [
+         "-a",
+@@ -647,7 +673,7 @@ template("linux_package") {
+         script = "flatpak/build.py"
+ 
+         inputs = packaging_files
+-        outputs = [ "$root_out_dir/${package}-${channel}_${chrome_version_full}-1_${flatpak_arch}.flatpak" ]
++        outputs = [ "$root_out_dir/${package}-${channel}_${package_version}-1_${flatpak_arch}.flatpak" ]
+ 
+         args = [
+           "-a",

@@ -14,6 +14,7 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "starry/browser/assistant/line_process.h"
+#include "starry/common/version.h"
 
 namespace starry::assistant {
 
@@ -260,7 +261,7 @@ void CodexBackend::Launch() {
           .Set("clientInfo", base::DictValue()
                                  .Set("name", "starry_browser")
                                  .Set("title", "Starry Browser")
-                                 .Set("version", "1.0"))
+                                 .Set("version", starry::kVersion))
           .Set("capabilities", base::DictValue().Set("experimentalApi", false)),
       base::BindOnce(
           [](base::WeakPtr<CodexBackend> self,

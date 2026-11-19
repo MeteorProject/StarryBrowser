@@ -1,0 +1,30 @@
+diff --git a/chrome/installer/setup/install_worker.cc b/chrome/installer/setup/install_worker.cc
+index a8e1e6e394..1d888fc62b 100644
+--- a/chrome/installer/setup/install_worker.cc
++++ b/chrome/installer/setup/install_worker.cc
+@@ -71,6 +71,7 @@
+ #include "chrome/installer/util/shell_util.h"
+ #include "chrome/installer/util/util_constants.h"
+ #include "chrome/installer/util/work_item_list.h"
++#include "starry/common/version.h"
+ 
+ #if BUILDFLAG(USE_GOOGLE_UPDATE_INTEGRATION)
+ #include "chrome/installer/setup/channel_override_work_item.h"
+@@ -706,12 +707,16 @@ void AddUninstallShortcutWorkItems(const InstallParams& install_params,
+     install_list->AddSetRegValueWorkItem(reg_root, uninstall_reg,
+                                          KEY_WOW64_32KEY, L"Publisher",
+                                          InstallUtil::GetPublisherName(), true);
++    const std::string display_version =
++        new_version == base::Version(starry::kWindowsVersion)
++            ? std::string(starry::kVersion)
++            : new_version.GetString();
+     install_list->AddSetRegValueWorkItem(
+         reg_root, uninstall_reg, KEY_WOW64_32KEY, L"Version",
+         ASCIIToWide(new_version.GetString()), true);
+     install_list->AddSetRegValueWorkItem(
+         reg_root, uninstall_reg, KEY_WOW64_32KEY, L"DisplayVersion",
+-        ASCIIToWide(new_version.GetString()), true);
++        ASCIIToWide(display_version), true);
+     // TODO(wfh): Ensure that this value is preserved in the 64-bit hive when
+     // 64-bit installs place the uninstall information into the 64-bit registry.
+     install_list->AddSetRegValueWorkItem(reg_root, uninstall_reg,

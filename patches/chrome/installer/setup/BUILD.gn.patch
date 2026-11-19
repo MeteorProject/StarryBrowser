@@ -1,0 +1,20 @@
+diff --git a/chrome/installer/setup/BUILD.gn b/chrome/installer/setup/BUILD.gn
+index e7e695f652..82b92b0b45 100644
+--- a/chrome/installer/setup/BUILD.gn
++++ b/chrome/installer/setup/BUILD.gn
+@@ -45,6 +45,7 @@ if (is_win) {
+       "//content/public/common:static_switches",
+       "//rlz:rlz_lib_no_network",
+       "//services/webnn:buildflags",
++      "//starry/common:version",
+       "//url",
+     ]
+ 
+@@ -128,6 +129,7 @@ if (is_win) {
+       "//components/metrics:metrics_pref_names",
+       "//components/version_info:channel",
+       "//crypto",
++      "//starry/common:version",
+       "//third_party/crashpad/crashpad/client",
+       "//third_party/crashpad/crashpad/util",
+       "//third_party/zlib/google:zip",

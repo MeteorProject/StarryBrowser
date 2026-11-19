@@ -1,9 +1,28 @@
 # Copyright 2026 The Starry Browser Authors
 
 import("//build/config/chrome_build.gni")
+import("//starry/build/version.gni")
 
 source_set("google_services") {
   sources = [ "google_services.h" ]
+}
+
+action("generate_version") {
+  script = "//starry/build/version.py"
+  inputs = [ starry_version_file ]
+  outputs = [ "$target_gen_dir/version_values.h" ]
+  args = [
+    "--version-file",
+    rebase_path(starry_version_file, root_build_dir),
+    "--format=header",
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+source_set("version") {
+  sources = [ "version.h" ] + get_target_outputs(":generate_version")
+  public_deps = [ ":generate_version" ]
 }
 
 action("generate_platform_branding") {

@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/safe_browsing/incident_reporting/binary_integrity_analyzer_win.cc b/chrome/browser/safe_browsing/incident_reporting/binary_integrity_analyzer_win.cc
-index ae9775564c..37c721d4a8 100644
+index ae9775564c..8270417265 100644
 --- a/chrome/browser/safe_browsing/incident_reporting/binary_integrity_analyzer_win.cc
 +++ b/chrome/browser/safe_browsing/incident_reporting/binary_integrity_analyzer_win.cc
-@@ -16,6 +16,7 @@
+@@ -16,18 +16,20 @@
  #include "base/path_service.h"
  #include "chrome/browser/safe_browsing/incident_reporting/binary_integrity_incident.h"
  #include "chrome/browser/safe_browsing/incident_reporting/incident_receiver.h"
@@ -10,7 +10,9 @@ index ae9775564c..37c721d4a8 100644
  #include "chrome/common/chrome_version.h"
  #include "chrome/common/safe_browsing/binary_feature_extractor.h"
  #include "components/safe_browsing/core/common/proto/csd.pb.h"
-@@ -24,10 +25,10 @@ namespace safe_browsing {
++#include "starry/common/version.h"
+ 
+ namespace safe_browsing {
  
  std::vector<base::FilePath> GetCriticalBinariesPath() {
    static constexpr auto kUnversionedFiles = std::to_array({
@@ -23,3 +25,12 @@ index ae9775564c..37c721d4a8 100644
        FILE_PATH_LITERAL("chrome_child.dll"),
        FILE_PATH_LITERAL("chrome_elf.dll"),
    });
+@@ -47,7 +49,7 @@ std::vector<base::FilePath> GetCriticalBinariesPath() {
+   }
+ 
+   base::FilePath version_dir(
+-      chrome_exe_dir.AppendASCII(CHROME_VERSION_STRING));
++      chrome_exe_dir.AppendASCII(starry::kWindowsVersion));
+   for (size_t i = 0; i < std::size(kVersionedFiles); ++i) {
+     critical_binaries.push_back(version_dir.Append(kVersionedFiles[i]));
+   }

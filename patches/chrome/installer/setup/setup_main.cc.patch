@@ -1,0 +1,21 @@
+diff --git a/chrome/installer/setup/setup_main.cc b/chrome/installer/setup/setup_main.cc
+index 3b9e3170f0..2318c52f7c 100644
+--- a/chrome/installer/setup/setup_main.cc
++++ b/chrome/installer/setup/setup_main.cc
+@@ -115,6 +115,7 @@
+ #include "components/crash/core/app/run_as_crashpad_handler_win.h"
+ #include "content/public/common/content_switches.h"
+ #include "services/webnn/buildflags.h"
++#include "starry/common/version.h"
+ #include "url/gurl.h"
+ 
+ #if BUILDFLAG(CLANG_PROFILING)
+@@ -588,7 +589,7 @@ installer::InstallStatus RenameChromeExecutables(
+                                     WorkItem::MoveTreeOptions{});
+ 
+   AddFinalizeUpdateWorkItems(original_state,
+-                             base::Version(chrome::kChromeVersion),
++                             base::Version(starry::kWindowsVersion),
+                              *installer_state, setup_exe, install_list.get());
+ 
+   // Add work items to delete Chrome's "opv", "cpv", and "cmd" values.

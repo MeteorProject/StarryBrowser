@@ -52,6 +52,7 @@
 #include "starry/browser/ui/tabs/pin_folders.h"
 #include "starry/browser/ui/webui/starry_pages.h"
 #include "starry/browser/web_time_zone.h"
+#include "starry/common/version.h"
 #include "starry/common/web_time_zone.h"
 #include "ui/base/l10n/l10n_util.h"
 #include "ui/shell_dialogs/selected_file_info.h"
@@ -274,7 +275,8 @@ base::DictValue SettingsHandler::State() {
   PrefService* prefs = profile_->GetPrefs();
   PrefService* local = g_browser_process->local_state();
   base::DictValue state;
-  state.Set("version", version_info::GetVersionNumber());
+  state.Set("version", starry::kVersion);
+  state.Set("engineVersion", version_info::GetVersionNumber());
   state.Set("incognito", Profile::FromWebUI(web_ui())->IsOffTheRecord());
 
   // 通用

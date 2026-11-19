@@ -1,0 +1,48 @@
+diff --git a/chrome/app/version_assembly/BUILD.gn b/chrome/app/version_assembly/BUILD.gn
+index fe7d487571..21bdfcce95 100644
+--- a/chrome/app/version_assembly/BUILD.gn
++++ b/chrome/app/version_assembly/BUILD.gn
+@@ -2,18 +2,31 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//build/config/chrome_build.gni")
+ import("//build/config/win/manifest.gni")
+ import("//build/util/process_version.gni")
+ import("//chrome/version.gni")
++import("//starry/build/version.gni")
+ 
+ version_assembly_output_file = "$target_gen_dir/version_assembly.manifest"
+ 
++if (is_chrome_branded) {
++  _version_assembly_sources = [ "//chrome/VERSION" ]
++  _version_assembly_deps = []
++  _version_assembly_version = chrome_version_full
++} else {
++  _version_assembly_sources = [ starry_windows_version_file ]
++  _version_assembly_deps = [ "//starry/build:win_version_file" ]
++  _version_assembly_version = starry_windows_version
++}
++
+ # Generates a manifest file with the current build's version information.
+ process_version("chrome_exe_version_manifest") {
+   process_only = true
+   visibility = [ ":*" ]
+   template_file = "chrome_exe_manifest.template"
+-  sources = [ "//chrome/VERSION" ]
++  sources = _version_assembly_sources
++  deps = _version_assembly_deps
+   output = version_assembly_output_file
+ }
+ 
+@@ -39,7 +52,8 @@ windows_manifest("chrome_exe_manifest") {
+ # directory where Chrome finds chrome.dll.
+ process_version("version_assembly_manifest") {
+   template_file = "version_assembly_manifest.template"
+-  sources = [ "//chrome/VERSION" ]
+-  output = "$root_build_dir/$chrome_version_full.manifest"
++  sources = _version_assembly_sources
++  deps = _version_assembly_deps
++  output = "$root_build_dir/$_version_assembly_version.manifest"
+   process_only = true
+ }

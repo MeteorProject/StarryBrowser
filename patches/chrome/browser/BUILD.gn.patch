@@ -1,8 +1,16 @@
 diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
-index 814b9d649a..0527022e30 100644
+index 814b9d649a..eb0a1cda7e 100644
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -1811,6 +1811,7 @@ source_set("core") {
+@@ -1672,6 +1672,7 @@ source_set("core") {
+       "//sandbox/win:sandbox",
+       "//services/proxy_resolver/public/mojom",
+       "//services/proxy_resolver/public/mojom:system_proxy_resolver",
++      "//starry/common:version",
+       "//third_party/crashpad/crashpad/client",
+       "//third_party/iaccessible2",
+       "//third_party/isimpledom",
+@@ -1811,6 +1812,7 @@ source_set("core") {
        ":shell_integration_linux",
        "//chrome/browser/lifetime",
        "//components/os_crypt/browser:posix_key_provider",

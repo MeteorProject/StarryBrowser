@@ -1,0 +1,12 @@
+diff --git a/chrome/common/child_module/BUILD.gn b/chrome/common/child_module/BUILD.gn
+index 77c3af732b..aec8ba6371 100644
+--- a/chrome/common/child_module/BUILD.gn
++++ b/chrome/common/child_module/BUILD.gn
+@@ -19,6 +19,7 @@ source_set("child_module") {
+     deps += [
+       "//components/base32",
+       "//crypto",
++      "//starry/common:version",
+     ]
+   }
+ }
