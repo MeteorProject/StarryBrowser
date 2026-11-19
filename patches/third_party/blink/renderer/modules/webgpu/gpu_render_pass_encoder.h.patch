@@ -1,0 +1,41 @@
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_render_pass_encoder.h b/third_party/blink/renderer/modules/webgpu/gpu_render_pass_encoder.h
+index 330a2f1e16..46b0a9a49b 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_render_pass_encoder.h
++++ b/third_party/blink/renderer/modules/webgpu/gpu_render_pass_encoder.h
+@@ -5,6 +5,7 @@
+ #ifndef THIRD_PARTY_BLINK_RENDERER_MODULES_WEBGPU_GPU_RENDER_PASS_ENCODER_H_
+ #define THIRD_PARTY_BLINK_RENDERER_MODULES_WEBGPU_GPU_RENDER_PASS_ENCODER_H_
+ 
++#include "starry/renderer/webgpu_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_union_arraybufferallowshared_arraybufferviewallowshared.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_typedefs.h"
+ #include "third_party/blink/renderer/modules/webgpu/dawn_enum_conversions.h"
+@@ -121,6 +122,8 @@ class GPURenderPassEncoder : public DawnObject<wgpu::RenderPassEncoder>,
+             uint32_t firstVertex,
+             uint32_t firstInstance) {
+     GetHandle().Draw(vertexCount, instanceCount, firstVertex, firstInstance);
++    if (vertexCount && instanceCount)
++      starry::RecordWebGPUShaderWrite(this);
+   }
+   void drawIndexed(uint32_t indexCount,
+                    uint32_t instanceCount,
+@@ -129,15 +132,19 @@ class GPURenderPassEncoder : public DawnObject<wgpu::RenderPassEncoder>,
+                    uint32_t firstInstance) {
+     GetHandle().DrawIndexed(indexCount, instanceCount, firstIndex, baseVertex,
+                             firstInstance);
++    if (indexCount && instanceCount)
++      starry::RecordWebGPUShaderWrite(this);
+   }
+   void drawIndirect(const DawnObject<wgpu::Buffer>* indirectBuffer,
+                     uint64_t indirectOffset) {
+     GetHandle().DrawIndirect(indirectBuffer->GetHandle(), indirectOffset);
++    starry::RecordWebGPUShaderWrite(this);
+   }
+   void drawIndexedIndirect(const DawnObject<wgpu::Buffer>* indirectBuffer,
+                            uint64_t indirectOffset) {
+     GetHandle().DrawIndexedIndirect(indirectBuffer->GetHandle(),
+                                     indirectOffset);
++    starry::RecordWebGPUShaderWrite(this);
+   }
+   void multiDrawIndirect(const DawnObject<wgpu::Buffer>* indirectBuffer,
+                          uint64_t indirectOffset,

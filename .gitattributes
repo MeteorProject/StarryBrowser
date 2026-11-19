@@ -1,0 +1,11 @@
+# 文本在哪个平台检出都用 LF，二进制文件保持原样。
+* text=auto eol=lf
+
+# 补丁和脚本强制按文本处理：git apply 和 bash 都不认 CRLF。
+*.patch text eol=lf
+# 补丁的空白上下文行、XML 的 tab 缩进和二进制段末尾空行是格式的一部分。
+*.patch whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+*.sh text eol=lf
+*.gn text eol=lf
+*.gni text eol=lf
+chromium.version text eol=lf

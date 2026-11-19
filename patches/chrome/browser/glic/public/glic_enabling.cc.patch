@@ -1,0 +1,42 @@
+diff --git a/chrome/browser/glic/public/glic_enabling.cc b/chrome/browser/glic/public/glic_enabling.cc
+index 754819121a..ad36ae4fb4 100644
+--- a/chrome/browser/glic/public/glic_enabling.cc
++++ b/chrome/browser/glic/public/glic_enabling.cc
+@@ -66,6 +66,7 @@
+ #include "components/variations/service/variations_service.h"
+ #include "components/variations/service/variations_service_utils.h"
+ #include "content/public/common/content_switches.h"
++#include "starry/common/google_services.h"
+ #include "ui/base/device_form_factor.h"
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+@@ -404,7 +405,8 @@ GlicEnabling::ProfileEnablement ComputeProfileEnablement(
+   GlicGlobalEnabling& global_enabling =
+       g_browser_process->GetFeatures()->glic_global_enabling();
+ 
+-  result.feature_flag_enabled = base::FeatureList::IsEnabled(features::kGlic);
++  result.feature_flag_enabled = starry::kGeminiEnabled &&
++                                base::FeatureList::IsEnabled(features::kGlic);
+   if (country_override.has_value()) {
+     result.allowed_by_country_filter =
+         GlicEnabling::IsRetailDemoModeDesktop() ||
+@@ -814,6 +816,9 @@ bool GlicGlobalEnabling::IsOsVersionSupported() {
+ }
+ 
+ bool GlicGlobalEnabling::IsEnabledByGlobalCriteria() const {
++  if (!starry::kGeminiEnabled) {
++    return false;
++  }
+   if (g_bypass_enablement_checks_for_testing) {
+     return true;
+   }
+@@ -1109,7 +1114,8 @@ bool GlicEnabling::IsEligibleForGlicTieredRollout(Profile* profile) {
+ 
+ // static
+ bool GlicEnabling::IsInternalsWebUIEnabled(Profile* profile) {
+-  return base::FeatureList::IsEnabled(features::kGlic) &&
++  return starry::kGeminiEnabled &&
++         base::FeatureList::IsEnabled(features::kGlic) &&
+          profile->IsRegularProfile();
+ }
+ 

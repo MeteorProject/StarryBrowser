@@ -1,0 +1,43 @@
+diff --git a/chrome/browser/ui/browser_command_controller.cc b/chrome/browser/ui/browser_command_controller.cc
+index 8db5695096..551ad8293a 100644
+--- a/chrome/browser/ui/browser_command_controller.cc
++++ b/chrome/browser/ui/browser_command_controller.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/browser_command_controller.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <stddef.h>
+ 
+ #include <algorithm>
+@@ -765,6 +767,9 @@ void BrowserCommandController::HandleCommandWithDisposition(
+       CloseWindow(browser_);
+       break;
+     case IDC_NEW_TAB: {
++      if (starry::HandleNewTabCommand(browser_)) {
++        break;
++      }
+       NewTab(browser_, NewTabTypes::kNewTabCommand);
+       break;
+     }
+@@ -774,6 +779,9 @@ void BrowserCommandController::HandleCommandWithDisposition(
+     }
+     case IDC_CLOSE_TAB:
+       base::RecordAction(base::UserMetricsAction("CloseTabByKey"));
++      if (starry::HandleCloseTabCommand(browser_)) {
++        break;
++      }
+       CloseTab(browser_);
+       break;
+     case IDC_SELECT_NEXT_TAB:
+@@ -1162,6 +1170,9 @@ void BrowserCommandController::HandleCommandWithDisposition(
+ 
+     // Show various bits of UI
+     case IDC_OPEN_FILE:
++      if (starry::HandleOpenFileCommand(browser_)) {
++        break;
++      }
+       BrowserSelectFileDialogController::From(browser_)->OpenFile();
+       break;
+     case IDC_CREATE_SHORTCUT:

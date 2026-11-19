@@ -1,0 +1,22 @@
+diff --git a/cc/paint/paint_op_writer.cc b/cc/paint/paint_op_writer.cc
+index b6e1151311..4c9c688aca 100644
+--- a/cc/paint/paint_op_writer.cc
++++ b/cc/paint/paint_op_writer.cc
+@@ -26,6 +26,7 @@
+ #include "cc/paint/skottie_transfer_cache_entry.h"
+ #include "cc/paint/skottie_wrapper.h"
+ #include "cc/paint/transfer_cache_serialize_helper.h"
++#include "starry/cc/paint/starry_shader_paint_filter.h"
+ #include "gpu/command_buffer/common/mailbox.h"
+ #include "skia/ext/skia_utils_base.h"
+ #include "third_party/skia/include/core/SkBitmap.h"
+@@ -998,6 +999,9 @@ void PaintOpWriter::Write(const PaintFilter* filter, const SkM44& current_ctm) {
+     case PaintFilter::Type::kLightingSpot:
+       Write(static_cast<const LightingSpotPaintFilter&>(*filter), current_ctm);
+       break;
++    case PaintFilter::Type::kStarryShader:
++      static_cast<const StarryShaderPaintFilter&>(*filter).Serialize(*this);
++      break;
+   }
+ }
+ 

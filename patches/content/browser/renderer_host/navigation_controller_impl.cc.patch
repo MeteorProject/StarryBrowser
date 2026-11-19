@@ -1,0 +1,21 @@
+diff --git a/content/browser/renderer_host/navigation_controller_impl.cc b/content/browser/renderer_host/navigation_controller_impl.cc
+index 580d1a893d..fb29ad8475 100644
+--- a/content/browser/renderer_host/navigation_controller_impl.cc
++++ b/content/browser/renderer_host/navigation_controller_impl.cc
+@@ -35,6 +35,8 @@
+ 
+ #include "content/browser/renderer_host/navigation_controller_impl.h"
+ 
++#include "starry/common/internal_urls.h"  // nogncheck
++
+ #include <algorithm>
+ #include <ranges>
+ #include <utility>
+@@ -459,6 +461,7 @@ void RewriteUrlForNavigation(const GURL& original_url,
+   *url_to_load = *virtual_url = original_url;
+   BrowserURLHandlerImpl::GetInstance()->RewriteURLIfNecessary(
+       url_to_load, browser_context, reverse_on_redirect);
++  *virtual_url = starry::ToStarryURL(*virtual_url);
+ }
+ 
+ #if DCHECK_IS_ON()

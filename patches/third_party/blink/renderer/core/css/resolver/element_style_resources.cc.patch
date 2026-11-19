@@ -1,0 +1,49 @@
+diff --git a/third_party/blink/renderer/core/css/resolver/element_style_resources.cc b/third_party/blink/renderer/core/css/resolver/element_style_resources.cc
+index 31cc4f3060..4e8f0da94a 100644
+--- a/third_party/blink/renderer/core/css/resolver/element_style_resources.cc
++++ b/third_party/blink/renderer/core/css/resolver/element_style_resources.cc
+@@ -23,6 +23,7 @@
+ 
+ #include "third_party/blink/renderer/core/css/resolver/element_style_resources.h"
+ 
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/renderer/core/css/css_crossfade_value.h"
+ #include "third_party/blink/renderer/core/css/css_gradient_value.h"
+ #include "third_party/blink/renderer/core/css/css_image_set_option_value.h"
+@@ -99,7 +100,9 @@ class StyleImageLoader {
+         builder_(builder),
+         conversion_data_(conversion_data),
+         pre_cached_container_sizes_(pre_cached_container_sizes),
+-        device_scale_factor_(device_scale_factor) {}
++        device_scale_factor_(
++            starry::ProtectDevicePixelRatio(document.GetFrame(),
++                                            device_scale_factor)) {}
+ 
+   StyleImage* Load(CSSValue&,
+                    const CSSLengthResolver& length_resolver,
+@@ -252,8 +255,10 @@ bool ElementStyleResources::IsPending(const CSSValue& value) const {
+   }
+ 
+   if (auto* img_set_value = DynamicTo<CSSImageSetValue>(value)) {
+-    return img_set_value->IsCachePending(element_.GetDocument().Fetcher(),
+-                                         device_scale_factor_);
++    return img_set_value->IsCachePending(
++        element_.GetDocument().Fetcher(),
++        starry::ProtectDevicePixelRatio(element_.GetDocument().GetFrame(),
++                                        device_scale_factor_));
+   }
+ 
+   NOTREACHED();
+@@ -282,8 +287,10 @@ StyleImage* ElementStyleResources::CachedStyleImage(
+   }
+ 
+   if (auto* img_set_value = DynamicTo<CSSImageSetValue>(value)) {
+-    return img_set_value->CachedImage(element_.GetDocument().Fetcher(),
+-                                      device_scale_factor_);
++    return img_set_value->CachedImage(
++        element_.GetDocument().Fetcher(),
++        starry::ProtectDevicePixelRatio(element_.GetDocument().GetFrame(),
++                                        device_scale_factor_));
+   }
+ 
+   NOTREACHED();

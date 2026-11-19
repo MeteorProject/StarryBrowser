@@ -1,0 +1,28 @@
+diff --git a/components/translate/core/browser/translate_prefs.cc b/components/translate/core/browser/translate_prefs.cc
+index 6ac3146781..7eef8f38b6 100644
+--- a/components/translate/core/browser/translate_prefs.cc
++++ b/components/translate/core/browser/translate_prefs.cc
+@@ -37,6 +37,7 @@
+ #include "components/translate/core/browser/translate_download_manager.h"
+ #include "components/translate/core/browser/translate_pref_names.h"
+ #include "components/translate/core/common/translate_language_matcher.h"
++#include "starry/common/google_services.h"
+ #include "third_party/abseil-cpp/absl/container/flat_hash_set.h"
+ #include "ui/base/l10n/chromium_language_matcher.h"
+ #include "ui/base/l10n/l10n_util.h"
+@@ -187,10 +188,14 @@ std::string TranslatePrefs::MapPreferenceName(std::string_view pref_name) {
+ }
+ 
+ bool TranslatePrefs::IsOfferTranslateEnabled() const {
+-  return prefs_->GetBoolean(prefs::kOfferTranslateEnabled);
++  return starry::kGoogleTranslateEnabled &&
++         prefs_->GetBoolean(prefs::kOfferTranslateEnabled);
+ }
+ 
+ bool TranslatePrefs::IsTranslateAllowedByPolicy() const {
++  if (!starry::kGoogleTranslateEnabled) {
++    return false;
++  }
+   const PrefService::Preference* const pref =
+       prefs_->FindPreference(prefs::kOfferTranslateEnabled);
+   DCHECK(pref);

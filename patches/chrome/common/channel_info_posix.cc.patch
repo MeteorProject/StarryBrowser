@@ -1,0 +1,41 @@
+diff --git a/chrome/common/channel_info_posix.cc b/chrome/common/channel_info_posix.cc
+index f6bcb3cc8e..a29f3a9130 100644
+--- a/chrome/common/channel_info_posix.cc
++++ b/chrome/common/channel_info_posix.cc
+@@ -17,6 +17,7 @@
+ #include "build/branding_buildflags.h"
+ #include "build/build_config.h"
+ #include "components/version_info/version_info.h"
++#include "starry/common/branding.h"
+ 
+ namespace chrome {
+ 
+@@ -78,6 +79,9 @@ std::string GetChannelName(WithExtendedStable with_extended_stable) {
+ }
+ 
+ std::string GetChannelSuffixForDataDir() {
++#if !BUILDFLAG(GOOGLE_CHROME_BRANDING)
++  return starry::LinuxChannelSuffix(GetChannelEnv());
++#else
+   switch (GetChannel()) {
+     case version_info::Channel::BETA:
+       return "-beta";
+@@ -90,6 +94,7 @@ std::string GetChannelSuffixForDataDir() {
+       // get a suffix.
+       return std::string();
+   }
++#endif
+ }
+ 
+ #if BUILDFLAG(IS_LINUX)
+@@ -148,7 +153,9 @@ std::string GetDesktopName(base::Environment* env) {
+   if (name.has_value() && !name.value().empty()) {
+     return name.value();
+   }
+-  return "chromium-browser.desktop";
++  return base::StrCat({starry::kProductId,
++                       starry::LinuxChannelSuffix(GetChannelEnv()),
++                       ".desktop"});
+ #endif
+ }
+ #endif  // BUILDFLAG(IS_LINUX)

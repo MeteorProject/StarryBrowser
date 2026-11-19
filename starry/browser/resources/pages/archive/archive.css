@@ -1,0 +1,502 @@
+/* Copyright 2026 The Starry Browser Authors */
+
+/* 已归档标签页样式：按原因与网站筛选、按天分组的缩略图卡片与底部批量操作栏。 */
+
+.archive-page.has-batch-bar {
+  padding-bottom: 96px;
+}
+
+.title-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.title-row .title {
+  margin: 0;
+}
+
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.archive-header .toolbar {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.pill-button {
+  cursor: pointer;
+}
+
+.pill-button.active {
+  background: color-mix(in srgb, var(--accent) calc(14% + var(--is-dark) * 4%), transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---- 按原因筛选 ---- */
+
+.filter-picker {
+  background: color-mix(in srgb, var(--on-surface) calc(5% + var(--is-dark) * 2%), transparent);
+  border-radius: 18px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  position: relative;
+}
+
+.filter-highlight {
+  background: color-mix(in srgb, var(--surface-bright) calc(100% - var(--is-dark) * 20%), transparent);
+  border-radius: 15px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / calc(0.06 - var(--is-dark) * 0.06));
+  height: 30px;
+  left: 0;
+  position: absolute;
+  top: 3px;
+  transition: transform var(--duration-page-filter) var(--ease-page-filter),
+      width var(--duration-page-filter) var(--ease-page-filter);
+}
+
+.filter {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: 15px;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 4px;
+  height: 30px;
+  padding: 0 14px;
+  position: relative;
+  transition: color var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+}
+
+.filter:active {
+  transform: scale(0.96);
+}
+
+.filter.selected {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+.filter-count {
+  color: var(--on-surface-variant);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* ---- 网站 ---- */
+
+.archive-sites {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  min-width: 0;
+}
+
+.sites-label {
+  color: var(--on-surface-variant);
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.site-chips {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent);
+  min-width: 0;
+  overflow-x: auto;
+  padding-right: 14px;
+  scrollbar-width: none;
+}
+
+.site-chip {
+  align-items: center;
+  background: color-mix(in srgb, var(--on-surface) calc(4.5% + var(--is-dark) * 1.5%), transparent);
+  border: none;
+  border-radius: 13px;
+  color: color-mix(in srgb, var(--on-surface) 88%, transparent);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 6px;
+  height: 26px;
+  max-width: 200px;
+  padding: 0 9px;
+  transition: background-color var(--hover), color var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+}
+
+.site-chip:hover {
+  background: color-mix(in srgb, var(--on-surface) calc(8% + var(--is-dark) * 2%), transparent);
+}
+
+.site-chip:active {
+  transform: scale(0.96);
+}
+
+.site-chip.active {
+  background: color-mix(in srgb, var(--accent) calc(14% + var(--is-dark) * 4%), transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.site-chip img {
+  border-radius: 3px;
+  flex: none;
+  height: 14px;
+  width: 14px;
+}
+
+.site-chip-count {
+  color: var(--on-surface-variant);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 主题（归档时 AI 打的）：紧跟在网站下面，没有图标。 */
+.archive-topics {
+  margin-top: 8px;
+}
+
+.topic-chip {
+  padding: 0 10px;
+}
+
+/* ---- 按天分组 ---- */
+
+.archive-day {
+  padding-top: 18px;
+}
+
+.day-header {
+  align-items: center;
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--surface-panel) 88%, transparent);
+  display: flex;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 4px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.day-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.day-count {
+  color: var(--on-surface-variant);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ghost-pill {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 5px;
+  height: 24px;
+  opacity: 0;
+  padding: 0 8px;
+  transition: background-color var(--hover), color var(--hover), opacity var(--hover);
+}
+
+.archive-day:hover .ghost-pill,
+.ghost-pill:focus-visible {
+  opacity: 1;
+}
+
+.ghost-pill:hover {
+  background: color-mix(in srgb, var(--on-surface) 7%, transparent);
+  color: var(--on-surface);
+}
+
+/* ---- 卡片：上面是缩略图（16:10，从网页顶上开始），下面一行图标、标题、网站和原因 ---- */
+
+.archive-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  padding: 6px 4px 0;
+}
+
+.archive-card {
+  background: var(--surface-alt);
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--on-surface) calc(5% + var(--is-dark) * 3%), transparent);
+  cursor: pointer;
+  min-width: 0;
+  outline: none;
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow var(--hover), transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.archive-card:hover {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--on-surface) calc(9% + var(--is-dark) * 4%), transparent),
+      0 6px 18px rgb(0 0 0 / calc(0.08 + var(--is-dark) * 0.18));
+  transform: translateY(-1px);
+}
+
+.archive-card:active {
+  transform: scale(0.98);
+}
+
+.archive-card:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.archive-card.selected {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.card-thumb {
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(135deg,
+      hsl(var(--hue) 46% calc(86% - var(--is-dark) * 60%)),
+      hsl(calc(var(--hue) + 28) 40% calc(78% - var(--is-dark) * 56%)));
+  overflow: hidden;
+  position: relative;
+}
+
+.thumb-favicon {
+  border-radius: 7px;
+  height: 32px;
+  left: calc(50% - 16px);
+  position: absolute;
+  top: calc(50% - 16px);
+  width: 32px;
+}
+
+.thumb-image {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  object-position: top center;
+  position: absolute;
+  width: 100%;
+}
+
+.card-restore {
+  align-items: center;
+  backdrop-filter: blur(14px) saturate(1.5);
+  background: color-mix(in srgb, var(--surface-bright) 82%, transparent);
+  border-radius: 11px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.16);
+  color: var(--on-surface);
+  display: inline-flex;
+  font-size: 11.5px;
+  font-weight: 600;
+  gap: 4px;
+  height: 22px;
+  opacity: 0;
+  padding: 0 9px;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  transform: translateY(-2px);
+  transition: opacity var(--hover), transform var(--hover);
+}
+
+.card-remove {
+  align-items: center;
+  backdrop-filter: blur(14px) saturate(1.5);
+  background: color-mix(in srgb, var(--surface-bright) 82%, transparent);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.16);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  display: flex;
+  height: 20px;
+  justify-content: center;
+  left: 8px;
+  opacity: 0;
+  position: absolute;
+  top: 9px;
+  transition: opacity var(--hover), color var(--hover);
+  width: 20px;
+}
+
+.card-remove:hover {
+  color: var(--danger);
+}
+
+.archive-card:hover .card-restore,
+.archive-card:focus-visible .card-restore,
+.archive-card:hover .card-remove {
+  opacity: 1;
+  transform: none;
+}
+
+.card-check {
+  color: var(--accent);
+  display: flex;
+  left: 8px;
+  position: absolute;
+  top: 8px;
+}
+
+.archive-card:not(.selected) .card-check {
+  color: rgb(255 255 255 / 0.92);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.4));
+}
+
+.card-meta {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  padding: 9px 10px 10px;
+}
+
+.card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.card-detail {
+  color: var(--on-surface-variant);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.card-time {
+  align-self: flex-start;
+  color: var(--on-surface-variant);
+  flex: none;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+}
+
+/* ---- 底部悬浮批量操作栏 ---- */
+
+.batch-bar {
+  align-items: center;
+  backdrop-filter: blur(18px) saturate(1.4);
+  background: color-mix(in srgb, var(--surface-bright) 92%, transparent);
+  border-radius: 22px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--on-surface) calc(8% + var(--is-dark) * 5%), transparent),
+      0 12px 32px rgb(0 0 0 / calc(0.14 + var(--is-dark) * 0.24));
+  bottom: 22px;
+  display: flex;
+  gap: 6px;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  padding: 6px 8px 6px 16px;
+  position: fixed;
+  transform: translateX(-50%);
+  transition: opacity 220ms ease-out, transform 340ms ease-out;
+  z-index: 20;
+}
+
+@starting-style {
+  .batch-bar {
+    opacity: 0;
+    transform: translateX(-50%) translateY(18px) scale(0.96);
+  }
+}
+
+.batch-count {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+
+.batch-divider {
+  background: color-mix(in srgb, var(--on-surface) 12%, transparent);
+  height: 16px;
+  margin: 0 2px;
+  width: 1px;
+}
+
+.batch-btn {
+  align-items: center;
+  background: color-mix(in srgb, var(--on-surface) calc(5.5% + var(--is-dark) * 2%), transparent);
+  border: none;
+  border-radius: 16px;
+  color: var(--on-surface);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12.5px;
+  font-weight: 500;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  transition: background-color var(--hover), opacity var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+  white-space: nowrap;
+}
+
+.batch-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--on-surface) calc(9.5% + var(--is-dark) * 2%), transparent);
+}
+
+.batch-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.batch-btn:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.batch-btn.danger {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.batch-btn.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+}
+
+.batch-btn.ghost {
+  background: transparent;
+  color: var(--on-surface-variant);
+}
+
+.batch-btn.ghost:hover {
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+  color: var(--on-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-highlight,
+  .archive-card,
+  .card-restore,
+  .batch-bar {
+    transition: none;
+  }
+}

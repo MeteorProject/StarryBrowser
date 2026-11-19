@@ -1,0 +1,26 @@
+diff --git a/components/sessions/core/live_tab.cc b/components/sessions/core/live_tab.cc
+index 4ebce2ee38..1b4c732192 100644
+--- a/components/sessions/core/live_tab.cc
++++ b/components/sessions/core/live_tab.cc
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "components/sessions/core/live_tab.h"
++#include "components/sessions/core/live_tab_context.h"
+ 
+ namespace sessions {
+ 
+@@ -13,4 +14,13 @@ LiveTab::GetPlatformSpecificTabData() {
+   return nullptr;
+ }
+ 
++void LiveTabContext::ReconstructSplitTabs(
++    const std::vector<LiveTab*>& tabs,
++    split_tabs::SplitTabId split_id,
++    const split_tabs::SplitTabVisualData& visual_data) {
++  if (tabs.size() == 2) {
++    ReconstructSplit(tabs[0], tabs[1], split_id, visual_data);
++  }
++}
++
+ }  // namespace sessions

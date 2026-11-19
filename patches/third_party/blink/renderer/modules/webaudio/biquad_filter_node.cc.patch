@@ -1,0 +1,23 @@
+diff --git a/third_party/blink/renderer/modules/webaudio/biquad_filter_node.cc b/third_party/blink/renderer/modules/webaudio/biquad_filter_node.cc
+index 23316ff089..9d571f0d96 100644
+--- a/third_party/blink/renderer/modules/webaudio/biquad_filter_node.cc
++++ b/third_party/blink/renderer/modules/webaudio/biquad_filter_node.cc
+@@ -28,6 +28,7 @@
+ #include <limits>
+ 
+ #include "base/metrics/histogram_functions.h"
++#include "starry/renderer/audio_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_automation_rate.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_biquad_filter_options.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_biquad_filter_type.h"
+@@ -221,6 +222,10 @@ void BiquadFilterNode::getFrequencyResponse(
+     GetBiquadFilterHandler().GetFrequencyResponse(frequency_hz->AsSpan(),
+                                                   mag_response->AsSpan(),
+                                                   phase_response->AsSpan());
++    starry::ProtectAudioSamples(context()->GetExecutionContext(),
++                                mag_response->AsSpan());
++    starry::ProtectAudioSamples(context()->GetExecutionContext(),
++                                phase_response->AsSpan());
+   }
+ }
+ 

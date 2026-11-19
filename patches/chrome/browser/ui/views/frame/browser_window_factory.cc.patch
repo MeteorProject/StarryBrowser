@@ -1,0 +1,21 @@
+diff --git a/chrome/browser/ui/views/frame/browser_window_factory.cc b/chrome/browser/ui/views/frame/browser_window_factory.cc
+index ad579aa818..860a448dbc 100644
+--- a/chrome/browser/ui/views/frame/browser_window_factory.cc
++++ b/chrome/browser/ui/views/frame/browser_window_factory.cc
+@@ -13,6 +13,7 @@
+ #include "chrome/browser/ui/webui_browser/webui_browser.h"
+ #include "chrome/browser/ui/webui_browser/webui_browser_window.h"
+ #include "chrome/browser/ui/window_feature_controller/window_feature_controller.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "ui/views/widget/widget.h"
+ 
+ #if defined(USE_AURA)
+@@ -51,7 +52,7 @@ BrowserWindow::CreateBrowserWindow(BrowserWindowInterface* browser,
+ #if BUILDFLAG(IS_CHROMEOS)
+   view = new BrowserViewAsh(browser);
+ #else
+-  view = new BrowserView(browser);
++  view = starry::CreateBrowserView(browser);
+ #endif
+   auto browser_widget = std::make_unique<BrowserWidget>(view);
+   view->set_browser_widget(std::move(browser_widget));

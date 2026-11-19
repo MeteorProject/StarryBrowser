@@ -1,0 +1,25 @@
+diff --git a/chrome/windows_services/elevated_tracing_service/BUILD.gn b/chrome/windows_services/elevated_tracing_service/BUILD.gn
+index be389aaf7f..d945a723ac 100644
+--- a/chrome/windows_services/elevated_tracing_service/BUILD.gn
++++ b/chrome/windows_services/elevated_tracing_service/BUILD.gn
+@@ -3,14 +3,18 @@
+ # found in the LICENSE file.
+ 
+ import("//build/config/chrome_build.gni")
+-import("//build/toolchain/win/midl.gni")
+ import("//chrome/process_version_rc_template.gni")
++import("//starry/build/branding/branding.gni")
++import("//starry/build/branding/service_midl.gni")
+ import("//testing/test.gni")
+ 
+-midl("tracing_service_idl") {
++starry_service_midl("tracing_service_idl") {
+   sources = [ "tracing_service_idl.idl" ]
+ 
+   writes_tlb = true
++  if (!is_chrome_branded && !is_chrome_for_testing_branded) {
++    dynamic_guids = starry_tracing_dynamic_guids
++  }
+ }
+ 
+ executable("elevated_tracing_service") {

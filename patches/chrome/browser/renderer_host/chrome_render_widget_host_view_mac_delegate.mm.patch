@@ -1,0 +1,25 @@
+diff --git a/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.mm b/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.mm
+index c72e8fe07d..b1ea43af21 100644
+--- a/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.mm
++++ b/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.mm
+@@ -36,6 +36,8 @@
+ #include "services/service_manager/public/cpp/interface_provider.h"
+ #include "ui/base/window_open_disposition.h"
+ 
++#import "starry/browser/ui/swipe/history_swiper_mac.h"  // nogncheck
++
+ @interface ChromeRenderWidgetHostViewMacDelegate () <HistorySwiperDelegate>
+ 
+ @property(readonly) content::WebContents* webContents;
+@@ -59,7 +61,10 @@ - (instancetype)initWithRenderWidgetHost:
+   if (self) {
+     _widgetProcessId = renderWidgetHost->GetProcess()->GetDeprecatedID();
+     _widgetRoutingId = renderWidgetHost->GetRoutingID();
+-    _historySwiper = [[HistorySwiper alloc] initWithDelegate:self];
++    // Starry：触控板翻页的指示器、上下选翻几页、振动（不是 Starry 的标签时还是 Chrome 的）。
++    _historySwiper =
++        [[StarryHistorySwiper alloc] initWithDelegate:self
++                                     renderWidgetHost:renderWidgetHost];
+     // Clip bounds so history swiper navigation layer doesn't overflow the
+     // bounds when in Split View or with a Side Panel open.
+     [self viewThatWantsHistoryOverlay].clipsToBounds = YES;

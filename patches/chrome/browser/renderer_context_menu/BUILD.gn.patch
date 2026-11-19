@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/renderer_context_menu/BUILD.gn b/chrome/browser/renderer_context_menu/BUILD.gn
+index 710da547b7..d376d9e2e5 100644
+--- a/chrome/browser/renderer_context_menu/BUILD.gn
++++ b/chrome/browser/renderer_context_menu/BUILD.gn
+@@ -88,6 +88,7 @@ source_set("impl") {
+     "//components/renderer_context_menu",
+     "//content/public/browser",
+     "//extensions/buildflags",
++    "//starry/common:google_services",
+   ]
+ 
+   if (!is_android) {

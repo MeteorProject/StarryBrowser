@@ -1,0 +1,25 @@
+diff --git a/chrome/browser/sessions/session_service_base.cc b/chrome/browser/sessions/session_service_base.cc
+index ee887add6a..8246b15476 100644
+--- a/chrome/browser/sessions/session_service_base.cc
++++ b/chrome/browser/sessions/session_service_base.cc
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "chrome/browser/sessions/session_service_base.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ 
+ #include <stddef.h>
+ 
+@@ -674,6 +675,12 @@ void SessionServiceBase::BuildCommandsForTab(
+     command_storage_manager()->AppendRebuildCommand(
+         sessions::CreatePinnedStateCommand(session_id, true));
+   }
++  std::map<std::string, std::string> starry_extra_data;
++  starry::AddTabExtraData(tab, is_pinned, &starry_extra_data);
++  for (const auto& [key, value] : starry_extra_data) {
++    command_storage_manager()->AppendRebuildCommand(
++        sessions::CreateAddTabExtraDataCommand(session_id, key, value));
++  }
+ 
+   // Record the association between the sessionStorage namespace and the tab.
+   content::SessionStorageNamespaceHandle* session_storage_namespace =

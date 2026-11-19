@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/mac/BUILD.gn b/chrome/browser/mac/BUILD.gn
+index 031f1606ca..7159771000 100644
+--- a/chrome/browser/mac/BUILD.gn
++++ b/chrome/browser/mac/BUILD.gn
+@@ -101,6 +101,7 @@ source_set("impl") {
+     "//chrome/common:constants",
+     "//components/policy/core/common",
+     "//components/version_info",
++    "//starry/common:branding",
+   ]
+ }
+ 

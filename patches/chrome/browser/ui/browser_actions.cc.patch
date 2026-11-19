@@ -1,0 +1,43 @@
+diff --git a/chrome/browser/ui/browser_actions.cc b/chrome/browser/ui/browser_actions.cc
+index 3c89142611..502223b67b 100644
+--- a/chrome/browser/ui/browser_actions.cc
++++ b/chrome/browser/ui/browser_actions.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/browser_actions.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <memory>
+ #include <optional>
+ #include <string>
+@@ -1261,6 +1263,9 @@ void BrowserActions::InitializeChromeMenuActions() {
+           base::BindRepeating(
+               [](BrowserWindowInterface* bwi, actions::ActionItem* item,
+                  actions::ActionInvocationContext context) {
++                if (starry::HandleNewTabCommand(bwi)) {
++                  return;
++                }
+                 chrome::NewTab(bwi, NewTabTypes::kNewTabCommand);
+               },
+               bwi))
+@@ -1788,6 +1793,9 @@ void BrowserActions::InitializeChromeMenuActions() {
+           base::BindRepeating(
+               [](BrowserWindowInterface* bwi, actions::ActionItem* item,
+                  actions::ActionInvocationContext context) {
++                if (starry::HandleOpenFileCommand(bwi)) {
++                  return;
++                }
+                 BrowserSelectFileDialogController::From(bwi)->OpenFile();
+               },
+               bwi))
+@@ -3048,6 +3056,9 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+               [](BrowserWindowInterface* bwi, actions::ActionItem* item,
+                  actions::ActionInvocationContext context) {
+                 base::RecordAction(base::UserMetricsAction("CloseTabByKey"));
++                if (starry::HandleCloseTabCommand(bwi)) {
++                  return;
++                }
+                 chrome::CloseTab(bwi);
+               },
+               bwi))

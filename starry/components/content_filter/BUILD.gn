@@ -1,0 +1,111 @@
+# 内置广告与跟踪拦截的过滤引擎：解析过滤列表、建索引、判断请求和元素隐藏、
+# 改写页面的 HTML 和响应（$replace）。只依赖 base（含 base:i18n，转编码）、
+# net、url、re2、ICU（RE2 做不到的正则）。
+
+# 脚本片段的 JS（scriptlets/core.js 的开头说了怎么写），编成 C++ 的字节数组。
+scriptlet_files = [
+  "scriptlets/abort.js",
+  "scriptlets/cookies.js",
+  "scriptlets/core.js",
+  "scriptlets/dom.js",
+  "scriptlets/events.js",
+  "scriptlets/json_edit.js",
+  "scriptlets/json_prune.js",
+  "scriptlets/misc.js",
+  "scriptlets/network.js",
+  "scriptlets/node_text.js",
+  "scriptlets/replace_argument.js",
+  "scriptlets/set_constant.js",
+  "scriptlets/storage.js",
+  "scriptlets/timers.js",
+]
+
+action("scriptlet_library") {
+  script = "scriptlets/generate_scriptlets.py"
+  inputs = scriptlet_files
+  outputs = [
+    "$target_gen_dir/scriptlet_library.cc",
+    "$target_gen_dir/scriptlet_library.h",
+  ]
+  args = [
+           "--out-cc",
+           rebase_path(outputs[0], root_build_dir),
+           "--out-h",
+           rebase_path(outputs[1], root_build_dir),
+           "--header-include",
+           "starry/components/content_filter/scriptlet_library.h",
+         ] + rebase_path(scriptlet_files, root_build_dir)
+}
+
+# 扩展选择器的 JS（procedural/procedural.js），网页进程用（//starry/renderer）。
+action("procedural_script_gen") {
+  script = "procedural/generate_procedural_script.py"
+  inputs = [ "procedural/procedural.js" ]
+  outputs = [
+    "$target_gen_dir/procedural_script.cc",
+    "$target_gen_dir/procedural_script.h",
+  ]
+  args = [
+    "--out-cc",
+    rebase_path(outputs[0], root_build_dir),
+    "--out-h",
+    rebase_path(outputs[1], root_build_dir),
+    "--header-include",
+    "starry/components/content_filter/procedural_script.h",
+    rebase_path("procedural/procedural.js", root_build_dir),
+  ]
+}
+
+source_set("procedural_script") {
+  sources = get_target_outputs(":procedural_script_gen")
+  deps = [ ":procedural_script_gen" ]
+}
+
+source_set("content_filter") {
+  sources = [
+    "content_filter_types.h",
+    "css_selector.cc",
+    "css_selector.h",
+    "domain_set.cc",
+    "domain_set.h",
+    "filter_engine.cc",
+    "filter_engine.h",
+    "filter_list.cc",
+    "filter_list.h",
+    "filter_parser.cc",
+    "filter_parser.h",
+    "html_document.cc",
+    "html_document.h",
+    "html_filter.cc",
+    "html_filter.h",
+    "js_regex.cc",
+    "js_regex.h",
+    "network_filter.cc",
+    "network_filter.h",
+    "procedural_selector.cc",
+    "procedural_selector.h",
+    "redirect_resources.cc",
+    "redirect_resources.h",
+    "request.cc",
+    "request.h",
+    "response_filter.cc",
+    "response_filter.h",
+    "scriptlets.cc",
+    "scriptlets.h",
+    "tracking_parameters.cc",
+    "tracking_parameters.h",
+  ]
+  sources += get_target_outputs(":scriptlet_library")
+  public_deps = [
+    "//base",
+    "//url",
+  ]
+  deps = [
+    ":scriptlet_library",
+    "//base:i18n",
+    "//net",
+    "//third_party/abseil-cpp:absl",
+    "//third_party/icu",
+    "//third_party/re2",
+  ]
+}

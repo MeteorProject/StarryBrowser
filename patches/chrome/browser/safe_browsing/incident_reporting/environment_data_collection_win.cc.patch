@@ -1,0 +1,21 @@
+diff --git a/chrome/browser/safe_browsing/incident_reporting/environment_data_collection_win.cc b/chrome/browser/safe_browsing/incident_reporting/environment_data_collection_win.cc
+index a9efe9238d..eba959bd13 100644
+--- a/chrome/browser/safe_browsing/incident_reporting/environment_data_collection_win.cc
++++ b/chrome/browser/safe_browsing/incident_reporting/environment_data_collection_win.cc
+@@ -24,6 +24,7 @@
+ #include "chrome/browser/net/service_providers_win.h"
+ #include "chrome/browser/safe_browsing/download_protection/path_sanitizer.h"
+ #include "chrome/browser/safe_browsing/incident_reporting/module_integrity_verifier_win.h"
++#include "chrome/common/chrome_constants.h"
+ #include "chrome/common/safe_browsing/binary_feature_extractor.h"
+ #include "components/safe_browsing/core/common/proto/csd.pb.h"
+ #include "components/variations/variations_associated_data.h"
+@@ -36,7 +37,7 @@ const REGSAM kKeyReadNoNotify = (KEY_READ) & ~(KEY_NOTIFY);
+ 
+ // The modules on which we will run VerifyModule.
+ constexpr std::array<const wchar_t*, 3> kModulesToVerify = {{
+-    L"chrome.dll",
++    chrome::kBrowserResourcesDll,
+     L"chrome_elf.dll",
+     L"ntdll.dll",
+ }};

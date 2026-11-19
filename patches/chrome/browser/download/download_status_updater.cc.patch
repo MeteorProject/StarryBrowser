@@ -1,0 +1,23 @@
+diff --git a/chrome/browser/download/download_status_updater.cc b/chrome/browser/download/download_status_updater.cc
+index 2baf664d9d..a82aad16f2 100644
+--- a/chrome/browser/download/download_status_updater.cc
++++ b/chrome/browser/download/download_status_updater.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/download/download_status_updater.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <stdint.h>
+ 
+ #include <vector>
+@@ -83,6 +85,9 @@ bool DownloadStatusUpdater::GetProgress(float* progress,
+     }
+   }
+ 
++  starry::AddDownloadProgress(download_count, &received_bytes, &total_bytes,
++                              &progress_certain);
++
+   if (total_bytes > 0)
+     *progress = static_cast<float>(received_bytes) / total_bytes;
+   return progress_certain;

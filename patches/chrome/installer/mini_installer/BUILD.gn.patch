@@ -1,0 +1,36 @@
+diff --git a/chrome/installer/mini_installer/BUILD.gn b/chrome/installer/mini_installer/BUILD.gn
+index df9408bb16..9809336ce2 100644
+--- a/chrome/installer/mini_installer/BUILD.gn
++++ b/chrome/installer/mini_installer/BUILD.gn
+@@ -7,6 +7,7 @@ import("//build/config/python.gni")
+ import("//build/config/ui.gni")
+ import("//build/timestamp.gni")
+ import("//chrome/process_version_rc_template.gni")
++import("//starry/build/branding/branding.gni")
+ import("//third_party/dawn/scripts/dawn_features.gni")
+ import("//third_party/ffmpeg/ffmpeg_options.gni")
+ import("//third_party/icu/config.gni")
+@@ -146,12 +147,12 @@ if (enable_uncompressed_archive) {
+ action("mini_installer_archive") {
+   script = "//chrome/tools/build/win/create_installer_archive.py"
+ 
+-  release_file = "chrome.release"
++  release_file = "$root_gen_dir/starry/build/branding/chrome.release"
+ 
+   inputs = [
+-    "$root_out_dir/chrome.dll",
++    "$root_out_dir/${starry_product_id}.dll",
+     "$root_out_dir/chrome_elf.dll",
+-    "$root_out_dir/chrome.exe",
++    "$root_out_dir/${starry_product_id}.exe",
+     "$root_out_dir/locales/en-US.pak",
+     "$root_out_dir/setup.exe",
+     "//chrome/tools/build/win/makecab.py",
+@@ -197,6 +198,7 @@ action("mini_installer_archive") {
+     "//chrome/chrome_elf",
+     "//chrome/common/win:eventlog_provider",
+     "//chrome/installer/setup",
++    "//starry/build/branding:windows_installer_file_list",
+     "//third_party/icu:icudata",
+   ]
+ 

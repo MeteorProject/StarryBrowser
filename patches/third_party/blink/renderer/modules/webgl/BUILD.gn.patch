@@ -1,0 +1,21 @@
+diff --git a/third_party/blink/renderer/modules/webgl/BUILD.gn b/third_party/blink/renderer/modules/webgl/BUILD.gn
+index d611207944..c9e856556b 100644
+--- a/third_party/blink/renderer/modules/webgl/BUILD.gn
++++ b/third_party/blink/renderer/modules/webgl/BUILD.gn
+@@ -7,6 +7,8 @@ import("//ui/gl/features.gni")
+ 
+ blink_modules_sources("webgl") {
+   sources = [
++    "//starry/renderer/webgl_fingerprint_protection.cc",
++    "//starry/renderer/webgl_fingerprint_protection.h",
+     "angle_instanced_arrays.cc",
+     "angle_instanced_arrays.h",
+     "ext_blend_min_max.cc",
+@@ -195,6 +197,7 @@ blink_modules_sources("webgl") {
+ 
+   public_deps = [ "//device/vr/public/mojom:vr_service_blink" ]
+   deps = [
++    "//starry/components/privacy:readback",
+     "//device/vr/buildflags",
+     "//gpu/command_buffer/client:gles2_implementation",
+     "//gpu/command_buffer/client:gles2_interface",

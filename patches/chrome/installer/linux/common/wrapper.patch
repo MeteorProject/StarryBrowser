@@ -1,0 +1,12 @@
+diff --git a/chrome/installer/linux/common/wrapper b/chrome/installer/linux/common/wrapper
+index 5ee3f9ff0f..7ba8fc2063 100755
+--- a/chrome/installer/linux/common/wrapper
++++ b/chrome/installer/linux/common/wrapper
+@@ -16,6 +16,7 @@ mkdir -p "$xdg_app_dir"
+ [ -f "$xdg_app_dir/mimeapps.list" ] || touch "$xdg_app_dir/mimeapps.list"
+ 
+ export CHROME_VERSION_EXTRA="@@channel"
++export CHROME_DESKTOP="@@PACKAGE.desktop"
+ 
+ # We don't want bug-buddy intercepting our crashes. http://crbug.com/41012584
+ export GNOME_DISABLE_CRASH_DIALOG=SET_BY_GOOGLE_CHROME

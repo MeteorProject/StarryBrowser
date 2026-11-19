@@ -1,0 +1,10 @@
+# 基础主题定义，独立于浏览器视图，供界面组件共用。
+
+source_set("theme") {
+  sources = [
+    "theme.cc",
+    "theme.h",
+  ]
+
+  deps = [ "//skia" ]
+}

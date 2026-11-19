@@ -1,0 +1,13 @@
+diff --git a/chrome/browser/shell_integration_mac.mm b/chrome/browser/shell_integration_mac.mm
+index f41bf44eeb..e706b1e89d 100644
+--- a/chrome/browser/shell_integration_mac.mm
++++ b/chrome/browser/shell_integration_mac.mm
+@@ -329,7 +329,7 @@ DefaultWebClientState IsDefaultHandlerForUTType(const std::string& type) {
+       return "google-chrome";
+   }
+ #else
+-  return "chromium";
++  return std::string(base::apple::BaseBundleID());
+ #endif
+ }
+ 

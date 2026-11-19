@@ -1,0 +1,12 @@
+diff --git a/components/tracing/BUILD.gn b/components/tracing/BUILD.gn
+index 74237ca34e..23435af37b 100644
+--- a/components/tracing/BUILD.gn
++++ b/components/tracing/BUILD.gn
+@@ -70,6 +70,7 @@ if (is_win) {
+       "//base/win:pe_image",
+       "//crypto",
+       "//services/tracing/public/cpp:perfetto_interning_index",
++      "//starry/common:platform_branding",
+       "//third_party/perfetto:libperfetto",
+     ]
+   }

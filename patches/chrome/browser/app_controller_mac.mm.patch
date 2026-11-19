@@ -1,0 +1,74 @@
+diff --git a/chrome/browser/app_controller_mac.mm b/chrome/browser/app_controller_mac.mm
+index ead883ef95..8632219493 100644
+--- a/chrome/browser/app_controller_mac.mm
++++ b/chrome/browser/app_controller_mac.mm
+@@ -4,6 +4,8 @@
+ 
+ #import "chrome/browser/app_controller_mac.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <AppKit/AppKit.h>
+ #include <dispatch/dispatch.h>
+ #include <stddef.h>
+@@ -958,6 +960,11 @@ - (void)tryToTerminateApplication {
+     }
+   }
+ 
++  // Starry：有下载在进行时用 Starry 的对话框问（不阻塞），这一次先不退出。
++  if (!isPoweringOff && starry::ConfirmQuitWithDownloads()) {
++    return;
++  }
++
+   // Check for in-process downloads, and prompt the user if they really want
+   // to quit (and thus cancel downloads).
+   if (![self shouldQuitWithInProgressDownloads]) {
+@@ -1340,6 +1347,10 @@ - (void)applicationDidFinishLaunching:(NSNotification*)notify {
+     _lastActiveBrowser = browser->GetWeakPtr();
+   }
+   [self updateHandoffManager:activeWebContents];
++  // Starry：启动完了，定下推迟的启动窗口现在开还是等链接。
++  starry::DidFinishLaunching(
++      _startupTabs,
++      [notify.userInfo[NSApplicationLaunchIsDefaultLaunchKey] boolValue]);
+   [self openStartupUrls];
+ 
+   PrefService* localState = g_browser_process->local_state();
+@@ -1857,6 +1868,11 @@ - (BOOL)applicationShouldHandleReopen:(NSApplication*)theApplication
+   if (browser_shutdown::IsTryingToQuit())
+     return NO;
+ 
++  // Starry：只有小窗口时也算没有浏览器窗口。
++  if (starry::HandleDockReopen()) {
++    return NO;
++  }
++
+   // Bring all browser windows to the front. Specifically, this brings them in
+   // front of any app windows. FocusWindowSet will also unminimize the most
+   // recently minimized window if no windows in the set are visible.
+@@ -2101,8 +2117,14 @@ - (IBAction)showPreferencesForProfile:(Profile*)profile {
+   }
+   // Re-use an existing browser, or create a new one.
+   if (BrowserWindowInterface* browser = ActivateBrowser(profile)) {
++    if (starry::ShowStarrySettings(profile, browser)) {
++      return;
++    }
+     chrome::ShowSettings(browser);
+   } else {
++    if (starry::ShowStarrySettings(profile, nullptr)) {
++      return;
++    }
+     chrome::OpenOptionsWindow(profile);
+   }
+ }
+@@ -2650,6 +2672,10 @@ void OpenStartupTabsInBrowserWithProfile(const StartupTabs& tabs,
+     profile = ProfileManager::MaybeForceOffTheRecordMode(
+         profile->GetOriginalProfile());
+   }
++  // Starry：其他 App 里点的一个链接用小窗口。
++  if (starry::OpenExternalLinks(tabs, profile)) {
++    return;
++  }
+   // Use FindTabbedBrowser() to ensure URLs open in a normal tabbed browser
+   // window, not in PWA/app windows which cannot accept new tabs.
+   BrowserWindowInterface* browser =

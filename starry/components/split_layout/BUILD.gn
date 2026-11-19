@@ -1,0 +1,10 @@
+source_set("split_layout") {
+  sources = [
+    "split_layout.cc",
+    "split_layout.h",
+  ]
+  deps = [
+    "//base",
+    "//ui/gfx/geometry",
+  ]
+}

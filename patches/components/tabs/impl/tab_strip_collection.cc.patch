@@ -1,0 +1,23 @@
+diff --git a/components/tabs/impl/tab_strip_collection.cc b/components/tabs/impl/tab_strip_collection.cc
+index bfb0b51275..e6e76e5f85 100644
+--- a/components/tabs/impl/tab_strip_collection.cc
++++ b/components/tabs/impl/tab_strip_collection.cc
+@@ -103,6 +103,18 @@ void TabStripCollection::MoveTabRecursive(
+ 
+   TabInterface* tab = GetTabAtIndexRecursive(initial_index);
+   const std::optional<tab_groups::TabGroupId> old_group = tab->GetGroup();
++  if (tab->GetSplit() &&
++      tab->GetSplit() == GetTabAtIndexRecursive(final_index)->GetSplit() &&
++      old_group == new_group_id && tab->IsPinned() == new_pinned_state) {
++    auto* split = GetSplitTabCollection(*tab->GetSplit());
++    size_t destination =
++        split->GetIndexOfTab(GetTabAtIndexRecursive(final_index)).value();
++    TabCollection::Position position = {
++        split->GetHandle(),
++        destination + (initial_index < final_index ? 1 : 0)};
++    MoveTabImpl(tab, position);
++    return;
++  }
+ 
+   const std::vector<int> tab_indices = {static_cast<int>(initial_index)};
+ 

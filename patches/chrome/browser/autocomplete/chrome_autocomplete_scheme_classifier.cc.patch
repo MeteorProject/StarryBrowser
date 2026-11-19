@@ -1,0 +1,21 @@
+diff --git a/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc b/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
+index e0402ff520..08be6dac86 100644
+--- a/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
++++ b/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
+@@ -13,6 +13,7 @@
+ #include "chrome/browser/profiles/profile_io_data.h"
+ #include "components/custom_handlers/protocol_handler_registry.h"
+ #include "content/public/common/url_constants.h"
++#include "starry/common/internal_urls.h"  // nogncheck
+ #include "url/url_util.h"
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+@@ -70,6 +71,8 @@ ChromeAutocompleteSchemeClassifier::GetInputTypeForScheme(
+   }
+   if (base::IsStringASCII(scheme) &&
+       (ProfileIOData::IsHandledProtocol(scheme) ||
++       base::EqualsCaseInsensitiveASCII(scheme, starry::kUIScheme) ||
++       base::EqualsCaseInsensitiveASCII(scheme, starry::kUIUntrustedScheme) ||
+        base::EqualsCaseInsensitiveASCII(scheme, content::kViewSourceScheme) ||
+        base::EqualsCaseInsensitiveASCII(scheme, url::kJavaScriptScheme) ||
+        base::EqualsCaseInsensitiveASCII(scheme, url::kDataScheme))) {

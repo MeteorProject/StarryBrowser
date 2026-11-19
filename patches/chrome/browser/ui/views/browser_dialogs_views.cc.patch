@@ -1,0 +1,27 @@
+diff --git a/chrome/browser/ui/views/browser_dialogs_views.cc b/chrome/browser/ui/views/browser_dialogs_views.cc
+index aa32008d34..d4407887d6 100644
+--- a/chrome/browser/ui/views/browser_dialogs_views.cc
++++ b/chrome/browser/ui/views/browser_dialogs_views.cc
+@@ -17,6 +17,7 @@
+ #include "chrome/browser/ui/views/task_manager_view.h"
+ #include "components/constrained_window/constrained_window_views.h"
+ #include "components/permissions/chooser_controller.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "ui/base/interaction/element_identifier.h"
+ #include "ui/views/bubble/bubble_dialog_delegate_view.h"
+ #include "ui/views/bubble/bubble_dialog_model_host.h"
+@@ -51,10 +52,14 @@ namespace chrome {
+ task_manager::TaskManagerTableModel* ShowTaskManager(
+     BrowserWindowInterface* browser,
+     task_manager::StartAction start_action) {
++  if (starry::ShowTaskManager(browser)) {
++    return nullptr;
++  }
+   return task_manager::TaskManagerView::Show(browser, start_action);
+ }
+ 
+ void HideTaskManager() {
++  starry::HideTaskManager();
+   task_manager::TaskManagerView::Hide();
+ }
+ 

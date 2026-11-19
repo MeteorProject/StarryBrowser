@@ -1,0 +1,32 @@
+diff --git a/components/split_tabs/split_tab_visual_data.h b/components/split_tabs/split_tab_visual_data.h
+index 5d14b4e383..98ba877b81 100644
+--- a/components/split_tabs/split_tab_visual_data.h
++++ b/components/split_tabs/split_tab_visual_data.h
+@@ -5,6 +5,8 @@
+ #ifndef COMPONENTS_SPLIT_TABS_SPLIT_TAB_VISUAL_DATA_H_
+ #define COMPONENTS_SPLIT_TABS_SPLIT_TAB_VISUAL_DATA_H_
+ 
++#include <string>
++
+ namespace split_tabs {
+ 
+ // Orientation of a split view. Needs to be kept in sync with
+@@ -45,6 +47,10 @@ class SplitTabVisualData {
+ 
+   double split_ratio() const { return split_ratio_; }
+ 
++  // Starry's normalized layout tree, in reading order. Empty for legacy pairs.
++  const std::string& starry_layout() const { return starry_layout_; }
++  void set_starry_layout(const std::string& layout) { starry_layout_ = layout; }
++
+   // Checks whether two instances are visually equivalent.
+   friend bool operator==(const SplitTabVisualData&,
+                          const SplitTabVisualData&) = default;
+@@ -53,6 +59,7 @@ class SplitTabVisualData {
+   SplitTabLayout split_layout_;
+   // ratio of the first split tab's width to the available width.
+   double split_ratio_ = 0.5;
++  std::string starry_layout_;
+ };
+ 
+ }  // namespace split_tabs

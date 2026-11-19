@@ -1,0 +1,20 @@
+diff --git a/chrome/browser/translate/translate_service.cc b/chrome/browser/translate/translate_service.cc
+index 71995f24ec..cd49aaa410 100644
+--- a/chrome/browser/translate/translate_service.cc
++++ b/chrome/browser/translate/translate_service.cc
+@@ -25,6 +25,7 @@
+ #include "content/public/browser/network_service_instance.h"
+ #include "content/public/common/url_constants.h"
+ #include "services/network/public/cpp/shared_url_loader_factory.h"
++#include "starry/common/google_services.h"
+ #include "url/gurl.h"
+ #include "url/url_constants.h"
+ 
+@@ -113,6 +114,7 @@ void TranslateService::OnResourceRequestsAllowed() {
+   }
+ 
+   language_list->SetResourceRequestsAllowed(
++      starry::kGoogleTranslateEnabled &&
+       resource_request_allowed_notifier_.ResourceRequestsAllowed());
+ }
+ 

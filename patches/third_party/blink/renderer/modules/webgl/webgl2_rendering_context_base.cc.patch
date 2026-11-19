@@ -1,0 +1,57 @@
+diff --git a/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc b/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc
+index 9eb36fe26c..edd608414c 100644
+--- a/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc
++++ b/third_party/blink/renderer/modules/webgl/webgl2_rendering_context_base.cc
+@@ -12,6 +12,7 @@
+ #include "base/numerics/checked_math.h"
+ #include "base/numerics/safe_conversions.h"
+ #include "gpu/command_buffer/client/gles2_interface.h"
++#include "starry/renderer/webgl_fingerprint_protection.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/platform/web_graphics_context_3d_provider.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/webgl_any.h"
+@@ -419,6 +420,8 @@ void WebGL2RenderingContextBase::copyBufferSubData(GLenum read_target,
+   ContextGL()->CopyBufferSubData(
+       read_target, write_target, static_cast<GLintptr>(read_offset),
+       static_cast<GLintptr>(write_offset), static_cast<GLsizeiptr>(size));
++  starry::CopyWebGLBuffer(GetExecutionContext(), read_buffer, write_buffer,
++                          read_offset, write_offset, size);
+ }
+ 
+ void WebGL2RenderingContextBase::getBufferSubData(
+@@ -451,6 +454,9 @@ void WebGL2RenderingContextBase::getBufferSubData(
+   ContextGL()->GetBufferSubDataCHROMIUM(
+       target, static_cast<GLintptr>(src_byte_offset),
+       static_cast<GLsizeiptr>(destination_byte_length), destination_data_ptr);
++  starry::ProtectWebGLBuffer(GetExecutionContext(), source_buffer, ContextGL(),
++                             target, src_byte_offset, destination_data_ptr,
++                             destination_byte_length);
+ }
+ 
+ void WebGL2RenderingContextBase::blitFramebuffer(GLint src_x0,
+@@ -919,8 +925,16 @@ void WebGL2RenderingContextBase::readPixels(GLint x,
+     if (!binder.Succeeded()) {
+       return;
+     }
++    const bool record_readback =
++        starry::TrackWebGLPixelRead(GetExecutionContext(), buffer, format,
++                                    type) &&
++        starry::WebGLReadbackIsValid(ContextGL(), true, format, type);
+     ContextGL()->ReadPixels(x, y, width, height, format, type,
+                             reinterpret_cast<void*>(offset));
++    if (record_readback && !isContextLost())
++      starry::RecordWebGLPixels(GetExecutionContext(), buffer, offset, width,
++                                height, format, type,
++                                GetPackPixelStoreParams());
+   }
+ }
+ 
+@@ -4211,6 +4225,8 @@ void WebGL2RenderingContextBase::endTransformFeedback() {
+   }
+ 
+   ContextGL()->EndTransformFeedback();
++  starry::WebGLTransformFeedbackFinished(GetExecutionContext(),
++                                         transform_feedback_binding_.Get());
+ 
+   transform_feedback_binding_->SetPaused(false);
+   transform_feedback_binding_->SetActive(false);

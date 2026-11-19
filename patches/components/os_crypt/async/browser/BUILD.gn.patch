@@ -1,0 +1,13 @@
+diff --git a/components/os_crypt/async/browser/BUILD.gn b/components/os_crypt/async/browser/BUILD.gn
+index 2309659150..cb128cca18 100644
+--- a/components/os_crypt/async/browser/BUILD.gn
++++ b/components/os_crypt/async/browser/BUILD.gn
+@@ -140,7 +140,7 @@ if (is_linux && use_dbus) {
+       "//crypto",
+       "//dbus",
+     ]
+-    public_deps = [ "//build:branding_buildflags" ]
++    public_deps = [ "//starry/common:branding" ]
+   }
+ 
+   source_set("test_secret_portal") {

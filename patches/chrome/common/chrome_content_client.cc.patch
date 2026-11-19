@@ -1,0 +1,41 @@
+diff --git a/chrome/common/chrome_content_client.cc b/chrome/common/chrome_content_client.cc
+index 601ff3ce61..6b900aeae3 100644
+--- a/chrome/common/chrome_content_client.cc
++++ b/chrome/common/chrome_content_client.cc
+@@ -54,6 +54,8 @@
+ #include "mojo/public/cpp/bindings/pending_receiver.h"
+ #include "net/http/http_util.h"
+ #include "pdf/buildflags.h"
++#include "starry/common/branding.h"
++#include "starry/common/internal_urls.h"  // nogncheck
+ #include "third_party/widevine/cdm/buildflags.h"
+ #include "ui/base/l10n/l10n_util.h"
+ #include "ui/base/resource/resource_bundle.h"
+@@ -122,17 +124,12 @@ void ChromeContentClient::SetGpuInfo(const gpu::GPUInfo& gpu_info) {
+ void ChromeContentClient::AddPlugins(
+     std::vector<content::WebPluginInfo>* plugins) {
+ #if BUILDFLAG(ENABLE_PDF)
+-#if BUILDFLAG(GOOGLE_CHROME_BRANDING)
+-  static constexpr char16_t kPDFPluginName[] = u"Chrome PDF Plugin";
+-#else
+-  static constexpr char16_t kPDFPluginName[] = u"Chromium PDF Plugin";
+-#endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
+   static constexpr char16_t kPDFPluginDescription[] = u"Built-in PDF viewer";
+   static constexpr char16_t kPDFPluginExtensionDescription[] =
+       u"Portable Document Format";
+ 
+   content::WebPluginInfo pdf_info;
+-  pdf_info.name = kPDFPluginName;
++  pdf_info.name = starry::kPdfPluginName;
+   pdf_info.path = base::FilePath(ChromeContentClient::kPDFInternalPluginPath);
+   pdf_info.desc = kPDFPluginDescription;
+   // Deliberately registers no file extensions: only the PDF viewer and Print
+@@ -203,6 +200,8 @@ static const char* const kChromeStandardURLSchemes[] = {
+ };
+ 
+ void ChromeContentClient::AddAdditionalSchemes(Schemes* schemes) {
++  schemes->standard_schemes.push_back(starry::kUIScheme);
++  schemes->standard_schemes.push_back(starry::kUIUntrustedScheme);
+   for (auto* standard_scheme : kChromeStandardURLSchemes)
+     schemes->standard_schemes.push_back(standard_scheme);
+ 

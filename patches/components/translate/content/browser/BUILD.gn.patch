@@ -1,0 +1,21 @@
+diff --git a/components/translate/content/browser/BUILD.gn b/components/translate/content/browser/BUILD.gn
+index 69b3ca4059..a1c8898480 100644
+--- a/components/translate/content/browser/BUILD.gn
++++ b/components/translate/content/browser/BUILD.gn
+@@ -43,6 +43,7 @@ static_library("browser") {
+     "//net",
+     "//pdf:buildflags",
+     "//services/network/public/cpp",
++    "//starry/common:google_services",
+     "//ui/accessibility:ax_base",
+   ]
+ 
+@@ -83,6 +84,8 @@ source_set("unit_tests") {
+ 
+   if (enable_pdf_translation) {
+     sources += [ "pdf_translation_coordinator_unittest.cc" ]
++  }
++  if (enable_pdf) {
+     deps += [
+       "//components/pdf/browser",
+       "//pdf/mojom",

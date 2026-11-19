@@ -1,0 +1,22 @@
+diff --git a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
+index 564c8c000c..61a23bac3d 100644
+--- a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
++++ b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
+@@ -29,6 +29,7 @@
+ #include "ui/base/base_window.h"
+ #include "ui/base/clipboard/clipboard.h"
+ #include "ui/base/data_transfer_policy/data_transfer_endpoint.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "ui/views/widget/widget.h"
+ 
+ ChromeWebContentsViewDelegateViewsMac::ChromeWebContentsViewDelegateViewsMac(
+@@ -210,6 +211,9 @@
+     return;
+   }
+ 
++  if (starry::ShowWebContextMenu(context_menu_)) {
++    return;
++  }
+   context_menu_->Show();
+ }
+ 

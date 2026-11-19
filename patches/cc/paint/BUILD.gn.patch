@@ -1,0 +1,19 @@
+diff --git a/cc/paint/BUILD.gn b/cc/paint/BUILD.gn
+index f4628a9e40..722d90b29a 100644
+--- a/cc/paint/BUILD.gn
++++ b/cc/paint/BUILD.gn
+@@ -127,6 +127,14 @@ cc_component("paint") {
+     "transfer_cache_serialize_helper.h",
+   ]
+ 
++  # Starry: the built-in backdrop shaders (Liquid Glass).
++  sources += [
++    "//starry/cc/paint/starry_glass_sksl.cc",
++    "//starry/cc/paint/starry_glass_sksl.h",
++    "//starry/cc/paint/starry_shader_paint_filter.cc",
++    "//starry/cc/paint/starry_shader_paint_filter.h",
++  ]
++
+   defines = [ "CC_PAINT_IMPLEMENTATION=1" ]
+ 
+   # cc/paint is intended to be a separate component from cc that can be

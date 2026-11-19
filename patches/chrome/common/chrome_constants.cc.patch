@@ -1,0 +1,28 @@
+diff --git a/chrome/common/chrome_constants.cc b/chrome/common/chrome_constants.cc
+index 1a6b899b4b..ee8fa1efaf 100644
+--- a/chrome/common/chrome_constants.cc
++++ b/chrome/common/chrome_constants.cc
+@@ -32,9 +32,9 @@ const char kChromeVersion[] = CHROME_VERSION_STRING;
+ 
+ #if BUILDFLAG(IS_WIN)
+ const base::FilePath::CharType kBrowserProcessExecutableName[] =
+-    FPL("chrome.exe");
++    STARRY_WINDOWS_EXE;
+ const base::FilePath::CharType kHelperProcessExecutableName[] =
+-    FPL("chrome.exe");
++    STARRY_WINDOWS_EXE;
+ #elif BUILDFLAG(IS_MAC)
+ const base::FilePath::CharType kBrowserProcessExecutableName[] =
+     FPL(PRODUCT_FULLNAME_STRING);
+@@ -54,9 +54,9 @@ const base::FilePath::CharType kHelperProcessExecutableName[] = FPL("exe");
+ 
+ #if BUILDFLAG(IS_WIN)
+ const base::FilePath::CharType kBrowserProcessExecutablePath[] =
+-    FPL("chrome.exe");
++    STARRY_WINDOWS_EXE;
+ const base::FilePath::CharType kHelperProcessExecutablePath[] =
+-    FPL("chrome.exe");
++    STARRY_WINDOWS_EXE;
+ #elif BUILDFLAG(IS_MAC)
+ const base::FilePath::CharType kBrowserProcessExecutablePath[] =
+     FPL(PRODUCT_FULLNAME_STRING ".app/Contents/MacOS/" PRODUCT_FULLNAME_STRING);

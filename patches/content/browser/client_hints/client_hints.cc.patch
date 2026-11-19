@@ -1,0 +1,53 @@
+diff --git a/content/browser/client_hints/client_hints.cc b/content/browser/client_hints/client_hints.cc
+index 1eae0a9aa9..ce8387aae1 100644
+--- a/content/browser/client_hints/client_hints.cc
++++ b/content/browser/client_hints/client_hints.cc
+@@ -51,6 +51,7 @@
+ #include "services/network/public/cpp/permissions_policy/permissions_policy_declaration.h"
+ #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom-shared.h"
+ #include "services/network/public/mojom/web_client_hints_types.mojom-shared.h"
++#include "starry/browser/privacy/fingerprint_client_hints.h"
+ #include "third_party/blink/public/common/client_hints/client_hints.h"
+ #include "third_party/blink/public/common/client_hints/enabled_client_hints.h"
+ #include "third_party/blink/public/common/device_memory/approximated_device_memory.h"
+@@ -674,6 +675,7 @@ enum class ClientUaHeaderCallType {
+ 
+ // Implementation of UpdateNavigationRequestClientUaHeaders().
+ void UpdateNavigationRequestClientUaHeadersImpl(
++    BrowserContext* context,
+     ClientHintsControllerDelegate* delegate,
+     bool is_ua_override_on,
+     FrameTreeNode* ftn_for_web_contents_override,
+@@ -711,6 +713,8 @@ void UpdateNavigationRequestClientUaHeadersImpl(
+   if (!disable_due_to_custom_ua) {
+     if (!ua_metadata.has_value())
+       ua_metadata = delegate->GetUserAgentMetadata();
++    starry::ProtectClientHintsUserAgent(context, data.main_frame_origin,
++                                        *ua_metadata);
+ 
+     // The `Sec-CH-UA` client hint is attached to all outgoing requests. This is
+     // (intentionally) different than other client hints.
+@@ -845,8 +849,9 @@ void UpdateNavigationRequestClientUaHeaders(
+   // the DevTools UA override logic.
+   ClientHintsExtendedData data(origin, frame_tree_node, delegate);
+   UpdateNavigationRequestClientUaHeadersImpl(
+-      delegate, override_ua, frame_tree_node,
+-      ClientUaHeaderCallType::kAfterCreated, headers, {}, data,
++      frame_tree_node->current_frame_host()->GetBrowserContext(), delegate,
++      override_ua, frame_tree_node, ClientUaHeaderCallType::kAfterCreated,
++      headers, {}, data,
+       /*ftn_for_devtools_override=*/frame_tree_node);
+ }
+ namespace {
+@@ -910,9 +915,10 @@ void AddRequestClientHintsHeaders(
+   if (ShouldAddClientHint(data, WebClientHintsType::kEct_DEPRECATED)) {
+     AddEctHeader(headers, network_quality_tracker, url);
+   }
++  starry::ProtectClientHintsHeaders(context, data.main_frame_origin, *headers);
+ 
+   UpdateNavigationRequestClientUaHeadersImpl(
+-      delegate, is_ua_override_on, frame_tree_node,
++      context, delegate, is_ua_override_on, frame_tree_node,
+       ClientUaHeaderCallType::kDuringCreation, headers, container_policy, data,
+       ftn_for_devtools_override);
+ 

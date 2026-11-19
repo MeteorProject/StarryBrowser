@@ -1,0 +1,41 @@
+diff --git a/components/translate/content/browser/content_translate_driver.cc b/components/translate/content/browser/content_translate_driver.cc
+index b824193e93..c5efbba890 100644
+--- a/components/translate/content/browser/content_translate_driver.cc
++++ b/components/translate/content/browser/content_translate_driver.cc
+@@ -50,6 +50,7 @@
+ #include "net/http/http_response_headers.h"
+ #include "net/http/http_status_code.h"
+ #include "services/metrics/public/cpp/ukm_source_id.h"
++#include "starry/common/google_services.h"
+ #include "ui/accessibility/accessibility_features.h"
+ #include "url/gurl.h"
+ 
+@@ -486,17 +487,19 @@ void ContentTranslateDriver::RegisterPage(
+   translate_manager_->GetLanguageState()->LanguageDetermined(
+       details.adopted_language, page_level_translation_criteria_met);
+ 
+-  if (IsPdfTranslation()) {
++  if constexpr (starry::kGoogleTranslateEnabled) {
++    if (IsPdfTranslation()) {
+ #if BUILDFLAG(ENABLE_PDF)
+-    content::RenderFrameHost* rfh = web_contents()->GetPrimaryMainFrame();
+-    auto* coordinator =
+-        PDFTranslationCoordinator::GetOrCreateForCurrentDocument(rfh);
+-    coordinator->RunIfPdfIsTranslatable(base::BindOnce(
+-        &TranslateManager::InitiateTranslation,
+-        translate_manager_->GetWeakPtr(), details.adopted_language));
++      content::RenderFrameHost* rfh = web_contents()->GetPrimaryMainFrame();
++      auto* coordinator =
++          PDFTranslationCoordinator::GetOrCreateForCurrentDocument(rfh);
++      coordinator->RunIfPdfIsTranslatable(base::BindOnce(
++          &TranslateManager::InitiateTranslation,
++          translate_manager_->GetWeakPtr(), details.adopted_language));
+ #endif
+-  } else {
+-    translate_manager_->InitiateTranslation(details.adopted_language);
++    } else {
++      translate_manager_->InitiateTranslation(details.adopted_language);
++    }
+   }
+ 
+   // Save the page language on the navigation entry so it can be synced.

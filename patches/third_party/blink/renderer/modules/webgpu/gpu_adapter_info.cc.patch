@@ -1,0 +1,80 @@
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_adapter_info.cc b/third_party/blink/renderer/modules/webgpu/gpu_adapter_info.cc
+index 9d155705c1..669a8a6aa1 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_adapter_info.cc
++++ b/third_party/blink/renderer/modules/webgpu/gpu_adapter_info.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "third_party/blink/renderer/modules/webgpu/gpu_adapter_info.h"
+ 
++#include "starry/renderer/webgpu_fingerprint_protection.h"
+ #include "third_party/blink/renderer/modules/webgpu/gpu_memory_heap_info.h"
+ #include "third_party/blink/renderer/modules/webgpu/gpu_subgroup_matrix_config.h"
+ 
+@@ -46,19 +47,19 @@ void GPUAdapterInfo::AppendSubgroupMatrixConfig(
+ }
+ 
+ const String& GPUAdapterInfo::vendor() const {
+-  return vendor_;
++  return starry::WebGPUIdentity(vendor_);
+ }
+ 
+ const String& GPUAdapterInfo::architecture() const {
+-  return architecture_;
++  return starry::WebGPUIdentity(architecture_);
+ }
+ 
+ const String& GPUAdapterInfo::device() const {
+-  return device_;
++  return starry::WebGPUIdentity(device_);
+ }
+ 
+ const String& GPUAdapterInfo::description() const {
+-  return description_;
++  return starry::WebGPUIdentity(description_);
+ }
+ 
+ uint32_t GPUAdapterInfo::subgroupMinSize() const {
+@@ -74,20 +75,20 @@ bool GPUAdapterInfo::isFallbackAdapter() const {
+ }
+ 
+ const String& GPUAdapterInfo::driver() const {
+-  return driver_;
++  return starry::WebGPUIdentity(driver_);
+ }
+ 
+ const String& GPUAdapterInfo::backend() const {
+-  return backend_;
++  return starry::WebGPUIdentity(backend_);
+ }
+ 
+ const String& GPUAdapterInfo::type() const {
+-  return type_;
++  return starry::WebGPUIdentity(type_);
+ }
+ 
+ const HeapVector<Member<GPUMemoryHeapInfo>>& GPUAdapterInfo::memoryHeaps()
+     const {
+-  return memory_heaps_;
++  return starry::WebGPUMemoryHeaps(memory_heaps_);
+ }
+ 
+ const HeapVector<Member<GPUSubgroupMatrixConfig>>&
+@@ -96,15 +97,15 @@ GPUAdapterInfo::subgroupMatrixConfigs() const {
+ }
+ 
+ const std::optional<uint32_t>& GPUAdapterInfo::d3dShaderModel() const {
+-  return d3d_shader_model_;
++  return starry::WebGPUDriverVersion(d3d_shader_model_);
+ }
+ 
+ const std::optional<uint32_t>& GPUAdapterInfo::vkDriverVersion() const {
+-  return vk_driver_version_;
++  return starry::WebGPUDriverVersion(vk_driver_version_);
+ }
+ 
+ const String& GPUAdapterInfo::powerPreference() const {
+-  return power_preference_;
++  return starry::WebGPUIdentity(power_preference_);
+ }
+ 
+ void GPUAdapterInfo::Trace(Visitor* visitor) const {

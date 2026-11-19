@@ -1,0 +1,28 @@
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_queue.cc b/third_party/blink/renderer/modules/webgpu/gpu_queue.cc
+index 76017b74b8..db6377f4fc 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_queue.cc
++++ b/third_party/blink/renderer/modules/webgpu/gpu_queue.cc
+@@ -11,6 +11,7 @@
+ #include "gpu/command_buffer/client/webgpu_interface.h"
+ #include "gpu/command_buffer/common/shared_image_usage.h"
+ #include "gpu/config/gpu_finch_features.h"
++#include "starry/renderer/webgpu_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/core/v8/script_promise_resolver.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_union_element_elementimage.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_gpu_command_buffer_descriptor.h"
+@@ -114,6 +115,7 @@ void GPUQueue::submit(ScriptState* script_state,
+   std::unique_ptr<wgpu::CommandBuffer[]> commandBuffers = AsDawnType(buffers);
+ 
+   GetHandle().Submit(buffers.size(), commandBuffers.get());
++  starry::SubmitWebGPUCommands(this, buffers);
+   // WebGPU guarantees that submitted commands finish in finite time so we
+   // need to ensure commands are flushed. Flush immediately so the GPU process
+   // eagerly processes commands to maximize throughput.
+@@ -253,6 +255,7 @@ void GPUQueue::WriteBufferImpl(ScriptState* script_state,
+                                 static_cast<size_t>(write_byte_size));
+   GetHandle().WriteBuffer(buffer->GetHandle(), buffer_offset, data_span.data(),
+                           data_span.size());
++  starry::OverwriteWebGPUBuffer(this, buffer, buffer_offset, data_span.size());
+   EnsureFlush(ToEventLoop(script_state));
+ }
+ 

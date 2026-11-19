@@ -1,0 +1,32 @@
+# Liquid Glass：材质参数和玻璃视图。着色器和滤镜在 //starry/cc/paint
+# （编进 //cc/paint）。这里的代码不分平台。
+
+import("//starry/build/devtools.gni")
+
+source_set("glass") {
+  sources = [
+    "glass_material.cc",
+    "glass_material.h",
+    "glass_view.cc",
+    "glass_view.h",
+  ]
+
+  deps = [
+    "//base",
+    "//cc/paint",
+    "//skia",
+    "//ui/base",
+    "//ui/base/metadata",
+    "//ui/compositor",
+    "//ui/gfx",
+    "//ui/gfx/geometry",
+    "//ui/views",
+  ]
+
+  if (starry_devtools) {
+    import("//starry_internal/browser/glass/glass_devtools.gni")
+    defines = [ "STARRY_DEVTOOLS=1" ]
+    sources += starry_glass_devtools_sources
+    deps += starry_glass_devtools_deps
+  }
+}

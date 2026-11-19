@@ -1,0 +1,28 @@
+# 动效系统：解析解阻尼弹簧、动效参数曲线以及在合成器线程运行的图层动画。
+
+source_set("motion") {
+  sources = [
+    "frame_motion.cc",
+    "frame_motion.h",
+    "layer_loop.cc",
+    "layer_loop.h",
+    "layer_motion.cc",
+    "layer_motion.h",
+    "motion.cc",
+    "motion.h",
+    "spring.cc",
+    "spring.h",
+    "value_motion.cc",
+    "value_motion.h",
+  ]
+
+  deps = [
+    "//base",
+    "//cc/animation",
+    "//ui/compositor",
+    "//ui/gfx",
+    "//ui/gfx/animation",
+    "//ui/gfx/animation/keyframe",
+    "//ui/gfx/geometry",
+  ]
+}

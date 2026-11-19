@@ -1,0 +1,22 @@
+diff --git a/chrome/browser/ui/views/frame/contents_container_view.cc b/chrome/browser/ui/views/frame/contents_container_view.cc
+index 5407bd717c..2b7f8d8f01 100644
+--- a/chrome/browser/ui/views/frame/contents_container_view.cc
++++ b/chrome/browser/ui/views/frame/contents_container_view.cc
+@@ -48,6 +48,7 @@
+ #include "ui/views/view.h"
+ #include "ui/views/view_class_properties.h"
+ #include "ui/views/widget/widget.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ 
+ #if BUILDFLAG(IS_WIN)
+ #include "ui/views/widget/native_widget_aura.h"
+@@ -199,6 +200,9 @@ std::vector<views::View*> ContentsContainerView::GetAccessiblePanes() {
+ void ContentsContainerView::UpdateBorderAndOverlay(bool is_in_split,
+                                                    bool is_active,
+                                                    bool is_highlighted) {
++  if (starry::OverrideSplitPaneDecorations(this, is_in_split)) {
++    return;
++  }
+   const bool split_changed = is_in_split != is_in_split_;
+   is_in_split_ = is_in_split;
+ 

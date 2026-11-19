@@ -1,0 +1,24 @@
+diff --git a/chrome/common/chrome_constants.h b/chrome/common/chrome_constants.h
+index e7b9a848b3..9a770ccbb8 100644
+--- a/chrome/common/chrome_constants.h
++++ b/chrome/common/chrome_constants.h
+@@ -10,6 +10,10 @@
+ #include "base/files/file_path.h"
+ #include "build/build_config.h"
+ 
++#if BUILDFLAG(IS_WIN)
++#include "starry/common/platform_branding.h"
++#endif
++
+ namespace chrome {
+ 
+ extern const char kChromeVersion[];
+@@ -36,7 +40,7 @@ extern const char kMacHelperSuffixAlerts[];
+ 
+ #if BUILDFLAG(IS_WIN)
+ inline constexpr base::FilePath::CharType kBrowserResourcesDll[] =
+-    FILE_PATH_LITERAL("chrome.dll");
++    STARRY_WINDOWS_DLL;
+ inline constexpr base::FilePath::CharType kElfDll[] =
+     FILE_PATH_LITERAL("chrome_elf.dll");
+ inline constexpr base::FilePath::CharType kRendererDll[] =

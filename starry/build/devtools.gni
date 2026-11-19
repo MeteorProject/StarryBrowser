@@ -1,0 +1,5 @@
+# Optional local developer tooling hook (disabled by default).
+# Local overrides live in an untracked `args.local.gn` beside the repo root.
+declare_args() {
+  starry_devtools = false
+}

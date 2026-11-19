@@ -1,0 +1,31 @@
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_render_pass_encoder.cc b/third_party/blink/renderer/modules/webgpu/gpu_render_pass_encoder.cc
+index d8e742bbde..5a0507c8d8 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_render_pass_encoder.cc
++++ b/third_party/blink/renderer/modules/webgpu/gpu_render_pass_encoder.cc
+@@ -164,6 +164,8 @@ void GPURenderPassEncoder::multiDrawIndirect(
+       indirectBuffer->GetHandle(), indirectOffset, maxDrawCount,
+       drawCountBuffer ? drawCountBuffer->GetHandle() : wgpu::Buffer(nullptr),
+       drawCountBufferOffset);
++  if (maxDrawCount)
++    starry::RecordWebGPUShaderWrite(this);
+ }
+ 
+ void GPURenderPassEncoder::multiDrawIndexedIndirect(
+@@ -207,6 +209,8 @@ void GPURenderPassEncoder::multiDrawIndexedIndirect(
+       indirectBuffer->GetHandle(), indirectOffset, maxDrawCount,
+       drawCountBuffer ? drawCountBuffer->GetHandle() : wgpu::Buffer(nullptr),
+       drawCountBufferOffset);
++  if (maxDrawCount)
++    starry::RecordWebGPUShaderWrite(this);
+ }
+ 
+ void GPURenderPassEncoder::executeBundles(
+@@ -214,6 +218,8 @@ void GPURenderPassEncoder::executeBundles(
+   std::unique_ptr<wgpu::RenderBundle[]> dawn_bundles = AsDawnType(bundles);
+ 
+   GetHandle().ExecuteBundles(bundles.size(), dawn_bundles.get());
++  if (!bundles.empty())
++    starry::RecordWebGPUShaderWrite(this);
+ }
+ 
+ void GPURenderPassEncoder::writeTimestamp(

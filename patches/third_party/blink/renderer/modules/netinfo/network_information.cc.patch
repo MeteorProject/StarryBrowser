@@ -1,0 +1,53 @@
+diff --git a/third_party/blink/renderer/modules/netinfo/network_information.cc b/third_party/blink/renderer/modules/netinfo/network_information.cc
+index 81df80e2b5..7753cb89ed 100644
+--- a/third_party/blink/renderer/modules/netinfo/network_information.cc
++++ b/third_party/blink/renderer/modules/netinfo/network_information.cc
+@@ -7,6 +7,8 @@
+ #include <algorithm>
+ 
+ #include "base/time/time.h"
++#include "starry/common/fingerprint_values.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/mojom/devtools/console_message.mojom-blink.h"
+ #include "third_party/blink/public/platform/task_type.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_connection_type.h"
+@@ -111,6 +113,9 @@ double NetworkInformation::downlinkMax() const {
+ }
+ 
+ V8EffectiveConnectionType NetworkInformation::effectiveType() {
++  if (starry::ShouldProtectFingerprint(GetExecutionContext())) {
++    return V8EffectiveConnectionType(V8EffectiveConnectionType::Enum::k4G);
++  }
+   MaybeShowWebHoldbackConsoleMsg();
+   std::optional<WebEffectiveConnectionType> override_ect =
+       GetNetworkStateNotifier().GetWebHoldbackEffectiveType();
+@@ -132,6 +137,9 @@ V8EffectiveConnectionType NetworkInformation::effectiveType() {
+ }
+ 
+ uint32_t NetworkInformation::rtt() {
++  if (starry::ShouldProtectFingerprint(GetExecutionContext())) {
++    return starry::kProtectedRttMs;
++  }
+   MaybeShowWebHoldbackConsoleMsg();
+   std::optional<base::TimeDelta> override_rtt =
+       GetNetworkStateNotifier().GetWebHoldbackHttpRtt();
+@@ -148,6 +156,9 @@ uint32_t NetworkInformation::rtt() {
+ }
+ 
+ double NetworkInformation::downlink() {
++  if (starry::ShouldProtectFingerprint(GetExecutionContext())) {
++    return starry::kProtectedDownlinkMbps;
++  }
+   MaybeShowWebHoldbackConsoleMsg();
+   std::optional<double> override_downlink_mbps =
+       GetNetworkStateNotifier().GetWebHoldbackDownlinkThroughputMbps();
+@@ -192,7 +203,8 @@ void NetworkInformation::ConnectionChange(
+   bool network_quality_estimate_changed = false;
+   // Allow setting |network_quality_estimate_changed| to true only if the
+   // network quality holdback experiment is not enabled.
+-  if (!GetNetworkStateNotifier().GetWebHoldbackEffectiveType()) {
++  if (!GetNetworkStateNotifier().GetWebHoldbackEffectiveType() &&
++      !starry::ShouldProtectFingerprint(GetExecutionContext())) {
+     network_quality_estimate_changed = effective_type_ != effective_type ||
+                                        http_rtt_msec_ != new_http_rtt_msec ||
+                                        downlink_mbps_ != new_downlink_mbps;

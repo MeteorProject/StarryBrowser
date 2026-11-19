@@ -1,0 +1,40 @@
+diff --git a/components/tracing/common/etw_stack_sampling_win.cc b/components/tracing/common/etw_stack_sampling_win.cc
+index cb5977bf17..de97dd9cb3 100644
+--- a/components/tracing/common/etw_stack_sampling_win.cc
++++ b/components/tracing/common/etw_stack_sampling_win.cc
+@@ -19,6 +19,7 @@
+ #include "base/profiler/module_cache.h"
+ #include "base/strings/utf_string_conversions.h"
+ #include "base/win/pe_image.h"
++#include "starry/common/platform_branding.h"
+ #include "third_party/perfetto/include/perfetto/tracing/core/data_source_config.h"
+ #include "third_party/perfetto/include/perfetto/tracing/core/trace_config.h"
+ #include "third_party/perfetto/protos/perfetto/config/etw/etw_config.gen.h"
+@@ -29,13 +30,20 @@ namespace {
+ // Images whose functions should be symbolized in ETW call stacks, and the
+ // directory where each is expected to be.
+ constexpr std::pair<const wchar_t*, int> kImagesOfInterest[] = {
+-    {L"chrome.exe", base::DIR_EXE},        {L"chrome.dll", base::DIR_MODULE},
+-    {L"dxcompiler.dll", base::DIR_MODULE}, {L"dxil.dll", base::DIR_MODULE},
+-    {L"libEGL.dll", base::DIR_MODULE},     {L"libGLESv2.dll", base::DIR_MODULE},
+-    {L"vulkan-1.dll", base::DIR_MODULE},   {L"advapi32.dll", base::DIR_SYSTEM},
+-    {L"apphelp.dll", base::DIR_SYSTEM},    {L"dbghelp.dll", base::DIR_SYSTEM},
+-    {L"kernel32.dll", base::DIR_SYSTEM},   {L"ntdll.dll", base::DIR_SYSTEM},
+-    {L"ntoskrnl.exe", base::DIR_SYSTEM},   {L"user32.dll", base::DIR_SYSTEM}};
++    {STARRY_WINDOWS_EXE, base::DIR_EXE},
++    {STARRY_WINDOWS_DLL, base::DIR_MODULE},
++    {L"dxcompiler.dll", base::DIR_MODULE},
++    {L"dxil.dll", base::DIR_MODULE},
++    {L"libEGL.dll", base::DIR_MODULE},
++    {L"libGLESv2.dll", base::DIR_MODULE},
++    {L"vulkan-1.dll", base::DIR_MODULE},
++    {L"advapi32.dll", base::DIR_SYSTEM},
++    {L"apphelp.dll", base::DIR_SYSTEM},
++    {L"dbghelp.dll", base::DIR_SYSTEM},
++    {L"kernel32.dll", base::DIR_SYSTEM},
++    {L"ntdll.dll", base::DIR_SYSTEM},
++    {L"ntoskrnl.exe", base::DIR_SYSTEM},
++    {L"user32.dll", base::DIR_SYSTEM}};
+ 
+ // Retrieves the full path and debug ID for each image in `kImagesOfInterest`,
+ // from memory or from disk if needed, and returns as a [path, debug ID] map.

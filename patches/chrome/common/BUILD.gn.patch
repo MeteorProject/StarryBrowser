@@ -1,0 +1,40 @@
+diff --git a/chrome/common/BUILD.gn b/chrome/common/BUILD.gn
+index 6f5f891dc6..a68428fb0f 100644
+--- a/chrome/common/BUILD.gn
++++ b/chrome/common/BUILD.gn
+@@ -85,7 +85,10 @@ source_set("channel_info") {
+     "channel_info.cc",
+     "channel_info.h",
+   ]
+-  deps = [ "//build:branding_buildflags" ]
++  deps = [
++    "//build:branding_buildflags",
++    "//starry/common:branding",
++  ]
+   public_deps = [
+     "//base",
+     "//components/version_info",
+@@ -275,6 +278,7 @@ static_library("common_lib") {
+     "//components/page_load_metrics/common",
+     "//components/pdf/common:constants",
+     "//components/pdf/common:util",
++    "//starry/common:branding",
+   ]
+ 
+   if (is_mac || is_win || is_linux || is_chromeos) {
+@@ -480,6 +484,7 @@ static_library("non_code_constants") {
+   ]
+ 
+   if (is_win) {
++    public_deps += [ "//starry/common:platform_branding" ]
+     sources += [ "chrome_icon_resources_win.h" ]
+   }
+ 
+@@ -586,6 +591,7 @@ static_library("constants") {
+     "//extensions/buildflags",
+     "//media:media_buildflags",
+     "//printing/buildflags",
++    "//starry/common:branding",
+     "//third_party/widevine/cdm:buildflags",
+   ]
+ 

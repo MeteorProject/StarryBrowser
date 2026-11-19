@@ -1,0 +1,58 @@
+diff --git a/chrome/installer/linux/common/installer.py b/chrome/installer/linux/common/installer.py
+index b2b6f8c06d..a34ce2e086 100644
+--- a/chrome/installer/linux/common/installer.py
++++ b/chrome/installer/linux/common/installer.py
+@@ -19,6 +19,10 @@ import subprocess
+ import sys
+ import typing
+ 
++# Starry keeps product-specific packaging behavior outside the upstream tree.
++sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4]))
++from starry.build.branding import linux_package as starry_packaging
++
+ 
+ class PackageFormat(enum.Enum):
+     DEB = "deb"
+@@ -422,6 +426,7 @@ class InstallerConfig:
+             ) = cls._compute_rpm_repoconfig(data["package_orig"])
+ 
+         config = cls(**data)
++        starry_packaging.configure_package(config)
+         config.rpm_package_filename = f"{config.package_orig}-{config.channel}"
+         config.desktop_exec = f"/usr/bin/{config.usr_bin_symlink_name}"
+         config.desktop_icon = config.info_vars["PACKAGE"]
+@@ -435,15 +440,7 @@ class InstallerConfig:
+             self.flatpak_tags = "\ntags=proprietary;"
+             base_id = "com.google.Chrome"
+         else:
+-            self.developer_id = "org.chromium"
+-            self.project_license_spdx = (
+-                "BSD-3-Clause and LGPL-2.1+ and Apache-2.0 and IJG and MIT "
+-                "and GPL-2.0+ and ISC and OpenSSL and (MPL-1.1 or GPL-2.0 or "
+-                "LGPL-2.0)"
+-            )
+-            self.flatpak_command = "chromium"
+-            self.flatpak_tags = ""
+-            base_id = "org.chromium.Chromium"
++            base_id = starry_packaging.configure_flatpak(self)
+ 
+         if self.channel == "stable":
+             self.app_id = base_id
+@@ -489,7 +486,7 @@ class InstallerConfig:
+ 
+         def parse_simple(file_path: pathlib.Path) -> dict[str, str]:
+             return dict(
+-                line.strip().split("=") for line in file_path.open("r") if line
++                line.strip().split("=", 1) for line in file_path.open("r") if line
+             )
+ 
+         data["info_vars"] = parse_shell(
+@@ -897,7 +894,7 @@ class InstallerConfig:
+             if self.channel not in ["beta", "unstable", "canary"]:
+                 self.uri_scheme = "x-scheme-handler/google-chrome;"
+         else:
+-            self.uri_scheme = "x-scheme-handler/chromium;"
++            self.uri_scheme = starry_packaging.direct_launch_scheme(self)
+ 
+         # apparmor profile
+         artifacts.append(

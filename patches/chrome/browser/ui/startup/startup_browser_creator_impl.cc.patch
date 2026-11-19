@@ -1,0 +1,24 @@
+diff --git a/chrome/browser/ui/startup/startup_browser_creator_impl.cc b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
+index 1e34f398af..b86f1f5479 100644
+--- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/startup/startup_browser_creator_impl.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <stddef.h>
+ 
+ #include <algorithm>
+@@ -439,6 +441,10 @@ BrowserWindowInterface* StartupBrowserCreatorImpl::OpenTabsInBrowser(
+     add_types |= AddTabTypes::ADD_FORCE_INDEX;
+     if (tab.type == StartupTab::Type::kPinned) {
+       add_types |= AddTabTypes::ADD_PINNED;
++      if (starry::RestoreStartupPin(browser, tab, add_types)) {
++        first_tab = false;
++        continue;
++      }
+     }
+ 
+     NavigateParams params(browser, tab.url, ui::PAGE_TRANSITION_AUTO_TOPLEVEL);

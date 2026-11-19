@@ -1,0 +1,11 @@
+diff --git a/chrome/installer/launcher_support/BUILD.gn b/chrome/installer/launcher_support/BUILD.gn
+index ee3f090025..133535f889 100644
+--- a/chrome/installer/launcher_support/BUILD.gn
++++ b/chrome/installer/launcher_support/BUILD.gn
+@@ -11,5 +11,6 @@ source_set("launcher_support") {
+   deps = [
+     "//base",
+     "//build:branding_buildflags",
++    "//starry/common:platform_branding",
+   ]
+ }

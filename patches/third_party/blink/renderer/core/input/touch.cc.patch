@@ -1,0 +1,27 @@
+diff --git a/third_party/blink/renderer/core/input/touch.cc b/third_party/blink/renderer/core/input/touch.cc
+index 56f3440957..e1322973eb 100644
+--- a/third_party/blink/renderer/core/input/touch.cc
++++ b/third_party/blink/renderer/core/input/touch.cc
+@@ -25,6 +25,7 @@
+ 
+ #include "third_party/blink/renderer/core/input/touch.h"
+ 
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_touch_init.h"
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+ #include "third_party/blink/renderer/core/frame/local_frame_view.h"
+@@ -75,7 +76,13 @@ Touch::Touch(LocalFrame* frame,
+       radius_(radius),
+       rotation_angle_(rotation_angle),
+       force_(force),
+-      absolute_location_(PageToAbsolute(frame, page_pos)) {}
++      absolute_location_(PageToAbsolute(frame, page_pos)) {
++  if (frame) {
++    if (auto point = starry::ProtectedScreenPoint(*frame, client_pos_)) {
++      screen_pos_ = *point;
++    }
++  }
++}
+ 
+ Touch::Touch(EventTarget* target,
+              int identifier,

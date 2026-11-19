@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+ <!-- Starry Browser 的图标，画布 1024，圆角方块 824，颜色、阴影和 Starry Player 相同。128 px 以上用这张。 -->
+ <defs>
+  <clipPath id="tile"><path d="M640.586 100C722.193 100 762.997 100 806.921 113.889C854.878 131.344 892.656 169.122 910.111 217.079C924 261.003 924 301.807 924 383.414L924 640.586C924 722.193 924 762.997 910.111 806.921C892.656 854.878 854.878 892.656 806.921 910.111C762.997 924 722.193 924 640.586 924L383.414 924C301.807 924 261.003 924 217.079 910.111C169.122 892.656 131.344 854.878 113.889 806.921C100 762.997 100 722.193 100 640.586L100 383.414C100 301.807 100 261.003 113.889 217.079C131.344 169.122 169.122 131.344 217.079 113.889C261.003 100 301.807 100 383.414 100Z"/></clipPath>
+  <filter id="shadow" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024" color-interpolation-filters="sRGB">
+   <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity="0.21"/>
+  </filter>
+ </defs>
+ <g filter="url(#shadow)"><g clip-path="url(#tile)">
+  <rect width="1024" height="1024" fill="#221C4E"/>
+  <circle cx="236" cy="262" r="6" fill="#A9A5CC" opacity="0.75"/>
+  <circle cx="390" cy="180" r="4" fill="#A9A5CC" opacity="0.75"/>
+  <circle cx="806" cy="196" r="5" fill="#A9A5CC" opacity="0.75"/>
+  <circle cx="820" cy="412" r="5" fill="#A9A5CC" opacity="0.75"/>
+  <circle cx="206" cy="436" r="4" fill="#A9A5CC" opacity="0.75"/>
+  <circle cx="512" cy="1250" r="702" fill="#3A2565"/>
+  <circle cx="512" cy="1250" r="668" fill="#6D3274"/>
+  <circle cx="512" cy="1250" r="634" fill="#B14D79"/>
+  <circle cx="512" cy="1250" r="600" fill="#FE7971"/>
+  <path d="M512 214C521 301.36 531.8 314.8 602 326C531.8 337.2 521 350.64 512 438C503 350.64 492.2 337.2 422 326C492.2 314.8 503 301.36 512 214Z" fill="#FFFFFF"/>
+  <path d="M664 202C666.5 225.4 669.5 229 689 232C669.5 235 666.5 238.6 664 262C661.5 238.6 658.5 235 639 232C658.5 229 661.5 225.4 664 202Z" fill="#FFFFFF"/>
+ </g></g>
+</svg>

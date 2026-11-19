@@ -1,0 +1,12 @@
+diff --git a/components/translate/core/browser/BUILD.gn b/components/translate/core/browser/BUILD.gn
+index 77e130e408..ef3842febb 100644
+--- a/components/translate/core/browser/BUILD.gn
++++ b/components/translate/core/browser/BUILD.gn
+@@ -76,6 +76,7 @@ static_library("browser") {
+     "//services/metrics/public/cpp:metrics_cpp",
+     "//services/metrics/public/cpp:ukm_builders",
+     "//services/network/public/cpp",
++    "//starry/common:google_services",
+     "//third_party/icu",
+     "//third_party/metrics_proto",
+     "//ui/base",

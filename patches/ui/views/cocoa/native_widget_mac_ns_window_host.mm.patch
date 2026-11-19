@@ -1,0 +1,24 @@
+diff --git a/ui/views/cocoa/native_widget_mac_ns_window_host.mm b/ui/views/cocoa/native_widget_mac_ns_window_host.mm
+index 352ef08958..2354bbb91a 100644
+--- a/ui/views/cocoa/native_widget_mac_ns_window_host.mm
++++ b/ui/views/cocoa/native_widget_mac_ns_window_host.mm
+@@ -1069,6 +1069,19 @@ void HandleAccelerator(const ui::Accelerator& accelerator,
+   return text_input_host_->GetTextInputClient();
+ }
+ 
++NSView* NativeWidgetMacNSWindowHost::GetNativeViewHostViewAt(
++    const gfx::Point& location_in_content) {
++  if (!root_view_) {
++    return nullptr;
++  }
++  View* target_view = root_view_->GetEventHandlerForPoint(location_in_content);
++  if (!target_view || !views::IsViewClass<views::NativeViewHost>(target_view)) {
++    return nullptr;
++  }
++  auto it = attached_native_view_host_views_.find(target_view);
++  return it == attached_native_view_host_views_.end() ? nullptr : it->second;
++}
++
+ void NativeWidgetMacNSWindowHost::SetLayerAndCompositorOpaque(bool opaque) {
+   if (layer()) {
+     layer()->SetFillsBoundsOpaquely(opaque);

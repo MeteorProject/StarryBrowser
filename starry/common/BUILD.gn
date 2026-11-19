@@ -1,0 +1,33 @@
+# Copyright 2026 The Starry Browser Authors
+
+import("//build/config/chrome_build.gni")
+
+source_set("google_services") {
+  sources = [ "google_services.h" ]
+}
+
+action("generate_platform_branding") {
+  script = "//starry/build/branding/platform_branding.py"
+  inputs = [ branding_file_path ]
+  outputs = [ "$target_gen_dir/platform_branding.h" ]
+  args = [
+    "--branding",
+    rebase_path(branding_file_path, root_build_dir),
+    "--format=header",
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+source_set("platform_branding") {
+  sources = get_target_outputs(":generate_platform_branding")
+  public_deps = [ ":generate_platform_branding" ]
+}
+
+source_set("branding") {
+  sources = [ "branding.h" ]
+  public_deps = [
+    ":platform_branding",
+    "//base/version_info:generate_version_info",
+  ]
+}

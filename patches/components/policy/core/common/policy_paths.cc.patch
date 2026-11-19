@@ -1,0 +1,21 @@
+diff --git a/components/policy/core/common/policy_paths.cc b/components/policy/core/common/policy_paths.cc
+index 7c15eeaa4f..bf11bcdbf6 100644
+--- a/components/policy/core/common/policy_paths.cc
++++ b/components/policy/core/common/policy_paths.cc
+@@ -6,6 +6,7 @@
+ 
+ #include "build/branding_buildflags.h"
+ #include "build/build_config.h"
++#include "starry/common/platform_branding.h"
+ 
+ namespace policy {
+ 
+@@ -18,7 +19,7 @@ const char kPolicyPath[] = "/etc/opt/chrome/policies";
+ #elif BUILDFLAG(GOOGLE_CHROME_FOR_TESTING_BRANDING)
+ const char kPolicyPath[] = "/etc/opt/chrome_for_testing/policies";
+ #else
+-const char kPolicyPath[] = "/etc/chromium/policies";
++const char kPolicyPath[] = STARRY_LINUX_POLICY_PATH;
+ #endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
+ #endif  // BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC)
+ 

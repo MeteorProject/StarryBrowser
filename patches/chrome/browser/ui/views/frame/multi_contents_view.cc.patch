@@ -1,0 +1,226 @@
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view.cc b/chrome/browser/ui/views/frame/multi_contents_view.cc
+index a756f076ff..7771212b66 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view.cc
++++ b/chrome/browser/ui/views/frame/multi_contents_view.cc
+@@ -3,6 +3,8 @@
+ // found in the LICENSE file.
+ 
+ #include "chrome/browser/ui/views/frame/multi_contents_view.h"
++#include "components/tabs/public/split_tab_data.h"
++#include "starry/components/split_layout/split_layout.h"
+ 
+ #include <algorithm>
+ #include <cstdlib>
+@@ -90,6 +92,9 @@ MultiContentsView::MultiContentsView(
+   contents_container_views_.push_back(
+       AddChildView(std::make_unique<ContentsContainerView>(browser_view_)));
+   contents_container_views_[1]->SetVisible(false);
++  contents_container_views_.push_back(
++      AddChildView(std::make_unique<ContentsContainerView>(browser_view_)));
++  contents_container_views_[2]->SetVisible(false);
+ 
+   drop_target_view_ =
+       AddChildView(std::make_unique<MultiContentsDropTargetView>());
+@@ -262,12 +267,14 @@ bool MultiContentsView::IsInSplitView() const {
+ void MultiContentsView::SetWebContentsAtIndex(
+     content::WebContents* web_contents,
+     int index) {
+-  CHECK(index >= 0 && index < 2);
++  CHECK(index >= 0 &&
++        static_cast<size_t>(index) < contents_container_views_.size());
+   contents_container_views_[index]->contents_view()->SetWebContents(
+       web_contents);
+ 
+-  if (index == 1 && !contents_container_views_[1]->GetVisible()) {
+-    contents_container_views_[1]->SetVisible(true);
++  if (index > 0 && web_contents &&
++      !contents_container_views_[index]->GetVisible()) {
++    contents_container_views_[index]->SetVisible(true);
+     resize_area_->SetVisible(true);
+     UpdateContentsBorderAndOverlay();
+   }
+@@ -301,10 +308,14 @@ void MultiContentsView::CloseSplitView() {
+   }
+ 
+   if (active_index_ != 0) {
+-    SwapContentsInSplitView();
++    std::swap(contents_container_views_[0],
++              contents_container_views_[active_index_]);
++    active_index_ = 0;
++  }
++  for (size_t i = 1; i < contents_container_views_.size(); ++i) {
++    contents_container_views_[i]->contents_view()->SetWebContents(nullptr);
++    contents_container_views_[i]->SetVisible(false);
+   }
+-  contents_container_views_[1]->contents_view()->SetWebContents(nullptr);
+-  contents_container_views_[1]->SetVisible(false);
+   resize_area_->SetVisible(false);
+   UpdateContentsBorderAndOverlay();
+ 
+@@ -316,29 +327,71 @@ void MultiContentsView::CloseSplitView() {
+ }
+ 
+ void MultiContentsView::SwapContentsInSplitView() {
+-  // Reorder the child views so that focus order will be consistent with
+-  // contents_container_views_.
+-  ContentsContainerView* start_view = contents_container_views_[0];
+-  ContentsContainerView* end_view = contents_container_views_[1];
+-  size_t start_view_child_index = GetIndexOf(start_view).value();
+-  size_t end_view_child_index = GetIndexOf(end_view).value();
+-  ReorderChildView(start_view, end_view_child_index);
+-  ReorderChildView(end_view, start_view_child_index);
+-
+-  std::swap(contents_container_views_[0], contents_container_views_[1]);
+-
+-  active_index_ = active_index_ == 0 ? 1 : 0;
++  auto* model = browser_view_->browser()->GetTabStripModel();
++  auto* active = model->GetActiveTab();
++  if (!active || !active->GetSplit()) {
++    return;
++  }
++  const auto tabs = model->GetSplitData(*active->GetSplit())->ListTabs();
++  std::vector<size_t> positions;
++  for (auto& container : contents_container_views_) {
++    positions.push_back(GetIndexOf(container).value());
++    auto* contents = container->contents_view()->web_contents();
++    if (contents && !std::ranges::any_of(tabs, [contents](auto* tab) {
++          return tab->GetContents() == contents;
++        })) {
++      // Only detach pages leaving the visible group. Keep the native view and
++      // compositor surface of retained pages attached throughout a rearrange.
++      if (container->Contains(GetFocusManager()->GetFocusedView())) {
++        GetFocusManager()->ClearFocus();
++      }
++      container->contents_view()->SetWebContents(nullptr);
++    }
++  }
++  std::ranges::sort(positions);
++  for (size_t i = 0; i < tabs.size(); ++i) {
++    auto found = std::ranges::find_if(
++        contents_container_views_, [&](const auto& container) {
++          return container->contents_view()->web_contents() ==
++                 tabs[i]->GetContents();
++        });
++    if (found == contents_container_views_.end()) {
++      found = std::ranges::find_if(
++          contents_container_views_, [](const auto& container) {
++            return !container->contents_view()->web_contents();
++          });
++    }
++    CHECK(found != contents_container_views_.end());
++    std::iter_swap(contents_container_views_.begin() + i, found);
++    if (!contents_container_views_[i]->contents_view()->web_contents()) {
++      SetWebContentsAtIndex(tabs[i]->GetContents(), i);
++    }
++    if (tabs[i] == active) {
++      active_index_ = i;
++    }
++  }
++  for (size_t i = 0; i < contents_container_views_.size(); ++i) {
++    ReorderChildView(contents_container_views_[i], positions[i]);
++    contents_container_views_[i]->SetVisible(i < tabs.size());
++  }
++  SetActiveIndex(active_index_);
++  InvalidateLayout();
+ }
+ 
+ void MultiContentsView::SetActiveIndex(int index) {
+   // Index should never be less than 0 or equal to or greater than the total
+   // number of contents views.
+-  CHECK(index >= 0 && index < 2);
++  CHECK(index >= 0 &&
++        static_cast<size_t>(index) < contents_container_views_.size());
+   // We will only activate a visible contents view.
+   CHECK(contents_container_views_[index]->GetVisible());
+   active_index_ = index;
+-  GetActiveContentsView()->set_is_primary_web_contents_for_window(true);
+-  GetInactiveContentsView()->set_is_primary_web_contents_for_window(false);
++  for (size_t i = 0; i < contents_container_views_.size(); ++i) {
++    contents_container_views_[i]
++        ->contents_view()
++        ->set_is_primary_web_contents_for_window(static_cast<int>(i) ==
++                                                 active_index_);
++  }
+   UpdateContentsBorderAndOverlay();
+ }
+ 
+@@ -449,7 +502,7 @@ void MultiContentsView::OnWebContentsFocused(views::WebView* web_view) {
+   if (IsInSplitView()) {
+     // Check whether the widget is visible as otherwise during browser hide,
+     // inactive web contents gets focus. See crbug.com/419335827
+-    if (GetInactiveContentsView()->web_contents() == web_view->web_contents() &&
++    if (GetActiveContentsView()->web_contents() != web_view->web_contents() &&
+         GetWidget()->IsVisible()) {
+       delegate_->WebContentsFocused(web_view->web_contents());
+     }
+@@ -461,10 +514,9 @@ void MultiContentsView::OnActorOverlayFocused(views::WebView* web_view) {
+     for (auto& contents_container_view : contents_container_views_) {
+       if (contents_container_view->actor_overlay_web_view() &&
+           contents_container_view->actor_overlay_web_view() == web_view &&
+-          GetInactiveContentsView() ==
+-              contents_container_view->contents_view()) {
++          GetActiveContentsView() != contents_container_view->contents_view()) {
+         return delegate_->WebContentsFocused(
+-            GetInactiveContentsView()->web_contents());
++            contents_container_view->contents_view()->web_contents());
+       }
+     }
+   }
+@@ -475,10 +527,9 @@ void MultiContentsView::OnNtpFooterFocused(views::WebView* web_view) {
+     for (auto& contents_container_view : contents_container_views_) {
+       if (contents_container_view->new_tab_footer_view() &&
+           contents_container_view->new_tab_footer_view() == web_view &&
+-          GetInactiveContentsView() ==
+-              contents_container_view->contents_view()) {
++          GetActiveContentsView() != contents_container_view->contents_view()) {
+         return delegate_->WebContentsFocused(
+-            GetInactiveContentsView()->web_contents());
++            contents_container_view->contents_view()->web_contents());
+       }
+     }
+   }
+@@ -488,7 +539,7 @@ void MultiContentsView::OnReadAnythingOverlayFocused(
+     ContentsContainerView* container,
+     views::WebView* web_view) {
+   if (IsInSplitView() && GetWidget()->IsVisible()) {
+-    if (GetInactiveContentsContainerView() == container) {
++    if (GetActiveContentsContainerView() != container) {
+       delegate_->WebContentsFocused(container->contents_view()->web_contents());
+     }
+   }
+@@ -523,6 +574,26 @@ views::ProposedLayout MultiContentsView::CalculateProposedLayout(
+   if (IsInSplitView()) {
+     available_space.Inset(split_view_insets_);
+   }
++  if (IsInSplitView()) {
++    const int count = contents_container_views_[2]->GetVisible() ? 3 : 2;
++    const auto tree = starry::split::Layout::Decode(
++        visual_data_.starry_layout(), count,
++        GetSplitLayout() == split_tabs::SplitTabLayout::kSideBySide,
++        GetSplitRatio());
++    const auto frames = starry::split::Frames(tree, available_space);
++    for (size_t i = 0; i < contents_container_views_.size(); ++i) {
++      layouts.child_layouts.emplace_back(
++          contents_container_views_[i].get(), i < frames.panes.size(),
++          i < frames.panes.size() ? frames.panes[i] : gfx::Rect());
++    }
++    // Starry owns the interactive dividers. Keep the native split-state flag.
++    layouts.child_layouts.emplace_back(resize_area_.get(), true, gfx::Rect());
++    layouts.child_layouts.emplace_back(lens_overlay_view_.get(),
++                                       lens_overlay_view_->GetVisible(),
++                                       gfx::Rect(width, height));
++    layouts.host_size = gfx::Size(width, height);
++    return layouts;
++  }
+   ViewSizes sizes = GetViewSizes(available_space);
+ 
+   gfx::Rect start_rect, resize_rect, end_rect;
+@@ -559,7 +630,7 @@ views::ProposedLayout MultiContentsView::CalculateProposedLayout(
+ }
+ 
+ void MultiContentsView::BeforeApplyLayout(const views::ProposedLayout& layout) {
+-  if (!target_content_bounds_) {
++  if (!target_content_bounds_ || contents_container_views_[2]->GetVisible()) {
+     for (auto& contents : contents_container_views_) {
+       contents->SetTargetContentBounds(std::nullopt);
+     }

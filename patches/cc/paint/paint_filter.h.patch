@@ -1,0 +1,18 @@
+diff --git a/cc/paint/paint_filter.h b/cc/paint/paint_filter.h
+index 7d8a84c8c7..0f8e5e83db 100644
+--- a/cc/paint/paint_filter.h
++++ b/cc/paint/paint_filter.h
+@@ -61,8 +61,11 @@ class CC_PAINT_EXPORT PaintFilter : public SkRefCnt {
+     kLightingDistant,
+     kLightingPoint,
+     kLightingSpot,
+-    // Update the following if kLightingSpot is not the max anymore.
+-    kMaxValue = kLightingSpot
++    // Starry: a built-in shader over the filter's input, see
++    // starry/cc/paint/starry_shader_paint_filter.h.
++    kStarryShader,
++    // Update the following if kStarryShader is not the max anymore.
++    kMaxValue = kStarryShader
+   };
+   enum class LightingType {
+     kDiffuse,

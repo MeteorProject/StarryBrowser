@@ -1,0 +1,23 @@
+diff --git a/components/sessions/core/session_service_commands.cc b/components/sessions/core/session_service_commands.cc
+index 6832a5e8f4..800f9034b0 100644
+--- a/components/sessions/core/session_service_commands.cc
++++ b/components/sessions/core/session_service_commands.cc
+@@ -849,6 +849,10 @@ bool CreateTabsAndWindows(
+ 
+         split->split_visual_data_ = split_tabs::SplitTabVisualData(
+             SplitTabLayoutFromString(split_layout_str), split_ratio);
++        std::string starry_layout;
++        if (iter.ReadString(&starry_layout)) {
++          split->split_visual_data_.set_starry_layout(starry_layout);
++        }
+         break;
+       }
+ 
+@@ -1216,6 +1220,7 @@ std::unique_ptr<SessionCommand> CreateSplitTabDataUpdateCommand(
+   pickle.WriteDouble(split_tab_visual_data->split_ratio());
+   pickle.WriteString(
+       SplitTabLayoutToString(split_tab_visual_data->split_layout()));
++  pickle.WriteString(split_tab_visual_data->starry_layout());
+ 
+   return std::make_unique<SessionCommand>(kCommandSetSplitTabData, pickle);
+ }

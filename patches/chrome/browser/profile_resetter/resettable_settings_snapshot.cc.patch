@@ -1,0 +1,23 @@
+diff --git a/chrome/browser/profile_resetter/resettable_settings_snapshot.cc b/chrome/browser/profile_resetter/resettable_settings_snapshot.cc
+index e8a6352cc7..bb20972d81 100644
+--- a/chrome/browser/profile_resetter/resettable_settings_snapshot.cc
++++ b/chrome/browser/profile_resetter/resettable_settings_snapshot.cc
+@@ -25,6 +25,7 @@
+ #include "chrome/browser/profiles/profile.h"
+ #include "chrome/browser/search_engines/template_url_service_factory.h"
+ #include "chrome/common/channel_info.h"
++#include "chrome/common/chrome_constants.h"
+ #include "chrome/common/pref_names.h"
+ #include "chrome/grit/branded_strings.h"
+ #include "chrome/grit/generated_resources.h"
+@@ -325,7 +326,9 @@ base::ListValue GetReadableFeedbackForSnapshot(
+     for (auto i = shortcuts.begin(); i != shortcuts.end(); ++i) {
+       if (!shortcut_targets.empty())
+         shortcut_targets += u"\n";
+-      shortcut_targets += u"chrome.exe ";
++      shortcut_targets +=
++          base::FilePath(chrome::kBrowserProcessExecutableName).AsUTF16Unsafe();
++      shortcut_targets += u" ";
+       shortcut_targets += base::WideToUTF16(i->second);
+     }
+     if (!shortcut_targets.empty()) {

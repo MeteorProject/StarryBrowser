@@ -1,0 +1,13 @@
+diff --git a/components/webui/chrome_urls/resources/app.ts b/components/webui/chrome_urls/resources/app.ts
+index a8e80b4902..574f92be7d 100644
+--- a/components/webui/chrome_urls/resources/app.ts
++++ b/components/webui/chrome_urls/resources/app.ts
+@@ -176,7 +176,7 @@ export class ChromeUrlsAppElement extends CrLitElement {
+   }
+ 
+   protected isChromeUrlsUrl_(info: WebuiUrlInfo): boolean {
+-    return info.url === 'chrome://chrome-urls';
++    return info.url === 'starry://starry-urls';
+   }
+ }
+ 

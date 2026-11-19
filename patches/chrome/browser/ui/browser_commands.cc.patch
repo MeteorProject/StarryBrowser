@@ -1,0 +1,32 @@
+diff --git a/chrome/browser/ui/browser_commands.cc b/chrome/browser/ui/browser_commands.cc
+index 365dcd789d..b0b96534c1 100644
+--- a/chrome/browser/ui/browser_commands.cc
++++ b/chrome/browser/ui/browser_commands.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/browser_commands.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <algorithm>
+ #include <memory>
+ #include <numeric>
+@@ -398,6 +400,8 @@ content::WebContents* DuplicateTabAt(BrowserWindowInterface* browser,
+     int add_types = AddTabTypes::ADD_ACTIVE | AddTabTypes::ADD_INHERIT_OPENER |
+                     (pinned ? AddTabTypes::ADD_PINNED : 0);
+     const auto old_group = tab_strip_model->GetTabGroupForTab(index);
++    dst_index = starry::tab_tree::DuplicateIndex(tab_strip_model, index,
++                                                 dst_index, raw_contents_dupe);
+     tab_strip_model->InsertWebContentsAt(dst_index, std::move(contents_dupe),
+                                          add_types, old_group);
+   } else {
+@@ -603,6 +607,9 @@ bool IsTabSelectable(
+       model->IsGroupCollapsed(tab->GetGroup().value())) {
+     return false;
+   }
++  if (starry::tab_tree::IsHidden(model, model->GetIndexOfTab(tab))) {
++    return false;
++  }
+ 
+   // Do not select the tab if it is not part of the focused state.
+   if (focused_group.has_value() &&

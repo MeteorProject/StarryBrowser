@@ -1,0 +1,21 @@
+diff --git a/third_party/blink/renderer/core/html/canvas/canvas_async_blob_creator.cc b/third_party/blink/renderer/core/html/canvas/canvas_async_blob_creator.cc
+index 8e9d842904..2c8f338d5a 100644
+--- a/third_party/blink/renderer/core/html/canvas/canvas_async_blob_creator.cc
++++ b/third_party/blink/renderer/core/html/canvas/canvas_async_blob_creator.cc
+@@ -8,6 +8,7 @@
+ #include "base/metrics/histogram_functions.h"
+ #include "base/metrics/histogram_macros.h"
+ #include "build/build_config.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/platform/platform.h"
+ #include "third_party/blink/public/platform/task_type.h"
+ #include "third_party/blink/renderer/bindings/core/v8/script_promise_resolver.h"
+@@ -178,7 +179,7 @@ CanvasAsyncBlobCreator::CanvasAsyncBlobCreator(
+   // We use pixmap to access the image pixels. Make the image unaccelerated if
+   // necessary. May return nullptr if GPU context lost or readback buffer
+   // allocation failed.
+-  image_ = image->MakeUnaccelerated();
++  image_ = starry::ProtectCanvasReadback(context, image->MakeUnaccelerated());
+ 
+   if (image_) {
+     skia_image_ = image_->PaintImageForCurrentFrame().GetSwSkImage();

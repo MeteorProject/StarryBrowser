@@ -1,0 +1,25 @@
+diff --git a/third_party/blink/renderer/core/frame/web_frame_widget_impl.cc b/third_party/blink/renderer/core/frame/web_frame_widget_impl.cc
+index 44e834ea71..449dd46392 100644
+--- a/third_party/blink/renderer/core/frame/web_frame_widget_impl.cc
++++ b/third_party/blink/renderer/core/frame/web_frame_widget_impl.cc
+@@ -56,6 +56,7 @@
+ #include "cc/trees/layer_tree_host.h"
+ #include "cc/trees/swap_promise.h"
+ #include "components/viz/common/resources/transferable_resource.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/common/features_generated.h"
+ #include "third_party/blink/public/common/metrics/document_update_reason.h"
+@@ -5568,8 +5569,11 @@ void WebFrameWidgetImpl::DidUpdateSurfaceAndScreen(
+         screen->UpdateDisplayId(original_screen_infos.current().display_id);
+         CoreInitializer::GetInstance().DidUpdateScreens(
+             *local_frame->GetFrame(), original_screen_infos);
+-        if (window_screen_has_changed)
++        // Starry: a protected page's screen is its viewport.
++        if (window_screen_has_changed &&
++            !starry::ShouldProtectFrame(local_frame->GetFrame())) {
+           screen->DispatchEvent(*Event::Create(event_type_names::kChange));
++        }
+         if (color_gamut_changed) {
+           local_frame->GetFrame()
+               ->GetDocument()

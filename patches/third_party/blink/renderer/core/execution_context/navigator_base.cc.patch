@@ -1,0 +1,37 @@
+diff --git a/third_party/blink/renderer/core/execution_context/navigator_base.cc b/third_party/blink/renderer/core/execution_context/navigator_base.cc
+index 83f427c5ec..7331e8c1bf 100644
+--- a/third_party/blink/renderer/core/execution_context/navigator_base.cc
++++ b/third_party/blink/renderer/core/execution_context/navigator_base.cc
+@@ -6,6 +6,7 @@
+ 
+ #include "base/feature_list.h"
+ #include "build/build_config.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/renderer/core/execution_context/execution_context.h"
+ #include "third_party/blink/renderer/core/frame/navigator_concurrent_hardware.h"
+@@ -85,8 +86,9 @@ void NavigatorBase::Trace(Visitor* visitor) const {
+ }
+ 
+ unsigned int NavigatorBase::hardwareConcurrency() const {
+-  unsigned int hardware_concurrency =
+-      NavigatorConcurrentHardware::hardwareConcurrency();
++  unsigned int hardware_concurrency = starry::ProtectHardwareConcurrency(
++      GetExecutionContext(),
++      NavigatorConcurrentHardware::hardwareConcurrency());
+ 
+   probe::ApplyHardwareConcurrencyOverride(
+       probe::ToCoreProbeSink(GetExecutionContext()), hardware_concurrency);
+@@ -99,8 +101,10 @@ ExecutionContext* NavigatorBase::GetUAExecutionContext() const {
+ 
+ UserAgentMetadata NavigatorBase::GetUserAgentMetadata() const {
+   ExecutionContext* execution_context = GetExecutionContext();
+-  return execution_context ? execution_context->GetUserAgentMetadata()
+-                           : blink::UserAgentMetadata();
++  return execution_context
++             ? starry::ProtectUserAgentMetadata(
++                   execution_context, execution_context->GetUserAgentMetadata())
++             : blink::UserAgentMetadata();
+ }
+ 
+ }  // namespace blink

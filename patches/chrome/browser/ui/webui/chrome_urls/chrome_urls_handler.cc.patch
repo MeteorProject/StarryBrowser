@@ -1,0 +1,26 @@
+diff --git a/chrome/browser/ui/webui/chrome_urls/chrome_urls_handler.cc b/chrome/browser/ui/webui/chrome_urls/chrome_urls_handler.cc
+index cb38ff470d..5d19cce481 100644
+--- a/chrome/browser/ui/webui/chrome_urls/chrome_urls_handler.cc
++++ b/chrome/browser/ui/webui/chrome_urls/chrome_urls_handler.cc
+@@ -16,6 +16,7 @@
+ #include "content/public/browser/internal_webui_config.h"
+ #include "content/public/browser/webui_config_map.h"
+ #include "content/public/common/url_constants.h"
++#include "starry/common/internal_urls.h"  // nogncheck
+ #include "url/gurl.h"
+ 
+ namespace chrome_urls {
+@@ -96,9 +97,12 @@ void ChromeUrlsHandler::GetUrls(GetUrlsCallback callback) {
+ 
+   chrome_urls::mojom::ChromeUrlsDataPtr result(
+       chrome_urls::mojom::ChromeUrlsData::New());
++  for (auto& info : webui_urls) {
++    info->url = starry::ToStarryURL(info->url);
++  }
+   result->webui_urls = std::move(webui_urls);
+   for (base::cstring_view url : chrome::ChromeDebugURLs()) {
+-    result->command_urls.emplace_back(url);
++    result->command_urls.emplace_back(starry::ToStarryURL(GURL(url)));
+   }
+ 
+   PrefService* local_state = g_browser_process->local_state();

@@ -1,0 +1,30 @@
+# Release 和 Dev 共用的构建参数。不写 target_os / target_cpu：用编译机自己的，三个平台
+# 都用这一份。
+
+# 没有 Google 的远程构建
+use_remoteexec = false
+chrome_pgo_phase = 0
+
+# H.264 / AAC（普通网站的 MP4）。分发时需注意编解码器专利授权。
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+
+# 不启用 Widevine DRM。
+enable_widevine = false
+
+# 不套用 testing/variations/fieldtrial_testing_config.json（开发版默认会套，
+# 会打开 Omnibox Everywhere 的菜单栏图标等实验功能）。行为和正式版一致。
+disable_fieldtrial_testing_config = true
+
+# 没有 Google 的 API 密钥。不设的话每次启动都有一条「Google API keys are missing」的
+# 信息栏；设成任意值它就不出现，用到密钥的功能照样不可用。OAuth 的 client id 不设：
+# 这样登录 Google 账号、同步的入口保持关闭。
+google_api_key = "no"
+
+# Google 的页面翻译和 Gemini 没有完整的编译开关，服务入口另外固定关闭
+# （starry/common/google_services.h）。PDF 翻译直接不带。
+enable_pdf_translation = false
+
+# 产品名、macOS 的 Bundle ID 这些（.app、Helper、Framework 的名字都从它来）。图标在
+# patches/ 里（scripts/app-icon.sh 生成），说明见 docs/development.md。
+branding_file_path = "//starry/app/theme/BRANDING"

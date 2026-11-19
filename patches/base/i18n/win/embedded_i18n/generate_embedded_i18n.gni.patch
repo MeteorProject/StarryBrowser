@@ -1,0 +1,27 @@
+diff --git a/base/i18n/win/embedded_i18n/generate_embedded_i18n.gni b/base/i18n/win/embedded_i18n/generate_embedded_i18n.gni
+index 556b766c32..62066b2b9a 100644
+--- a/base/i18n/win/embedded_i18n/generate_embedded_i18n.gni
++++ b/base/i18n/win/embedded_i18n/generate_embedded_i18n.gni
+@@ -49,6 +49,8 @@ import("//build/config/python.gni")
+ #
+ #   deps (optional)
+ #   visibility (optional)
++#   script (optional): Override the string generation entry point.
++#   extra_inputs (optional): Additional inputs used by the entry point.
+ 
+ # Locales in |all_chrome_locales| are for pak file format. We need to convert
+ # them to the xtb version.
+@@ -86,7 +88,13 @@ template("generate_embedded_i18n") {
+ 
+   action_with_pydeps(target_name) {
+     script = "//base/i18n/win/embedded_i18n/create_string_rc.py"
++    if (defined(invoker.script)) {
++      script = invoker.script
++    }
+     inputs = []
++    if (defined(invoker.extra_inputs)) {
++      inputs += invoker.extra_inputs
++    }
+ 
+     output_dir = rebase_path(target_gen_dir, root_build_dir)
+ 

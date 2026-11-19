@@ -1,0 +1,22 @@
+diff --git a/chrome/browser/ui/views/session_crashed_bubble_view.cc b/chrome/browser/ui/views/session_crashed_bubble_view.cc
+index 3a0abc0d12..c2c548ad3e 100644
+--- a/chrome/browser/ui/views/session_crashed_bubble_view.cc
++++ b/chrome/browser/ui/views/session_crashed_bubble_view.cc
+@@ -42,6 +42,7 @@
+ #include "components/strings/grit/components_strings.h"
+ #include "content/public/browser/browser_context.h"
+ #include "content/public/browser/browser_thread.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "ui/base/buildflags.h"
+ #include "ui/base/interaction/element_identifier.h"
+ #include "ui/base/l10n/l10n_util.h"
+@@ -225,6 +226,9 @@ void SessionCrashedBubble::ShowIfNotOffTheRecordProfile(
+   if (browser->GetProfile()->IsOffTheRecord()) {
+     return;
+   }
++  if (starry::ShowSessionCrashedDialog(browser, skip_tab_checking)) {
++    return;
++  }
+ 
+   // Observes possible browser removal before Show is called.
+   auto browser_observer =

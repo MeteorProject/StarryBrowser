@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/pdf/BUILD.gn b/chrome/browser/pdf/BUILD.gn
+index 4d694792c0..556d95357e 100644
+--- a/chrome/browser/pdf/BUILD.gn
++++ b/chrome/browser/pdf/BUILD.gn
+@@ -51,6 +51,7 @@ source_set("pdf") {
+     "//extensions/common:common_constants",
+     "//pdf:features",
+     "//printing/buildflags",
++    "//starry/common:branding",
+     "//third_party/blink/public/common:headers",
+     "//ui/base",
+     "//ui/gfx:color_utils",

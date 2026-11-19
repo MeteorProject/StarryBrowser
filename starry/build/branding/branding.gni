@@ -1,0 +1,32 @@
+# Copyright 2026 The Starry Browser Authors
+
+import("//build/config/chrome_build.gni")
+
+# GN needs these values for output filenames and MIDL substitutions. Other
+# consumers use the generated header or package metadata at build time.
+foreach(_line, read_file(branding_file_path, "list lines")) {
+  _pair = []
+  _pair = string_split(_line, "=")
+  if (_pair[0] == "PRODUCT_ID") {
+    starry_product_id = _pair[1]
+  } else if (_pair[0] == "WINDOWS_ELEVATOR_IID") {
+    _elevator_iid = _pair[1]
+  } else if (_pair[0] == "WINDOWS_ELEVATOR2_IID") {
+    _elevator2_iid = _pair[1]
+  } else if (_pair[0] == "WINDOWS_ELEVATOR_TYPELIB_IID") {
+    _elevator_typelib = _pair[1]
+  } else if (_pair[0] == "WINDOWS_TRACING_IID") {
+    _tracing_iid = _pair[1]
+  } else if (_pair[0] == "WINDOWS_TRACING_TYPELIB_IID") {
+    _tracing_typelib = _pair[1]
+  }
+}
+assert(defined(starry_product_id), "Starry PRODUCT_ID is missing from BRANDING")
+
+starry_elevation_dynamic_guids =
+    "B88C45B9-8825-4629-B83E-77CC67D9CEED=$_elevator_iid," +
+    "BB19A0E5-00C6-4966-94B2-5AFEC6FED93A=$_elevator2_iid," +
+    "0014D784-7012-4A79-8AB6-ADDB8193A06E=$_elevator_typelib"
+starry_tracing_dynamic_guids =
+    "E0B03E2D-7682-4D83-B9FF-4574AF720500=$_tracing_iid," +
+    "C9368104-11AE-4784-8C2D-115C5D421937=$_tracing_typelib"

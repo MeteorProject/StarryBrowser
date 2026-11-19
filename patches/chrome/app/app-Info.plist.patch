@@ -1,0 +1,40 @@
+diff --git a/chrome/app/app-Info.plist b/chrome/app/app-Info.plist
+index 6fada0a2b1..a56c953f82 100644
+--- a/chrome/app/app-Info.plist
++++ b/chrome/app/app-Info.plist
+@@ -157,6 +157,8 @@
+ 	<string>6.0</string>
+ 	<key>CFBundleName</key>
+ 	<string>${CHROMIUM_SHORT_NAME}</string>
++	<key>CrProductDirName</key>
++	<string>${EXECUTABLE_NAME}</string>
+ 	<key>CFBundlePackageType</key>
+ 	<string>APPL</string>
+ 	<key>CFBundleSignature</key>
+@@ -198,7 +200,7 @@
+ 			<string>Direct launch URL</string>
+ 			<key>CFBundleURLSchemes</key>
+ 			<array>
+-				<string>%DIRECT_LAUNCH_URL_SCHEME%</string>
++				<string>${CHROMIUM_BUNDLE_ID}</string>
+ 			</array>
+ 		</dict>
+ 	</array>
+@@ -234,7 +236,7 @@
+ 				<string>public.content</string>
+ 			</array>
+ 			<key>UTTypeDescription</key>
+-			<string>Chromium Extension</string>
++			<string>${EXECUTABLE_NAME} Extension</string>
+ 			<key>UTTypeIcons</key>
+ 			<dict>
+ 				<key>UTTypeIconBadgeName</key>
+@@ -262,7 +264,7 @@
+ 				<string>com.apple.web-internet-location</string>
+ 			</array>
+ 			<key>UTTypeDescription</key>
+-			<string>Chromium Shortcut</string>
++			<string>${EXECUTABLE_NAME} Shortcut</string>
+ 			<key>UTTypeIcons</key>
+ 			<dict>
+ 				<key>UTTypeIconBadgeName</key>

@@ -1,0 +1,335 @@
+/* Copyright 2026 The Starry Browser Authors */
+
+/* 整页界面共用的样式：颜色来自 theme.css（与 Views 界面共用同一套主题）。 */
+
+:root {
+  --font: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei UI", "Noto Sans CJK SC", sans-serif;
+  --page-max-width: 880px;
+  --page-padding: 24px;
+  --row-height: 36px;
+  --radius-row: 9px;
+  --radius-button: 6px;
+  --hover: cubic-bezier(0, 0, 0.58, 1) 180ms;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--surface-panel);
+  color: var(--on-surface);
+  font: 13px/1.35 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input {
+  color: inherit;
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.icon svg {
+  display: block;
+}
+
+.page {
+  margin: 0 auto;
+  max-width: calc(var(--page-max-width) + 2 * var(--page-padding));
+  padding: 0 var(--page-padding) 48px;
+}
+
+.library-header {
+  padding: 40px 4px 12px;
+}
+
+.eyebrow {
+  color: var(--on-surface-variant);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 8px 0 0;
+}
+
+.subtitle {
+  color: var(--on-surface-variant);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.toolbar {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* 搜索框：胶囊形态，聚焦时展开宽度。 */
+.search {
+  align-items: center;
+  background: color-mix(in srgb, var(--on-surface) calc(5% + var(--is-dark) * 1%), transparent);
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 1px transparent;
+  color: var(--on-surface-variant);
+  cursor: text;
+  display: flex;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  transition: width var(--duration-search-resize, 300ms) var(--ease-search-resize, ease-out),
+      background-color var(--hover), box-shadow var(--hover);
+  width: 220px;
+}
+
+.search:hover {
+  background: color-mix(in srgb, var(--on-surface) calc(8% + var(--is-dark) * 1%), transparent);
+}
+
+.search:focus-within {
+  background: color-mix(in srgb, var(--on-surface) calc(7.5% + var(--is-dark) * 1%), transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 14%, transparent);
+  color: color-mix(in srgb, var(--on-surface) 80%, transparent);
+  width: 280px;
+}
+
+.search input {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--on-surface);
+  flex: 1;
+  font-size: 13px;
+  min-width: 0;
+  outline: none;
+  padding: 0;
+}
+
+.search input::placeholder {
+  color: var(--on-surface-variant);
+}
+
+.search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  color: color-mix(in srgb, var(--on-surface-variant) 80%, transparent);
+  cursor: default;
+  display: flex;
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
+  transform: scale(0.7);
+  transition: opacity var(--hover), transform var(--hover);
+}
+
+.search.has-text .search-clear {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.pill-button {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: none;
+  border-radius: 16px;
+  color: color-mix(in srgb, var(--on-surface) 85%, transparent);
+  display: flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  transition: background-color var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+  white-space: nowrap;
+}
+
+.pill-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.pill-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.pill-button:disabled {
+  opacity: 0.45;
+}
+
+.filled-pill {
+  align-items: center;
+  background: var(--primary);
+  border: none;
+  border-radius: 17px;
+  color: var(--on-primary);
+  display: flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  transition: background-color var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+}
+
+.filled-pill:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 90%, transparent);
+}
+
+.filled-pill:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.filled-pill:disabled {
+  opacity: 0.45;
+}
+
+.round-button {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: none;
+  border-radius: 18px;
+  color: color-mix(in srgb, var(--on-surface) 80%, transparent);
+  display: flex;
+  flex: none;
+  height: 36px;
+  justify-content: center;
+  transition: background-color var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+  width: 36px;
+}
+
+.round-button:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.round-button:active {
+  transform: scale(0.96);
+}
+
+.icon-button {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-button);
+  color: color-mix(in srgb, var(--on-surface) 75%, transparent);
+  display: flex;
+  flex: none;
+  height: 22px;
+  justify-content: center;
+  padding: 0;
+  transition: background-color var(--hover), opacity var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+  width: 22px;
+}
+
+.icon-button:hover {
+  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+}
+
+.icon-button:active {
+  transform: scale(0.96);
+}
+
+.row {
+  align-items: center;
+  border-radius: var(--radius-row);
+  display: flex;
+  gap: 12px;
+  height: var(--row-height);
+  padding: 0 6px 0 12px;
+  transition: background-color var(--hover);
+}
+
+.row:hover {
+  background: color-mix(in srgb, var(--on-surface) 5%, transparent);
+}
+
+.row .reveal-on-hover {
+  opacity: 0;
+}
+
+.row:hover .reveal-on-hover {
+  opacity: 1;
+}
+
+.favicon {
+  border-radius: 3px;
+  flex: none;
+  height: 16px;
+  width: 16px;
+}
+
+.ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 吸顶分组标题，用不透明背景遮住下方滚动经过的行。 */
+.section-header {
+  background: var(--surface-panel);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 18px 12px 6px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.empty-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 80px 0;
+  text-align: center;
+}
+
+.empty-state .icon {
+  color: color-mix(in srgb, var(--on-surface-variant) 60%, transparent);
+}
+
+/* 空状态大图标使用细描边。 */
+.empty-state .icon :is(path, circle, ellipse) {
+  stroke-width: 0.6;
+}
+
+.empty-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.empty-detail {
+  color: var(--on-surface-variant);
+  font-size: 13px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}

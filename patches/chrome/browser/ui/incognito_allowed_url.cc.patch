@@ -1,0 +1,19 @@
+diff --git a/chrome/browser/ui/incognito_allowed_url.cc b/chrome/browser/ui/incognito_allowed_url.cc
+index 90cbf265af..7cb326c987 100644
+--- a/chrome/browser/ui/incognito_allowed_url.cc
++++ b/chrome/browser/ui/incognito_allowed_url.cc
+@@ -12,6 +12,7 @@
+ #include "chrome/common/webui_url_constants.h"
+ #include "components/password_manager/content/common/web_ui_constants.h"
+ #include "components/signin/public/base/signin_metrics.h"
++#include "starry/common/internal_urls.h"  // nogncheck
+ #include "url/gurl.h"
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+@@ -73,5 +74,5 @@ bool IsURLAllowedInIncognito(const GURL& url) {
+     return stripped_url.is_valid() && IsURLAllowedInIncognito(stripped_url);
+   }
+ 
+-  return IsHostAllowedInIncognito(url);
++  return IsHostAllowedInIncognito(starry::ToChromeURL(url));
+ }

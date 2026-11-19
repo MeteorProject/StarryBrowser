@@ -1,0 +1,16 @@
+diff --git a/chrome/browser/extensions/api/downloads/downloads_api.h b/chrome/browser/extensions/api/downloads/downloads_api.h
+index 15a71156c3..57861b64c2 100644
+--- a/chrome/browser/extensions/api/downloads/downloads_api.h
++++ b/chrome/browser/extensions/api/downloads/downloads_api.h
+@@ -332,6 +332,11 @@ class ExtensionDownloadsEventRouter
+ 
+   static void SetDetermineFilenameTimeoutForTesting(base::TimeDelta timeout);
+ 
++  // Starry：Chrome 的一项交给 Starry 自己下载时，把它在扩展事件里的状态搬到接手的那一项
++  // 上（starry/browser/downloads/chrome_download_bridge.h）。
++  static void MoveItemData(download::DownloadItem* from,
++                           download::DownloadItem* to);
++
+   // The logic for how to handle conflicting filename suggestions from multiple
+   // extensions is split out here for testing.
+   static void DetermineFilenameInternal(

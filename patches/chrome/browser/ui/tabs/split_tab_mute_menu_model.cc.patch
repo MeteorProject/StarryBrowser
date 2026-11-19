@@ -1,0 +1,18 @@
+diff --git a/chrome/browser/ui/tabs/split_tab_mute_menu_model.cc b/chrome/browser/ui/tabs/split_tab_mute_menu_model.cc
+index 7fec5b82e1..e27b68cea7 100644
+--- a/chrome/browser/ui/tabs/split_tab_mute_menu_model.cc
++++ b/chrome/browser/ui/tabs/split_tab_mute_menu_model.cc
+@@ -161,9 +161,11 @@ std::optional<int> SplitTabMuteMenuModel::GetTabIndexForCommand(
+   }
+   const std::vector<tabs::TabInterface*> tabs_in_split =
+       tab_strip_model_->GetSplitData(split_id_)->ListTabs();
+-  CHECK_EQ(tabs_in_split.size(), 2U);
++  CHECK(tabs_in_split.size() >= 2 && tabs_in_split.size() <= 3);
+   return tab_strip_model_->GetIndexOfTab(
+-      tabs_in_split[id == CommandId::kToggleStartSiteMuted ? 0 : 1]);
++      tabs_in_split[id == CommandId::kToggleStartSiteMuted
++                        ? 0
++                        : tabs_in_split.size() - 1]);
+ }
+ 
+ bool SplitTabMuteMenuModel::IsSideBySide() const {

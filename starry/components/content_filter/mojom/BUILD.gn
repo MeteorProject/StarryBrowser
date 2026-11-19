@@ -1,0 +1,7 @@
+import("//mojo/public/tools/bindings/mojom.gni")
+
+# 浏览器进程和网页进程之间的元素隐藏。
+mojom("mojom") {
+  sources = [ "content_filter.mojom" ]
+  public_deps = [ "//url/mojom:url_mojom_gurl" ]
+}

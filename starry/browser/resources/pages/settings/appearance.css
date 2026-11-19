@@ -1,0 +1,440 @@
+/* Copyright 2026 The Starry Browser Authors */
+
+/* 设置 › 外观：单栏层次引导（主题与色彩 → 窗口布局与工具栏 → 标签交互与预览 → 快捷按钮）
+ * + Motion.fold 条件折叠。宽度与其他设置分类保持一致（680），更改直接作用于当前窗口。
+ *
+ * 卡片里的行是两列：左边 16 + 28 的图标列，文字从 56 开始；子设置缩进到 56，左边一条竖线
+ * 接着父设置的图标；分隔线都从文字那一列开始。 */
+
+.ap-page {
+  --ap-pad: 16px;
+  --ap-lead: 28px;
+  --ap-gap: 12px;
+  --ap-text: calc(var(--ap-pad) + var(--ap-lead) + var(--ap-gap));
+  --ap-line: color-mix(in srgb, var(--on-surface) calc(6% + var(--is-dark) * 1%), transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ---- 分段标题：标题和一句说明排在一行 ---- */
+
+.ap-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ap-step-head {
+  align-items: baseline;
+  column-gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 4px;
+  row-gap: 2px;
+}
+
+.ap-step-title {
+  color: var(--on-surface);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.ap-step-detail {
+  color: var(--on-surface-variant);
+  font-size: 12px;
+}
+
+.ap-card {
+  overflow: hidden;
+}
+
+/* ---- 紧致横排视觉单选（主题 / 布局） ---- */
+
+.ap-picker-wrap {
+  padding: 12px var(--ap-pad);
+}
+
+.ap-picker {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  position: relative;
+}
+
+.ap-picker-ring {
+  background: color-mix(in srgb, var(--accent) calc(8% + var(--is-dark) * 5%), transparent);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  height: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transition: transform var(--duration-selection) var(--ease-selection),
+      width var(--duration-selection) var(--ease-selection),
+      height var(--duration-selection) var(--ease-selection),
+      opacity var(--hover);
+  width: 0;
+  z-index: 1;
+}
+
+.ap-pick {
+  align-items: center;
+  background: color-mix(in srgb, var(--on-surface) calc(4% + var(--is-dark) * 1.5%), transparent);
+  border: none;
+  border-radius: 10px;
+  color: var(--on-surface);
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  position: relative;
+  text-align: start;
+  transition: background-color var(--hover), transform 110ms cubic-bezier(0, 0, 0.58, 1);
+  z-index: 2;
+}
+
+.ap-pick:hover:not(.selected) {
+  background: color-mix(in srgb, var(--on-surface) calc(7% + var(--is-dark) * 2%), transparent);
+}
+
+.ap-pick:active {
+  transform: scale(0.98);
+}
+
+.ap-pick.selected {
+  background: transparent;
+}
+
+.ap-thumb {
+  aspect-ratio: 104 / 66;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 12%, transparent);
+  container-type: inline-size;
+  flex: none;
+  overflow: hidden;
+  position: relative;
+  transition: transform var(--duration-lift) var(--ease-lift);
+  width: 46px;
+}
+
+.ap-pick:hover:not(.selected) .ap-thumb {
+  transform: scale(1.04);
+}
+
+.ap-pick-title {
+  color: var(--on-surface-variant);
+  font-size: 12.5px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ap-pick.selected .ap-pick-title {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+/* 选择器下面的一行小字：浮动侧栏怎么呼出、顶部标签收起了哪些设置。 */
+.ap-caption {
+  align-items: center;
+  color: var(--on-surface-variant);
+  display: flex;
+  font-size: 11.5px;
+  gap: 6px;
+  padding: 10px 2px 0;
+}
+
+.ap-caption starry-icon {
+  flex: none;
+  opacity: 0.8;
+}
+
+/* ---- 行：图标列 + 文字 + 控件 ---- */
+
+.ap-row {
+  align-items: center;
+  display: flex;
+  gap: var(--ap-gap);
+  min-height: 52px;
+  padding: 11px var(--ap-pad);
+  position: relative;
+}
+
+.ap-row::before {
+  background: var(--ap-line);
+  content: '';
+  height: 1px;
+  left: var(--ap-text);
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+/* 卡片第一行（前面没有可见行时）不画顶线。 */
+.ap-card > .ap-row:first-child::before,
+.ap-card > .ap-fold:first-child > .ap-fold-inner > .ap-row:first-child::before,
+.ap-card > .ap-fold.closed:first-child + .ap-row::before {
+  display: none;
+}
+
+/* 选择器和下面的第一行之间是一整条线（分开两种控件）。 */
+.ap-picker-wrap + .ap-row::before,
+.ap-picker-wrap + .ap-fold > .ap-fold-inner > .ap-row:first-child::before,
+.ap-picker-wrap + .ap-fold.closed + .ap-fold > .ap-fold-inner > .ap-row:first-child::before {
+  left: var(--ap-pad);
+}
+
+.ap-row .entry-control {
+  gap: 6px;
+}
+
+.ap-lead {
+  align-items: center;
+  background: color-mix(in srgb, var(--on-surface) calc(5.5% + var(--is-dark) * 2%), transparent);
+  border-radius: 8px;
+  color: color-mix(in srgb, var(--on-surface) 68%, transparent);
+  display: flex;
+  flex: none;
+  height: var(--ap-lead);
+  justify-content: center;
+  transition: background-color var(--hover), color var(--hover);
+  width: var(--ap-lead);
+}
+
+.ap-lead.accent {
+  background: color-mix(in srgb, var(--accent) calc(11% + var(--is-dark) * 6%), transparent);
+  color: var(--accent);
+}
+
+/* 子设置（树状标签的三项、预览的占用、Windows 控件自动隐藏）：缩进到文字那一列，
+ * 图标列里从父设置的图标下面垂下一条树线：中间的是 ├，最后一项是带圆角的 └；
+ * 横的一笔对着标题那一行（说明换行时也不掉到中间）。 */
+.ap-row.ap-sub {
+  --ap-tree: color-mix(in srgb, var(--on-surface) calc(14% + var(--is-dark) * 6%), transparent);
+  --ap-stub: 21px;
+  min-height: 48px;
+  padding-left: var(--ap-text);
+}
+
+.ap-row.ap-sub::after {
+  background: linear-gradient(var(--ap-tree), var(--ap-tree)) no-repeat 0 calc(var(--ap-stub) - 0.75px) / 100% 1.5px;
+  border-left: 1.5px solid var(--ap-tree);
+  bottom: 0;
+  content: '';
+  left: calc(var(--ap-pad) + var(--ap-lead) / 2 - 0.75px);
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 12px;
+}
+
+.ap-row.ap-sub:last-child::after {
+  background: none;
+  border-bottom: 1.5px solid var(--ap-tree);
+  border-bottom-left-radius: 6px;
+  bottom: auto;
+  height: calc(var(--ap-stub) + 0.75px);
+}
+
+.ap-row.ap-sub .entry-title {
+  font-size: 13px;
+}
+
+/* ---- 侧栏宽度：标题一行（右边是数字和「恢复默认」），滑块单独一行、和文字左对齐 ---- */
+
+.ap-width-row {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+}
+
+.ap-width-head {
+  align-items: center;
+  display: flex;
+  gap: var(--ap-gap);
+}
+
+.ap-width-readout {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.ap-width-readout .width-value {
+  min-width: 48px;
+}
+
+.ap-width-slider {
+  margin-left: calc(var(--ap-lead) + var(--ap-gap));
+}
+
+.ap-reset-icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: none;
+  border-radius: 12px;
+  color: var(--on-surface-variant);
+  display: flex;
+  flex: none;
+  height: 24px;
+  justify-content: center;
+  padding: 0;
+  transition: background-color var(--hover), color var(--hover), opacity var(--hover),
+      transform var(--duration-lift) var(--ease-lift);
+  width: 24px;
+}
+
+.ap-reset-icon:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 13%, transparent);
+  color: var(--on-surface);
+}
+
+.ap-reset-icon:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.ap-reset-icon.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.8);
+}
+
+/* ---- 平滑条件折叠（Motion.fold） ---- */
+
+.ap-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows var(--duration-fold, 340ms) var(--ease-fold, ease),
+      opacity 200ms cubic-bezier(0, 0, 0.58, 1);
+}
+
+.ap-fold-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ap-fold.closed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- 内联分段控件（替代下拉菜单，带弹簧滑块） ---- */
+
+.ap-seg {
+  align-items: center;
+  background: color-mix(in srgb, var(--on-surface) calc(5% + var(--is-dark) * 2%), transparent);
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) calc(5% + var(--is-dark) * 2%), transparent);
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+  padding: 2.5px;
+  position: relative;
+}
+
+.ap-seg-thumb {
+  background: color-mix(in srgb, var(--surface-bright) calc(100% - var(--is-dark) * 24%), transparent);
+  border-radius: 7px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / calc(0.10 + var(--is-dark) * 0.14)),
+      inset 0 0 0 1px color-mix(in srgb, var(--on-surface) calc(6% + var(--is-dark) * 3%), transparent);
+  height: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transition: transform var(--duration-selection) var(--ease-selection),
+      width var(--duration-selection) var(--ease-selection),
+      opacity var(--hover);
+  width: 0;
+  z-index: 1;
+}
+
+.ap-seg-btn {
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  color: var(--on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  height: 24px;
+  padding: 0 10px;
+  position: relative;
+  transition: color var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.ap-seg-btn:hover:not(.selected) {
+  color: var(--on-surface);
+}
+
+.ap-seg-btn:active {
+  transform: scale(0.96);
+}
+
+.ap-seg-btn.selected {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+/* ---- 快捷按钮：同搜索结果里的按钮块（settings.css 的 .button-picker），一行排下全部 ---- */
+
+.ap-btn-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px var(--ap-pad);
+}
+
+.ap-btn-wrap .button-picker {
+  grid-template-columns: repeat(var(--count, 7), minmax(0, 1fr));
+}
+
+.ap-btn-wrap .button-chip {
+  padding: 11px 2px 9px;
+}
+
+.ap-btn-hint {
+  color: var(--on-surface-variant);
+  font-size: 11.5px;
+  padding: 0 2px;
+}
+
+/* ---- 窄视口适配 ---- */
+
+/* 横排单选每项只要 130 左右，再窄才一项一行。 */
+@media (max-width: 480px) {
+  .ap-picker {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .ap-btn-wrap .button-picker {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .ap-row.ap-sub {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-fold,
+  .ap-picker-ring,
+  .ap-seg-thumb {
+    transition: none;
+  }
+}

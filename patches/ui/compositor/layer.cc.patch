@@ -1,0 +1,46 @@
+diff --git a/ui/compositor/layer.cc b/ui/compositor/layer.cc
+index 39070449ef..0cfaef0f75 100644
+--- a/ui/compositor/layer.cc
++++ b/ui/compositor/layer.cc
+@@ -266,6 +266,7 @@ std::unique_ptr<Layer> Layer::Clone() const {
+   clone->SetBackgroundBlur(background_blur_sigma_);
+   clone->SetBackgroundInverted(background_inverted_);
+   clone->SetBackgroundZoom(zoom_, zoom_inset_);
++  clone->SetBackdropFilter(backdrop_filter_);
+   clone->SetBackdropFilterQuality(backdrop_filter_quality_);
+   if (has_explicit_backdrop_filter_bounds_) {
+     auto backdrop_filter_bounds = cc_layer_->backdrop_filter_bounds();
+@@ -589,6 +590,12 @@ void Layer::SetBackgroundZoom(float zoom, int inset) {
+   SetLayerBackgroundFilters();
+ }
+ 
++void Layer::SetBackdropFilter(sk_sp<cc::PaintFilter> filter) {
++  backdrop_filter_ = std::move(filter);
++
++  SetLayerBackgroundFilters();
++}
++
+ void Layer::SetLayerBlur(float blur_sigma) {
+   layer_blur_sigma_ = blur_sigma;
+ 
+@@ -784,6 +791,10 @@ void Layer::SetLayerBackgroundFilters() {
+     filters.Append(cc::FilterOperation::CreateZoomFilter(zoom_, zoom_inset_));
+   }
+ 
++  if (backdrop_filter_) {
++    filters.Append(cc::FilterOperation::CreateReferenceFilter(backdrop_filter_));
++  }
++
+   cc_layer_->SetBackdropFilters(filters);
+   RecomputeBackdropFilterBounds();
+ }
+@@ -795,7 +806,8 @@ void Layer::RecomputeBackdropFilterBounds() {
+   }
+ 
+   // Only set bounds when backdrop filters are active.
+-  if (!background_blur_sigma_ && zoom_ == 1 && !background_inverted_) {
++  if (!background_blur_sigma_ && zoom_ == 1 && !background_inverted_ &&
++      !backdrop_filter_) {
+     cc_layer_->ClearBackdropFilterBounds();
+     return;
+   }

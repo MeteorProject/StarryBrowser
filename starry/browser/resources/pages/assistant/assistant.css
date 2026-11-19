@@ -1,0 +1,1566 @@
+/* Copyright 2026 The Starry Browser Authors */
+
+/* AI 助手浮岛与侧栏样式：浮岛使用透明背景衬托底层毛玻璃，侧栏（.docked）停靠在窗口右侧。 */
+
+:root {
+  --text: var(--on-surface);
+  --secondary: var(--on-surface-variant);
+  --faint: color-mix(in srgb, var(--on-surface) 35%, transparent);
+  --chip: color-mix(in srgb, var(--on-surface) 5%, transparent);
+  --press: color-mix(in srgb, var(--on-surface) 8%, transparent);
+  --output: color-mix(in srgb, var(--on-surface) 4%, transparent);
+  --hairline: color-mix(in srgb, var(--on-surface) 12%, transparent);
+  --quote-bar: color-mix(in srgb, var(--on-surface) 18%, transparent);
+  --code: color-mix(in srgb, var(--on-surface) calc(4.5% + 2.5% * var(--is-dark)), transparent);
+  --bubble: color-mix(in srgb, var(--accent) calc(13% + 11% * var(--is-dark)), transparent);
+  --card-fill: color-mix(in srgb, var(--surface-bright) calc(80% - 30% * var(--is-dark)), transparent);
+  --violet: #7c5cff;
+  --sky: #38bdf8;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --hover: 0.18s ease-out;
+}
+
+html,
+body {
+  background: transparent;
+  height: 100%;
+  overflow: hidden;
+}
+
+starry-assistant {
+  display: block;
+  height: 100%;
+}
+
+.island {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+
+/* 消失的问题卡片、「正在思考」放在这里放完动画（playOut）。 */
+.leaving-layer {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: default;
+  font: inherit;
+  padding: 0;
+}
+
+.icon-button {
+  align-items: center;
+  border-radius: 6px;
+  color: var(--secondary);
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  transition: background var(--hover);
+  width: 28px;
+}
+
+.icon-button:hover {
+  background: var(--press);
+}
+
+.icon-button.dim {
+  opacity: 0.4;
+}
+
+.chevron {
+  display: inline-flex;
+  height: 10px;
+  justify-content: center;
+  transition: transform var(--duration-fold) var(--ease-fold);
+  width: 10px;
+}
+
+.chevron.open {
+  transform: rotate(90deg);
+}
+
+/* 一直重复的动画都按每秒 30 格走（steps，同浏览器里的 LayerLoop）：岛是实时的玻璃，网页每出
+   一帧整个窗口都要重画，智能体做事的时候帧数就是开销。延迟、关键帧都在 1/30 秒的格子上，几个
+   一起动的落在同一帧。 */
+.spinner {
+  animation: spin 0.9s steps(27) infinite;
+  border: 1.5px solid color-mix(in srgb, var(--on-surface) 22%, transparent);
+  border-radius: 50%;
+  border-top-color: var(--secondary);
+  box-sizing: border-box;
+  flex: none;
+  height: 12px;
+  margin: 1px;
+  width: 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- 标题行 ---- */
+
+.header {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 8px;
+  height: 42px;
+  justify-content: space-between;
+  padding: 0 9px 0 18px;
+}
+
+.header-left {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.header-title {
+  color: var(--secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip {
+  align-items: center;
+  background: var(--chip);
+  color: var(--secondary);
+  display: inline-flex;
+  transition: background var(--hover);
+}
+
+.chip:hover {
+  background: var(--press);
+}
+
+.chip.earlier {
+  border-radius: 11px;
+  font-size: 11.5px;
+  gap: 3px;
+  height: 22px;
+  padding: 0 8px 0 7px;
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 1px;
+}
+
+/* ---- 对话 ---- */
+
+.transcript {
+  flex: 1 1 auto;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 22px;
+  scrollbar-width: thin;
+}
+
+.transcript-content {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0 8px;
+  position: relative;
+}
+
+.entry {
+  flex: none;
+  max-width: 100%;
+}
+
+.entry + .entry {
+  margin-top: 12px;
+}
+
+.entry.reply + .entry.reply-footer {
+  margin-top: 4px;
+}
+
+/* 用户的话：靠右的气泡，换了网页时上面写是哪个标签，选中的文字在它上面（左边一条渐变竖线）。 */
+.entry.user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bubble-stack {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: min(300px, 100%);
+}
+
+.tab-label {
+  align-items: center;
+  color: var(--secondary);
+  display: flex;
+  font-size: 11px;
+  gap: 5px;
+  height: 14px;
+  max-width: 260px;
+}
+
+.tab-label img {
+  flex: none;
+  height: 12px;
+  width: 12px;
+}
+
+.tab-label span,
+.pill-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote {
+  display: flex;
+  gap: 7px;
+  max-width: 280px;
+}
+
+.quote-bar {
+  align-self: stretch;
+  background: linear-gradient(to top, var(--violet), var(--sky));
+  border-radius: 1.5px;
+  flex: none;
+  width: 3px;
+}
+
+.quote-text {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  color: var(--secondary);
+  display: -webkit-box;
+  font-size: 11.5px;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.bubble {
+  background: var(--bubble);
+  border-radius: 18px;
+  color: var(--text);
+  max-width: 100%;
+  padding: 8px 12px;
+}
+
+.bubble-text {
+  --line: 18px;
+  line-height: var(--line);
+  overflow-wrap: anywhere;
+  user-select: text;
+  white-space: pre-wrap;
+}
+
+/* 很长的话默认只显示开头 8 行，下面淡出；展开后最高 480，再长在气泡里滚动。 */
+.bubble.folded .bubble-text {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  max-height: calc(8 * var(--line));
+  overflow: hidden;
+}
+
+.bubble.expanded .bubble-text {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.fold {
+  align-items: center;
+  color: var(--secondary);
+  display: flex;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 3px;
+  height: 20px;
+  margin-top: 2px;
+}
+
+/* 助手 Markdown 回答。 */
+.entry.reply {
+  color: var(--text);
+  line-height: 19px;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.entry.reply :is(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6, .code, .table, hr) {
+  margin: 6px 0 0;
+}
+
+.entry.reply :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 10px;
+}
+
+.entry.reply h1 {
+  font-size: 16px;
+}
+
+.entry.reply h2 {
+  font-size: 14.5px;
+}
+
+.entry.reply :is(h3, h4, h5, h6) {
+  font-size: 13.5px;
+}
+
+.entry.reply starry-markdown > :first-child {
+  margin-top: 0;
+}
+
+.entry.reply :is(ul, ol) {
+  padding-left: 16px;
+}
+
+.entry.reply li + li {
+  margin-top: 2px;
+}
+
+.entry.reply li::marker {
+  color: var(--secondary);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.entry.reply li.nested {
+  margin-left: 16px;
+}
+
+.entry.reply blockquote {
+  border-left: 3px solid var(--quote-bar);
+  color: var(--secondary);
+  font-size: 12.5px;
+  padding-left: 12px;
+}
+
+.entry.reply hr {
+  border: none;
+  border-top: 1px solid var(--hairline);
+  margin: 9px 0 3px;
+}
+
+.entry.reply code {
+  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+  border-radius: 3px;
+  font: 12px var(--mono);
+  padding: 0 2px;
+}
+
+.entry.reply a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.entry.reply .code {
+  background: var(--code);
+  border-radius: 8px;
+  margin-top: 9px;
+  position: relative;
+}
+
+.entry.reply .code pre {
+  margin: 0;
+  overflow-x: auto;
+  padding: 10px 11px;
+  scrollbar-width: none;
+}
+
+.entry.reply .code code {
+  background: none;
+  font-size: 11.5px;
+  padding: 0;
+  white-space: pre;
+}
+
+/* 代码块悬停时右上角出现语言和拷贝。 */
+.code-tools {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  transition: opacity var(--hover);
+}
+
+.code:hover .code-tools,
+.code.copied .code-tools {
+  opacity: 1;
+}
+
+.code-lang {
+  color: var(--secondary);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.copy-code {
+  align-items: center;
+  border-radius: 6px;
+  color: var(--secondary);
+  display: inline-flex;
+  height: 22px;
+  justify-content: center;
+  transition: background var(--hover);
+  width: 22px;
+}
+
+.copy-code:hover {
+  background: var(--press);
+}
+
+.entry.reply .table {
+  background: color-mix(in srgb, var(--on-surface) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--on-surface) 8%, transparent);
+  border-radius: 8px;
+  margin-top: 9px;
+  overflow-x: auto;
+  padding: 4px 10px;
+}
+
+.entry.reply table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.entry.reply :is(th, td) {
+  border-bottom: 1px solid color-mix(in srgb, var(--on-surface) 8%, transparent);
+  max-width: 220px;
+  padding: 6px 7px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.entry.reply th {
+  border-bottom-color: color-mix(in srgb, var(--on-surface) 18%, transparent);
+  font-weight: 600;
+}
+
+.entry.reply tr:last-child td {
+  border-bottom: none;
+}
+
+.entry.reply :is(th, td):first-child {
+  padding-left: 0;
+}
+
+.entry.reply :is(th, td):last-child {
+  padding-right: 0;
+}
+
+.entry.reply-footer {
+  margin-left: -5px;
+}
+
+.entry.reply-footer .icon-button {
+  height: 24px;
+  width: 24px;
+}
+
+/* 思考：一行「正在思考… / 思考过程」，点开看内容。 */
+.disclosure {
+  align-items: center;
+  color: var(--secondary);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  height: 18px;
+}
+
+.disclosure .chevron {
+  margin-left: -4px;
+}
+
+.entry.reasoning.active .brain {
+  animation: pulse 0.8s steps(6) infinite alternate;
+}
+
+/* 1 到 0.35 的 ease-in-out，分四段、每段 6 格。 */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  25% {
+    opacity: 0.916;
+  }
+
+  50% {
+    opacity: 0.675;
+  }
+
+  75% {
+    opacity: 0.434;
+  }
+
+  100% {
+    opacity: 0.35;
+  }
+}
+
+.reasoning-body {
+  border-left: 1.5px solid var(--hairline);
+  color: var(--secondary);
+  font-size: 11.5px;
+  line-height: 17px;
+  margin-top: 6px;
+  padding-left: 10px;
+  user-select: text;
+  white-space: pre-wrap;
+}
+
+/* 工具：一个小胶囊（转圈、打勾、红色感叹号），点开看结果。连着的几步收成一行。 */
+.pill {
+  align-items: center;
+  background: var(--chip);
+  border-radius: 13px;
+  color: var(--secondary);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  height: 26px;
+  max-width: 100%;
+  padding: 0 8px;
+  transition: background var(--hover);
+}
+
+.pill:not(:disabled):hover {
+  background: var(--press);
+}
+
+.entry.group > .pill {
+  font-size: 12.5px;
+}
+
+.status-icon {
+  display: inline-flex;
+  flex: none;
+  height: 14px;
+  justify-content: center;
+  width: 14px;
+}
+
+.status-icon.done {
+  color: var(--faint);
+}
+
+.status-icon.error {
+  color: var(--danger);
+}
+
+.output {
+  background: var(--output);
+  border-radius: 8px;
+  color: var(--secondary);
+  font: 10.5px/1.45 var(--mono);
+  margin: 6px 0 0;
+  max-height: 200px;
+  overflow: auto;
+  padding: 9px;
+  user-select: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.output.error {
+  color: var(--danger);
+}
+
+.members {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* 等模型：三个渐变色的小点一个接一个亮。 */
+.entry.waiting {
+  align-items: center;
+  color: var(--secondary);
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  height: 19px;
+}
+
+.dots {
+  display: flex;
+  gap: 2.5px;
+  width: 17px;
+}
+
+.dots i {
+  animation: thinking 1.2s steps(11) infinite;
+  background: var(--violet);
+  border-radius: 50%;
+  height: 4px;
+  opacity: 0.3;
+  width: 4px;
+}
+
+/* 7 格、14 格。 */
+.dots i:nth-child(2) {
+  animation-delay: 233.3333ms;
+  background: color-mix(in srgb, var(--violet) 50%, var(--sky));
+}
+
+.dots i:nth-child(3) {
+  animation-delay: 466.6667ms;
+  background: var(--sky);
+}
+
+/* 一趟 36 格：11 格亮起来、11 格暗下去。 */
+@keyframes thinking {
+  0%,
+  61.1111%,
+  100% {
+    opacity: 0.3;
+  }
+
+  30.5556% {
+    opacity: 1;
+  }
+}
+
+/* 提示（停止、出错）：一行小字，出错的可以看原文。 */
+.notice-line {
+  align-items: flex-start;
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  line-height: 16px;
+}
+
+.notice-icon {
+  display: inline-flex;
+  flex: none;
+  height: 16px;
+  width: 14px;
+}
+
+.entry.notice.info,
+.entry.notice.stopped {
+  color: var(--secondary);
+}
+
+.entry.notice.failed {
+  color: var(--danger);
+}
+
+.entry.notice.warning {
+  color: var(--warning);
+}
+
+.link {
+  color: var(--primary);
+  font-size: 11.5px;
+  font-weight: 500;
+  margin-left: 7px;
+}
+
+.notice-detail {
+  background: var(--output);
+  border-radius: 6px;
+  color: var(--secondary);
+  font: 11px/1.45 var(--mono);
+  margin: 6px 0 0;
+  max-height: 200px;
+  overflow: auto;
+  padding: 8px;
+  user-select: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 答过的确认、问题。 */
+.entry.record {
+  align-items: flex-start;
+  color: var(--secondary);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  line-height: 16px;
+}
+
+.record-icon {
+  display: inline-flex;
+  flex: none;
+  height: 16px;
+  width: 14px;
+}
+
+.entry.record.ok .record-icon {
+  color: var(--accent);
+}
+
+.entry.record.no .record-icon {
+  color: var(--faint);
+}
+
+.record-text b {
+  color: var(--text);
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+/* ---- 问题卡片：贴在输入框上面 ---- */
+
+.card-wrap {
+  flex: none;
+  padding: 0 9px 5px;
+}
+
+.card {
+  background: var(--chip);
+  border-radius: 20px;
+  padding: 11px 13px;
+}
+
+.card-title {
+  align-items: flex-start;
+  color: var(--text);
+  display: flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 5px;
+  line-height: 19px;
+}
+
+.shield {
+  color: var(--warning);
+  display: inline-flex;
+  flex: none;
+  margin-top: 2px;
+}
+
+.card-subtitle {
+  color: var(--secondary);
+  font-size: 12.5px;
+  margin-top: 1px;
+}
+
+.card-detail {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  background: var(--chip);
+  border-radius: 8px;
+  color: var(--secondary);
+  display: -webkit-box;
+  font: 11.5px/1.4 var(--mono);
+  margin-top: 7px;
+  overflow: hidden;
+  padding: 5px 7px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.option {
+  align-items: center;
+  background: var(--chip);
+  border-radius: 17px;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px 0 14px;
+  transition: background var(--hover);
+}
+
+.option:hover {
+  background: var(--press);
+}
+
+.option:active {
+  opacity: 0.8;
+}
+
+.option.primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  padding-right: 7px;
+}
+
+.option.primary:hover {
+  background: color-mix(in srgb, var(--primary) 90%, transparent);
+}
+
+.option.keyed {
+  padding-left: 6px;
+}
+
+.key {
+  align-items: center;
+  background: var(--chip);
+  border-radius: 6px;
+  color: var(--secondary);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 500;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.option.primary .key {
+  background: rgb(128 128 128 / 0.28);
+  color: var(--on-primary);
+}
+
+/* ---- 空的对话：建议、设置引导 ---- */
+
+.suggestions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: center;
+  padding: 10px 12px 2px;
+}
+
+.suggestion {
+  align-items: center;
+  background: var(--chip);
+  border-radius: 16px;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 13px;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  transition: background var(--hover);
+}
+
+.suggestion:hover {
+  background: var(--press);
+}
+
+.suggestion .icon {
+  color: var(--secondary);
+}
+
+.setup {
+  align-items: center;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 28px 12px;
+  text-align: center;
+}
+
+.glyph {
+  align-items: center;
+  background: linear-gradient(135deg,
+                              color-mix(in srgb, var(--violet) calc(12% + 6% * var(--is-dark)), transparent),
+                              color-mix(in srgb, var(--sky) calc(12% + 6% * var(--is-dark)), transparent));
+  border-radius: 13.8px;
+  color: var(--violet);
+  display: flex;
+  height: 46px;
+  justify-content: center;
+  width: 46px;
+}
+
+.setup-title {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.setup-detail {
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.setup-button {
+  align-items: center;
+  background: var(--primary);
+  border-radius: 15px;
+  color: var(--on-primary);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 6px;
+  height: 30px;
+  padding: 0 16px;
+}
+
+/* ---- 输入框：一行高 58（上下各 8，中间一行 42），附上图片时上面多一排缩略图 ---- */
+
+.bar {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+}
+
+.bar-row {
+  align-items: flex-end;
+  box-sizing: border-box;
+  container-type: inline-size;
+  display: flex;
+  min-height: 58px;
+  padding: 11px 9px 11px 10px;
+}
+
+/* 要发的图片：64×54，圆角 13，右上角一个半透明的 ×。 */
+.thumbs {
+  display: flex;
+  gap: 8px;
+  overflow: hidden;
+  padding: 12px 12px 0;
+}
+
+.thumb {
+  flex: none;
+  height: 54px;
+  position: relative;
+  width: 64px;
+}
+
+.thumb-image {
+  border-radius: 13px;
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+.thumb-image img,
+.bubble-image img,
+.live-thumb img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.thumb-remove {
+  align-items: center;
+  background: rgb(0 0 0 / 55%);
+  border-radius: 9px;
+  color: #fff;
+  display: flex;
+  height: 18px;
+  justify-content: center;
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 18px;
+}
+
+/* @ 的标签：文字上面一排高 26 的小胶囊（网站图标、标题、×），有图片时在图片下面。 */
+.mention-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 12px 0;
+}
+
+.thumbs + .mention-chips {
+  padding-top: 8px;
+}
+
+.mention-chip {
+  align-items: center;
+  background: var(--chip);
+  border-radius: 13px;
+  box-sizing: border-box;
+  display: inline-flex;
+  gap: 5px;
+  height: 26px;
+  max-width: 220px;
+  padding: 0 4px 0 8px;
+}
+
+.mention-chip img {
+  flex: none;
+  height: 14px;
+  width: 14px;
+}
+
+.mention-chip-title {
+  color: var(--text);
+  font-size: 12.5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-chip-remove {
+  align-items: center;
+  border-radius: 9px;
+  color: var(--secondary);
+  display: inline-flex;
+  flex: none;
+  height: 18px;
+  justify-content: center;
+  transition: background var(--hover);
+  width: 18px;
+}
+
+.mention-chip-remove:hover {
+  background: var(--press);
+}
+
+/* 打 @ 时的标签列表：贴在输入框上面（同问题卡片的底色和圆角），一行 36，最多露 6 行、再多在
+ * 里面滚动。标题后面是网站（地方不够时先缩它），最右边正在看的写「当前」、别的窗口的写出来。 */
+.mention-picker-wrap {
+  flex: none;
+  padding: 0 9px 5px;
+}
+
+/* 空的对话：上面没有标题行，离玻璃的上边也留 9。 */
+.island:not(.conversation) .mention-picker-wrap {
+  padding-top: 9px;
+}
+
+.mention-picker {
+  background: var(--chip);
+  border-radius: 20px;
+  max-height: 226px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  position: relative;
+  scrollbar-width: thin;
+}
+
+.mention-row {
+  align-items: center;
+  border-radius: 15px;
+  display: flex;
+  gap: 9px;
+  height: 36px;
+  padding: 0 10px 0 11px;
+}
+
+.mention-row.selected {
+  background: var(--press);
+}
+
+.mention-icon {
+  flex: none;
+  height: 16px;
+  width: 16px;
+}
+
+.mention-title,
+.mention-host,
+.bubble-mention span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-title {
+  color: var(--text);
+  flex: 0 1 auto;
+  font-size: 13px;
+}
+
+.mention-host {
+  color: var(--secondary);
+  flex: 0 3 auto;
+  font-size: 11.5px;
+  max-width: 45%;
+}
+
+.mention-badge {
+  background: var(--chip);
+  border-radius: 6px;
+  color: var(--secondary);
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 18px;
+  margin-left: auto;
+  padding: 0 6px;
+}
+
+.mention-empty {
+  color: var(--secondary);
+  font-size: 12.5px;
+  line-height: 36px;
+  padding: 0 11px;
+}
+
+/* 用户发的图片：气泡上面 64×64，靠右、放不下换行。 */
+.bubble-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  max-width: 300px;
+}
+
+.bubble-image {
+  align-items: center;
+  background: var(--chip);
+  border-radius: 13px;
+  color: var(--faint);
+  display: flex;
+  height: 64px;
+  justify-content: center;
+  overflow: hidden;
+  width: 64px;
+}
+
+/* 用户 @ 的标签：气泡上面一排高 22 的小胶囊，靠右、放不下换行。 */
+.bubble-mentions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  max-width: 300px;
+}
+
+.bubble-mention {
+  align-items: center;
+  background: var(--chip);
+  border-radius: 11px;
+  box-sizing: border-box;
+  color: var(--secondary);
+  display: inline-flex;
+  font-size: 11.5px;
+  gap: 5px;
+  height: 22px;
+  max-width: 220px;
+  padding: 0 9px 0 6px;
+}
+
+.bubble-mention img {
+  flex: none;
+  height: 12px;
+  width: 12px;
+}
+
+/* 点图片：盖住整个岛看大图，点一下或者 Esc 关掉。 */
+.preview {
+  align-items: center;
+  background: rgb(0 0 0 / 55%);
+  box-sizing: border-box;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: absolute;
+  z-index: 5;
+}
+
+.preview img {
+  border-radius: 12px;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.round {
+  align-items: center;
+  border-radius: 18px;
+  display: inline-flex;
+  flex: none;
+  height: 36px;
+  justify-content: center;
+  transition: background var(--hover);
+  width: 36px;
+}
+
+.round.plus,
+.round.camera {
+  color: var(--secondary);
+}
+
+.round.plus:hover,
+.round.camera:hover {
+  background: var(--press);
+}
+
+.round.camera {
+  margin-right: 4px;
+}
+
+.round.send {
+  background: var(--chip);
+  color: var(--faint);
+}
+
+.round.send.enabled {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.round.send.enabled:hover {
+  background: color-mix(in srgb, var(--primary) 90%, transparent);
+}
+
+.round.send.enabled:active {
+  opacity: 0.8;
+}
+
+textarea {
+  background: transparent;
+  border: none;
+  caret-color: var(--text);
+  color: var(--text);
+  flex: 1 1 auto;
+  font: 14px/19px var(--font);
+  margin: 0 4px 8.5px 6px;
+  min-width: 0;
+  outline: none;
+  padding: 0;
+  resize: none;
+}
+
+textarea::placeholder {
+  color: var(--secondary);
+}
+
+.chip.mode,
+.chip.reasoning {
+  border-radius: 12px;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 3px;
+  height: 24px;
+  margin: 0 2px 6px 0;
+  padding: 0 8px;
+}
+
+.chip.reasoning {
+  margin-right: 5px;
+}
+
+/* 代理、自动：紫色。 */
+.chip.mode.active {
+  color: var(--violet);
+}
+
+/* 容器较窄时隐藏思考程度按钮，为输入框预留空间。 */
+@container (max-width: 430px) {
+  .chip.reasoning {
+    display: none;
+  }
+}
+
+/* ---- 聊天记录（点时钟）：上面搜索，进行中的对话是带网页缩略图的小卡片，下面按日期排 ---- */
+
+.history {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.history-search {
+  align-items: center;
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+  border-radius: 17px;
+  color: var(--secondary);
+  display: flex;
+  flex: none;
+  gap: 7px;
+  height: 34px;
+  margin: 0 16px;
+  padding: 0 12px;
+}
+
+.history-search input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  flex: 1 1 auto;
+  font: 13px var(--font);
+  min-width: 0;
+  outline: none;
+  padding: 0;
+}
+
+.history-search input::placeholder {
+  color: var(--secondary);
+}
+
+.history-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.history-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 16px 8px;
+  scrollbar-width: thin;
+}
+
+.live-tiles {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  padding-bottom: 6px;
+}
+
+.live-tile {
+  background: color-mix(in srgb, var(--on-surface) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--on-surface) 10%, transparent);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+}
+
+.live-tile.waiting {
+  border: 1.5px solid var(--warning);
+}
+
+.live-thumb {
+  background: color-mix(in srgb, var(--on-surface) 5%, transparent);
+  display: block;
+  height: 78px;
+  width: 100%;
+}
+
+.live-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px;
+}
+
+.live-title,
+.live-status,
+.history-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-title {
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.live-status {
+  color: var(--secondary);
+  font-size: 11.5px;
+}
+
+.live-tile.waiting .live-status {
+  color: var(--warning);
+}
+
+.history-note {
+  color: var(--secondary);
+  font-size: 11.5px;
+  padding: 6px 0;
+}
+
+.history-empty {
+  color: var(--secondary);
+  font-size: 12.5px;
+  padding: 28px 0;
+  text-align: center;
+}
+
+.history-section {
+  color: var(--secondary);
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 10px 0 4px;
+}
+
+.history-row {
+  align-items: center;
+  border-radius: 8px;
+  display: flex;
+  gap: 9px;
+  height: 32px;
+  padding: 0 8px;
+  transition: background var(--hover);
+}
+
+.history-row:hover {
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+}
+
+.history-icon {
+  align-items: center;
+  color: var(--secondary);
+  display: flex;
+  flex: none;
+  height: 16px;
+  justify-content: center;
+  width: 16px;
+}
+
+.history-title {
+  color: var(--text);
+  flex: 1 1 auto;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.history-time {
+  color: var(--secondary);
+  flex: none;
+  font-size: 11.5px;
+}
+
+.history-delete {
+  align-items: center;
+  color: var(--secondary);
+  display: none;
+  flex: none;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+}
+
+/* 悬停时时间换成 ×。 */
+.history-row:hover .history-time {
+  display: none;
+}
+
+.history-row:hover .history-delete {
+  display: flex;
+}
+
+.history-clear {
+  color: var(--secondary);
+  display: block;
+  font-size: 11.5px;
+  margin: 12px auto 8px;
+}
+
+/* ---- 侧栏（停在右边）：标题行 44，整个对话，输入框是一张卡片，胶囊在它下面 ---- */
+
+.island.docked {
+  justify-content: flex-start;
+}
+
+.island.docked.has-capsules {
+  padding-bottom: 42px;
+}
+
+.island.docked .header {
+  height: 44px;
+  padding: 0 9px 0 14px;
+}
+
+.island.docked .transcript {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 12px);
+  padding: 0 18px;
+}
+
+.island.docked .transcript-content {
+  padding: 8px 0;
+}
+
+.island.docked :is(.card-wrap, .mention-picker-wrap) {
+  padding: 0 8px 8px;
+}
+
+.island.docked .bar {
+  background: var(--card-fill);
+  border: 1px solid var(--hairline);
+  border-radius: 26px;
+  margin: 0 8px 8px;
+  transition: border-color var(--hover);
+}
+
+.island.docked .bar.focused {
+  border-color: var(--violet);
+}
+
+/* 侧栏空对话状态。 */
+.empty {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  padding: 0 28px;
+  text-align: center;
+}
+
+.empty-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  min-width: 240px;
+}
+
+.empty-suggestion {
+  align-items: center;
+  background: var(--chip);
+  border-radius: 9px;
+  color: var(--text);
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  transition: background var(--hover);
+}
+
+.empty-suggestion:hover {
+  background: var(--press);
+}
+
+.empty-suggestion .icon {
+  color: var(--secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .dots i,
+  .entry.reasoning.active .brain {
+    animation: none;
+  }
+
+  .dots i {
+    opacity: 0.8;
+  }
+}

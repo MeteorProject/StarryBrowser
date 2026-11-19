@@ -1,0 +1,62 @@
+diff --git a/third_party/blink/renderer/core/frame/local_dom_window.cc b/third_party/blink/renderer/core/frame/local_dom_window.cc
+index f2aeb1ac0c..07ffec72be 100644
+--- a/third_party/blink/renderer/core/frame/local_dom_window.cc
++++ b/third_party/blink/renderer/core/frame/local_dom_window.cc
+@@ -39,6 +39,7 @@
+ #include "cc/input/snap_selection_strategy.h"
+ #include "net/base/registry_controlled_domains/registry_controlled_domain.h"
+ #include "net/storage_access_api/status.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/common/dom/dom_node_id.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/common/switches.h"
+@@ -1703,6 +1704,9 @@ int LocalDOMWindow::outerHeight() const {
+   if (frame->IsInFencedFrameTree()) {
+     return innerHeight();
+   }
++  if (auto size = starry::ProtectedScreenSize(*frame, true)) {
++    return size->height();
++  }
+ 
+   Page* page = frame->GetPage();
+   if (!page) {
+@@ -1735,6 +1739,9 @@ int LocalDOMWindow::outerWidth() const {
+   if (frame->IsInFencedFrameTree()) {
+     return innerWidth();
+   }
++  if (auto size = starry::ProtectedScreenSize(*frame, true)) {
++    return size->width();
++  }
+ 
+   Page* page = frame->GetPage();
+   if (!page) {
+@@ -1817,6 +1824,9 @@ int LocalDOMWindow::screenX() const {
+     return 0;
+   }
+ 
++  if (starry::ShouldProtectFingerprint(frame->DomWindow())) {
++    return 0;
++  }
+   ChromeClient& chrome_client = page->GetChromeClient();
+   if (page->GetSettings().GetReportScreenSizeInPhysicalPixelsQuirk()) {
+     return static_cast<int>(
+@@ -1842,6 +1852,9 @@ int LocalDOMWindow::screenY() const {
+     return 0;
+   }
+ 
++  if (starry::ShouldProtectFingerprint(frame->DomWindow())) {
++    return 0;
++  }
+   ChromeClient& chrome_client = page->GetChromeClient();
+   if (page->GetSettings().GetReportScreenSizeInPhysicalPixelsQuirk()) {
+     return static_cast<int>(
+@@ -1963,7 +1976,8 @@ double LocalDOMWindow::devicePixelRatio() const {
+     return 0.0;
+   }
+ 
+-  return GetFrame()->DevicePixelRatio();
++  return starry::ProtectDevicePixelRatio(GetFrame(),
++                                         GetFrame()->DevicePixelRatio());
+ }
+ 
+ ScriptPromise<ScrollResult> LocalDOMWindow::scrollBy(ScriptState* script_state,

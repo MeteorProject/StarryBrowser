@@ -1,0 +1,31 @@
+diff --git a/third_party/blink/renderer/modules/screen_orientation/screen_orientation.cc b/third_party/blink/renderer/modules/screen_orientation/screen_orientation.cc
+index fce1a975e3..ae61a0b632 100644
+--- a/third_party/blink/renderer/modules/screen_orientation/screen_orientation.cc
++++ b/third_party/blink/renderer/modules/screen_orientation/screen_orientation.cc
+@@ -8,6 +8,7 @@
+ 
+ #include "base/memory/raw_ptr_exclusion.h"
+ #include "services/network/public/mojom/web_sandbox_flags.mojom-blink.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/core/v8/script_promise.h"
+ #include "third_party/blink/renderer/bindings/core/v8/script_promise_resolver.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_orientation_lock_type.h"
+@@ -88,10 +89,18 @@ ExecutionContext* ScreenOrientation::GetExecutionContext() const {
+ }
+ 
+ V8OrientationType ScreenOrientation::type() const {
++  // Starry: a protected page sees an unrotated landscape screen, the common
++  // desktop setup, whatever the shape of its viewport.
++  if (starry::ShouldProtectFingerprint(GetExecutionContext())) {
++    return V8OrientationType(V8OrientationType::Enum::kLandscapePrimary);
++  }
+   return V8OrientationType(OrientationTypeToV8Enum(type_));
+ }
+ 
+ uint16_t ScreenOrientation::angle() const {
++  if (starry::ShouldProtectFingerprint(GetExecutionContext())) {
++    return 0;
++  }
+   return angle_;
+ }
+ 

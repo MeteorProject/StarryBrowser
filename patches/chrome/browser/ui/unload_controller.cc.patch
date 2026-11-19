@@ -1,0 +1,23 @@
+diff --git a/chrome/browser/ui/unload_controller.cc b/chrome/browser/ui/unload_controller.cc
+index 02ae74168c..1e9215c52b 100644
+--- a/chrome/browser/ui/unload_controller.cc
++++ b/chrome/browser/ui/unload_controller.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/unload_controller.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <algorithm>
+ 
+ #include "base/functional/bind.h"
+@@ -265,6 +267,9 @@ void UnloadController::CloseContents(content::WebContents* contents) {
+     ClearUnloadState(contents, true);
+   }
+   if (CanCloseContents(contents)) {
++    if (state_ == State::kIdle && starry::FinishPinnedTabClose(browser_, contents)) {
++      return;
++    }
+     chrome::CloseWebContents(browser_, contents, true);
+   }
+ }

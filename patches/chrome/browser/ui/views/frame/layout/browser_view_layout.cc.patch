@@ -1,0 +1,23 @@
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout.cc b/chrome/browser/ui/views/frame/layout/browser_view_layout.cc
+index 778997a0f1..d5b3e0c1ea 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout.cc
+@@ -20,6 +20,7 @@
+ #include "chrome/browser/ui/views/frame/multi_contents_view.h"
+ #include "chrome/browser/ui/web_applications/app_browser_controller.h"
+ #include "components/web_modal/web_contents_modal_dialog_host.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "ui/views/view.h"
+ #include "ui/views/widget/widget.h"
+ #include "ui/views/widget/widget_observer.h"
+@@ -140,6 +141,10 @@ std::unique_ptr<BrowserViewLayout> BrowserViewLayout::CreateLayout(
+     BrowserViewLayoutViews views) {
+   // Browser can be null in unit tests.
+   if (browser) {
++    if (auto layout =
++            starry::MaybeCreateBrowserViewLayout(delegate, browser, views)) {
++      return layout;
++    }
+     switch (browser->GetType()) {
+       case BrowserWindowInterface::Type::TYPE_NORMAL:
+         return std::make_unique<BrowserViewTabbedLayoutImpl>(

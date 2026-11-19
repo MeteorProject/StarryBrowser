@@ -1,0 +1,41 @@
+diff --git a/chrome/test/BUILD.gn b/chrome/test/BUILD.gn
+index f7779bf105..616faa0f1d 100644
+--- a/chrome/test/BUILD.gn
++++ b/chrome/test/BUILD.gn
+@@ -69,6 +69,10 @@ assert(!is_ios, "Chromium/iOS shouldn't use anything in //chrome")
+ assert(!is_fuchsia, "Fuchsia shouldn't use anything in //chrome")
+ assert(enable_supervised_users)
+ 
++if (is_win) {
++  import("//starry/build/branding/branding.gni")
++}
++
+ if (is_android) {
+   import("//build/config/android/rules.gni")
+   import("//chrome/android/features/dev_ui/dev_ui_module.gni")
+@@ -3051,7 +3055,7 @@ test("unit_tests") {
+     assert(toolkit_views)
+     deps += [ "//chrome/common/win:unit_tests" ]
+ 
+-    data += [ "$root_out_dir/chrome.exe" ]
++    data += [ "$root_out_dir/${starry_product_id}.exe" ]
+ 
+     data_deps += [
+       "//chrome",
+@@ -5110,6 +5114,7 @@ if (is_win) {
+       "//chrome/install_static:install_static_util",
+       "//chrome/install_static/test:test_support",
+       "//mojo:buildflags",
++      "//starry/common:platform_branding",
+       "//testing/gtest",
+     ]
+ 
+@@ -5117,7 +5122,7 @@ if (is_win) {
+     # the //chrome target to bundle up both initial/chrome.exe and chrome.exe.
+     # As a workaround, explicitly include a data dep on just chrome.exe, and
+     # add //chrome to deps above to make sure it's been built.
+-    data = [ "$root_out_dir/chrome.exe" ]
++    data = [ "$root_out_dir/${starry_product_id}.exe" ]
+ 
+     # Don't want the test-specific dependencies to affect load tests.
+     # In particular, a few system DLLs cause user32 to be loaded, which is bad.

@@ -1,0 +1,127 @@
+# Starry 的整页界面（历史记录、下载、书签、设置）的网页文件。不走 Chrome 的 grit 和 .pak：
+# embed_resources.py 把它们编成 C++ 的字节数组，WebUI 的数据源按路径取
+# （starry/browser/ui/webui/starry_pages.cc）。
+#
+# 目录：pages/common/ 是各页共用的（主题之外的样式、动效、菜单和对话框的桥），
+# pages/<页面>/ 是每页自己的，入口是 index.html。
+
+page_files = [
+  "pages/archive/archive.css",
+  "pages/archive/archive.js",
+  "pages/archive/index.html",
+  "pages/assistant/assistant.css",
+  "pages/assistant/assistant.js",
+  "pages/assistant/index.html",
+  "pages/assistant/markdown.js",
+  "pages/bookmarks/bookmarks.css",
+  "pages/bookmarks/bookmarks.js",
+  "pages/bookmarks/index.html",
+  "pages/common/base.css",
+  "pages/common/browser.js",
+  "pages/common/format.js",
+  "pages/common/l10n.js",
+  "pages/common/library.js",
+  "pages/common/motion.js",
+  "pages/downloads/downloads.css",
+  "pages/downloads/downloads.js",
+  "pages/downloads/index.html",
+  "pages/history/history.css",
+  "pages/history/history.js",
+  "pages/history/index.html",
+  "pages/settings/appearance.css",
+  "pages/settings/appearance.js",
+  "pages/settings/extensions.js",
+  "pages/settings/index.html",
+  "pages/settings/settings.css",
+  "pages/settings/settings.js",
+]
+
+action("page_resources") {
+  script = "embed_resources.py"
+  inputs = page_files
+  outputs = [
+    "$target_gen_dir/starry_page_resources.cc",
+    "$target_gen_dir/starry_page_resources.h",
+  ]
+  args = [
+           "--root",
+           rebase_path("pages", root_build_dir),
+           "--out-cc",
+           rebase_path(outputs[0], root_build_dir),
+           "--out-h",
+           rebase_path(outputs[1], root_build_dir),
+           "--header-include",
+           "starry/browser/resources/starry_page_resources.h",
+         ] + rebase_path(page_files, root_build_dir)
+}
+
+# 界面文字的语言文件。Views 界面和整页界面共用这一组资源，
+# 编进程序的方法和页面文件相同。
+l10n_files = [
+  "l10n/en.json",
+  "l10n/ja.json",
+  "l10n/ko.json",
+  "l10n/zh-Hans.json",
+  "l10n/zh-Hant.json",
+]
+
+action("l10n_resources") {
+  script = "embed_resources.py"
+  inputs = l10n_files
+  outputs = [
+    "$target_gen_dir/starry_l10n_resources.cc",
+    "$target_gen_dir/starry_l10n_resources.h",
+  ]
+  args = [
+           "--root",
+           rebase_path("l10n", root_build_dir),
+           "--out-cc",
+           rebase_path(outputs[0], root_build_dir),
+           "--out-h",
+           rebase_path(outputs[1], root_build_dir),
+           "--header-include",
+           "starry/browser/resources/starry_l10n_resources.h",
+           "--name",
+           "L10n",
+           "--comment",
+           "Language files (<language>.json), sorted by file name.",
+         ] + rebase_path(l10n_files, root_build_dir)
+}
+
+# AI 助手、智能体注入网页的脚本（starry/browser/agent/page_commands.cc）。
+agent_files = [ "agent/agent-page.js" ]
+
+action("agent_resources") {
+  script = "embed_resources.py"
+  inputs = agent_files
+  outputs = [
+    "$target_gen_dir/starry_agent_resources.cc",
+    "$target_gen_dir/starry_agent_resources.h",
+  ]
+  args = [
+           "--root",
+           rebase_path("agent", root_build_dir),
+           "--out-cc",
+           rebase_path(outputs[0], root_build_dir),
+           "--out-h",
+           rebase_path(outputs[1], root_build_dir),
+           "--header-include",
+           "starry/browser/resources/starry_agent_resources.h",
+           "--name",
+           "Agent",
+           "--comment",
+           "Scripts injected into web pages by the agent tools.",
+         ] + rebase_path(agent_files, root_build_dir)
+}
+
+source_set("resources") {
+  sources = get_target_outputs(":page_resources") +
+            get_target_outputs(":l10n_resources") +
+            get_target_outputs(":agent_resources")
+  deps = [
+    ":agent_resources",
+    ":l10n_resources",
+    ":page_resources",
+    "//base",
+  ]
+}

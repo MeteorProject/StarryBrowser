@@ -1,0 +1,27 @@
+diff --git a/chrome/browser/web_applications/os_integration/mac/apps_folder_support.mm b/chrome/browser/web_applications/os_integration/mac/apps_folder_support.mm
+index d8cb9f66ac..86a598d60d 100644
+--- a/chrome/browser/web_applications/os_integration/mac/apps_folder_support.mm
++++ b/chrome/browser/web_applications/os_integration/mac/apps_folder_support.mm
+@@ -26,6 +26,7 @@
+ #include "chrome/common/channel_info.h"
+ #include "chrome/grit/chrome_unscaled_resources.h"
+ #include "content/public/browser/browser_thread.h"
++#include "starry/common/branding.h"
+ #include "ui/base/l10n/l10n_util.h"
+ #include "ui/base/resource/resource_bundle.h"
+ #include "ui/gfx/image/image.h"
+@@ -38,13 +39,12 @@
+ std::atomic<bool> g_have_localized_app_dir_name{false};
+ 
+ base::FilePath GetLocalizableAppShortcutsSubdirName() {
+-  static const char kChromiumAppDirName[] = "Chromium Apps.localized";
+   static const char kChromeAppDirName[] = "Chrome Apps.localized";
+   static const char kChromeCanaryAppDirName[] = "Chrome Canary Apps.localized";
+ 
+   switch (chrome::GetChannel()) {
+     case version_info::Channel::UNKNOWN:
+-      return base::FilePath(kChromiumAppDirName);
++      return base::FilePath(starry::kWebAppsDirectoryName);
+ 
+     case version_info::Channel::CANARY:
+       return base::FilePath(kChromeCanaryAppDirName);

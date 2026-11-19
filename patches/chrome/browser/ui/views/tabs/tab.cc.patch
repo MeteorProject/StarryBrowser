@@ -1,0 +1,13 @@
+diff --git a/chrome/browser/ui/views/tabs/tab.cc b/chrome/browser/ui/views/tabs/tab.cc
+index 96d48ee0fe..2b1394fb96 100644
+--- a/chrome/browser/ui/views/tabs/tab.cc
++++ b/chrome/browser/ui/views/tabs/tab.cc
+@@ -1539,7 +1539,7 @@ void Tab::CloseButtonPressed(const ui::Event& event) {
+ 
+   const std::vector<Tab*>& tabs_in_split = controller()->GetTabsInSplit(this);
+   if (tabs_in_split.size() > 0) {
+-    CHECK(tabs_in_split.size() == 2);
++    CHECK(tabs_in_split.size() >= 2 && tabs_in_split.size() <= 3);
+     base::RecordAction(UserMetricsAction(this == tabs_in_split[0]
+                                              ? "CloseTab_StartTabInSplit"
+                                              : "CloseTab_EndTabInSplit"));

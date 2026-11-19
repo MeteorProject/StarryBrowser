@@ -1,0 +1,14 @@
+diff --git a/chrome/browser/ui/startup/startup_tab.cc b/chrome/browser/ui/startup/startup_tab.cc
+index fc72e2a583..2186679b63 100644
+--- a/chrome/browser/ui/startup/startup_tab.cc
++++ b/chrome/browser/ui/startup/startup_tab.cc
+@@ -9,4 +9,9 @@ StartupTab::StartupTab(const GURL& url, Type type) : url(url), type(type) {}
+ StartupTab::StartupTab(const GURL& url, bool is_untrusted_launch)
+     : url(url), is_untrusted_launch(is_untrusted_launch) {}
+ 
++StartupTab::StartupTab(const StartupTab&) = default;
++StartupTab& StartupTab::operator=(const StartupTab&) = default;
++StartupTab::StartupTab(StartupTab&&) = default;
++StartupTab& StartupTab::operator=(StartupTab&&) = default;
++
+ StartupTab::~StartupTab() = default;

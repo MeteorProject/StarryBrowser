@@ -1,0 +1,21 @@
+diff --git a/third_party/blink/renderer/modules/webgpu/BUILD.gn b/third_party/blink/renderer/modules/webgpu/BUILD.gn
+index f883ab27a4..fbb417bd7e 100644
+--- a/third_party/blink/renderer/modules/webgpu/BUILD.gn
++++ b/third_party/blink/renderer/modules/webgpu/BUILD.gn
+@@ -7,6 +7,8 @@ import("//ui/gl/features.gni")
+ 
+ blink_modules_sources("webgpu") {
+   sources = [
++    "//starry/renderer/webgpu_fingerprint_protection.cc",
++    "//starry/renderer/webgpu_fingerprint_protection.h",
+     "dawn_conversions.cc",
+     "dawn_conversions.h",
+     "dawn_enum_conversions.cc",
+@@ -111,6 +113,7 @@ blink_modules_sources("webgpu") {
+     "wgsl_language_features.h",
+   ]
+   deps = [
++    "//starry/components/privacy:readback",
+     "//gpu/command_buffer/client:webgpu_interface",
+     "//services/metrics/public/cpp:ukm_builders",
+     "//skia",

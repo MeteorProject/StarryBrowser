@@ -1,0 +1,16 @@
+diff --git a/content/browser/renderer_host/overscroll_controller_delegate.h b/content/browser/renderer_host/overscroll_controller_delegate.h
+index b1f3506917..a608a6fa6c 100644
+--- a/content/browser/renderer_host/overscroll_controller_delegate.h
++++ b/content/browser/renderer_host/overscroll_controller_delegate.h
+@@ -52,6 +52,11 @@ class CONTENT_EXPORT OverscrollControllerDelegate {
+   // overscroll delta corresponding to the current overscroll mode.
+   virtual std::optional<float> GetMaxOverscrollDelta() const = 0;
+ 
++  // Starry（starry/browser/ui/swipe/overscroll_delegate.h）：返回 true 时当前的模式不因为
++  // 另一个方向的移动变掉；overscroll 进行中控制器看到的每个事件。
++  virtual bool KeepsOverscrollMode() const;
++  virtual void OnOverscrollEvent(const blink::WebInputEvent& event);
++
+   base::WeakPtr<OverscrollControllerDelegate> GetWeakPtr();
+ 
+  private:

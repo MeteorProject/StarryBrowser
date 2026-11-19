@@ -1,0 +1,26 @@
+diff --git a/chrome/elevation_service/BUILD.gn b/chrome/elevation_service/BUILD.gn
+index 0ce72b243f..7e6a9714fe 100644
+--- a/chrome/elevation_service/BUILD.gn
++++ b/chrome/elevation_service/BUILD.gn
+@@ -4,15 +4,19 @@
+ 
+ import("//build/config/chrome_build.gni")
+ import("//build/config/ui.gni")
+-import("//build/toolchain/win/midl.gni")
+ import("//chrome/process_version_rc_template.gni")
++import("//starry/build/branding/branding.gni")
++import("//starry/build/branding/service_midl.gni")
+ import("//testing/libfuzzer/fuzzer_test.gni")
+ import("//testing/test.gni")
+ 
+-midl("elevation_service_idl") {
++starry_service_midl("elevation_service_idl") {
+   sources = [ "elevation_service_idl.idl" ]
+ 
+   writes_tlb = true
++  if (!is_chrome_branded && !is_chrome_for_testing_branded) {
++    dynamic_guids = starry_elevation_dynamic_guids
++  }
+ }
+ 
+ executable("elevation_service") {

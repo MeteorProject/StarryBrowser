@@ -1,0 +1,14 @@
+diff --git a/components/os_crypt/common/BUILD.gn b/components/os_crypt/common/BUILD.gn
+index 10db068710..28f4483ba1 100644
+--- a/components/os_crypt/common/BUILD.gn
++++ b/components/os_crypt/common/BUILD.gn
+@@ -24,8 +24,8 @@ if (is_apple) {
+     ]
+     deps = [
+       "//base",
+-      "//build:branding_buildflags",
+       "//crypto",
++      "//starry/common:branding",
+     ]
+   }
+ }

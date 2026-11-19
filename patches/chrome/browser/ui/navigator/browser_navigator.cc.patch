@@ -1,0 +1,41 @@
+diff --git a/chrome/browser/ui/navigator/browser_navigator.cc b/chrome/browser/ui/navigator/browser_navigator.cc
+index 1e98a3d7cb..373ec3beed 100644
+--- a/chrome/browser/ui/navigator/browser_navigator.cc
++++ b/chrome/browser/ui/navigator/browser_navigator.cc
+@@ -75,6 +75,8 @@
+ #include "content/public/browser/site_isolation_policy.h"
+ #include "content/public/browser/web_contents.h"
+ #include "extensions/buildflags/buildflags.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
++#include "starry/common/internal_urls.h"  // nogncheck
+ #include "ui/base/page_transition_types.h"
+ #include "ui/base/window_open_disposition.h"
+ #include "ui/display/display.h"
+@@ -253,6 +255,10 @@ BrowserWindowCreateParams::ValueSpecified GetOriginSpecified(
+ std::tuple<BrowserWindowInterface*, int> GetBrowserAndTabForDisposition(
+     const NavigateParams& params,
+     const AdditionalParams& additional_params) {
++  // Starry：小窗口里的网页自己开的窗口另开一个小窗口。
++  if (BrowserWindowInterface* mini = starry::MiniWindowForNavigation(params)) {
++    return {mini, -1};
++  }
+   Profile* profile = params.initiating_profile;
+   const bool should_trigger_session_restore =
+       params.should_trigger_session_restore;
+@@ -1017,6 +1023,8 @@ base::WeakPtr<content::NavigationHandle> NavigateImpl(
+       }
+     }
+     // The navigation should insert a new tab into the target Browser.
++    starry::tab_tree::NoteSource(params->source_contents,
++                                 tab_to_insert->GetContents());
+     params->browser->GetTabStripModel()->AddTab(
+         std::move(tab_to_insert), params->tabstrip_index, params->transition,
+         params->tabstrip_add_types, group);
+@@ -1144,6 +1152,7 @@ base::WeakPtr<content::NavigationHandle> ShowTabModalPopup(
+ }  // namespace internal
+ 
+ base::WeakPtr<content::NavigationHandle> Navigate(NavigateParams* params) {
++  params->url = starry::ToChromeURL(params->url);
+   AdditionalParams additional_params;
+   return internal::NavigateImpl(params, additional_params);
+ }

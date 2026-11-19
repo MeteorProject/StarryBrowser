@@ -1,0 +1,70 @@
+diff --git a/chrome/browser/ui/views/frame/browser_view.cc b/chrome/browser/ui/views/frame/browser_view.cc
+index d441b8a76b..3dea943be3 100644
+--- a/chrome/browser/ui/views/frame/browser_view.cc
++++ b/chrome/browser/ui/views/frame/browser_view.cc
+@@ -2031,8 +2031,10 @@ void BrowserView::OnActiveTabChanged(content::WebContents* old_contents,
+       GetWidget()->GetFocusManager()->ClearFocus();
+     }
+ 
+-    multi_contents_view_->GetInactiveContentsView()->SetWebContents(nullptr);
+-    active_contents_view->SetWebContents(nullptr);
++    for (ContentsContainerView* container :
++         multi_contents_view_->contents_container_views()) {
++      container->contents_view()->SetWebContents(nullptr);
++    }
+   }
+ 
+   // Do this before updating InfoBarContainer as the InfoBarContainer may
+@@ -4326,9 +4328,8 @@ void BrowserView::ShowSplitView(bool focus_active_view) {
+ 
+   std::vector<tabs::TabInterface*> split_tabs = split_data->ListTabs();
+ 
+-  for (size_t i = 0; tabs::TabInterface* tab : split_tabs) {
+-    multi_contents_view_->SetWebContentsAtIndex(tab->GetContents(), i++);
+-  }
++  multi_contents_view_->ShowSplitView(*split_data->visual_data());
++  multi_contents_view_->SwapContentsInSplitView();
+   const int first_split_tab_index =
+       browser_->GetTabStripModel()->GetIndexOfTab(split_tabs[0]);
+   const int relative_active_position = active_index - first_split_tab_index;
+@@ -4375,7 +4376,10 @@ void BrowserView::UpdateActiveTabInSplitView() {
+   // However, there are cases where inactive tab can be activated without a
+   // focus change e.g. using tab shortcuts and in these cases update focus.
+   if (GetWidget()->IsActive() &&
+-      multi_contents_view_->GetInactiveContentsView()->HasFocus()) {
++      std::ranges::any_of(multi_contents_view_->contents_container_views(),
++                          [](const auto& container) {
++                            return container->contents_view()->HasFocus();
++                          })) {
+     multi_contents_view_->GetActiveContentsView()->RequestFocus();
+   }
+ }
+@@ -4385,8 +4389,9 @@ bool BrowserView::IsTabChangeInSplitView(content::WebContents* old_contents,
+   return multi_contents_view_->IsInSplitView() &&
+          multi_contents_view_->GetActiveContentsView()->web_contents() ==
+              old_contents &&
+-         multi_contents_view_->GetInactiveContentsView()->web_contents() ==
+-             new_contents;
++         multi_contents_view_->GetContentsContainerViewFor(new_contents) &&
++         multi_contents_view_->GetContentsContainerViewFor(new_contents)
++             ->GetVisible();
+ }
+ 
+ void BrowserView::UpdateTabModalDialogHost() {
+@@ -4435,10 +4440,12 @@ void BrowserView::MaybeUpdateStoredFocusForWebContents(
+ std::vector<ContentsWebView*> BrowserView::GetAllVisibleContentsWebViews() {
+   std::vector<ContentsWebView*> contents_views;
+   contents_views.push_back(multi_contents_view_->GetActiveContentsView());
+-  ContentsWebView* inactive_contents_view =
+-      multi_contents_view_->GetInactiveContentsView();
+-  if (multi_contents_view_->IsInSplitView()) {
+-    contents_views.push_back(inactive_contents_view);
++  for (ContentsContainerView* container :
++       multi_contents_view_->contents_container_views()) {
++    if (container->GetVisible() &&
++        container->contents_view() != contents_views[0]) {
++      contents_views.push_back(container->contents_view());
++    }
+   }
+   return contents_views;
+ }

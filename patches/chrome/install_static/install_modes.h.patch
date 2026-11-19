@@ -1,0 +1,28 @@
+diff --git a/chrome/install_static/install_modes.h b/chrome/install_static/install_modes.h
+index d2a8f592a7..9d7873729d 100644
+--- a/chrome/install_static/install_modes.h
++++ b/chrome/install_static/install_modes.h
+@@ -45,11 +45,22 @@
+ #elif BUILDFLAG(GOOGLE_CHROME_FOR_TESTING_BRANDING)
+ #include "chrome/install_static/google_chrome_for_testing_install_modes.h"
+ #else
+-#include "chrome/install_static/chromium_install_modes.h"
++#include "starry/common/win/install_modes.h"
+ #endif
+ 
+ namespace install_static {
+ 
++#if !BUILDFLAG(GOOGLE_CHROME_BRANDING) && \
++    !BUILDFLAG(GOOGLE_CHROME_FOR_TESTING_BRANDING)
++using starry::CHROMIUM_INDEX;
++using starry::InstallConstantIndex;
++using starry::kCompanyPathName;
++using starry::kInstallModes;
++using starry::kProductPathName;
++using starry::kSafeBrowsingName;
++using starry::NUM_INSTALL_MODES;
++#endif
++
+ // The length, in characters, of kProductPathName not including the terminator.
+ inline constexpr size_t kProductPathNameLength = _countof(kProductPathName) - 1;
+ 

@@ -1,0 +1,20 @@
+diff --git a/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc b/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
+index ba2dcc2f2f..458fdcc396 100644
+--- a/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
++++ b/third_party/blink/renderer/modules/canvas/canvas2d/base_rendering_context_2d.cc
+@@ -42,6 +42,7 @@
+ #include "components/viz/common/resources/shared_image_format_utils.h"
+ #include "gpu/command_buffer/common/shared_image_usage.h"
+ #include "skia/ext/legacy_display_globals.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/abseil-cpp/absl/cleanup/cleanup.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/common/metrics/document_update_reason.h"
+@@ -827,6 +828,7 @@ ImageData* BaseRenderingContext2D::getImageDataInternal(
+   }
+ 
+   scoped_refptr<StaticBitmapImage> snapshot = GetImage();
++  snapshot = starry::ProtectCanvasReadback(GetTopExecutionContext(), snapshot);
+ 
+   // Determine if the array should be zero initialized, or if it will be
+   // completely overwritten.

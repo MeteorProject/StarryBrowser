@@ -1,0 +1,22 @@
+# Chromium 源码（gclient 根目录）和 depot_tools，由 scripts/ 管理，不入库
+/chromium/
+/vendor/
+/.logs/
+
+# 构建产物（dist/ 是 scripts/package.sh 打的发布包）
+/out/
+/dist/
+# 只忽略根目录的产物；starry/build/args/ 是需要入库的构建配置
+/build/
+
+# macOS / 编辑器
+.DS_Store
+.idea/
+.vscode/
+*.swp
+__pycache__/
+
+# 本地覆盖与未追踪文件
+/internal/
+/args.local.gn
+/AGENTS.md

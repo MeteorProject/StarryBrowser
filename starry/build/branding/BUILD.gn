@@ -1,0 +1,50 @@
+# Copyright 2026 The Starry Browser Authors
+
+import("//build/config/chrome_build.gni")
+import("//build/util/process_version.gni")
+import("//starry/build/branding/branding.gni")
+
+if (is_linux || is_chromeos) {
+  action("linux_packaging_files") {
+    script = "platform_branding.py"
+    inputs = [ branding_file_path ]
+    outputs = []
+    foreach(name,
+            [
+              "chromium-browser.info",
+              "apt.include",
+              "rpm.include",
+              "key.include",
+              "repo.cron",
+              "rpmrepo.cron",
+              "appdata.xml.template",
+            ]) {
+      outputs += [ "$root_out_dir/installer/common/$name" ]
+    }
+    args = [
+      "--branding",
+      rebase_path(branding_file_path, root_build_dir),
+      "--format=linux",
+      "--output",
+      rebase_path("$root_out_dir/installer/common", root_build_dir),
+    ]
+  }
+}
+
+if (is_win) {
+  process_version("windows_installer_file_list") {
+    process_only = true
+    sources = [ branding_file_path ]
+    template_file = "//chrome/installer/mini_installer/chrome.release"
+    output = "$target_gen_dir/chrome.release"
+  }
+}
+
+if (is_mac) {
+  process_version("scripting") {
+    process_only = true
+    sources = [ branding_file_path ]
+    template_file = "//chrome/browser/ui/cocoa/applescript/scripting.sdef"
+    output = "$target_gen_dir/scripting.sdef"
+  }
+}

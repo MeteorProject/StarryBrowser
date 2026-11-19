@@ -1,0 +1,23 @@
+diff --git a/chrome/installer/util/util_constants.h b/chrome/installer/util/util_constants.h
+index 825aba2569..44cb356032 100644
+--- a/chrome/installer/util/util_constants.h
++++ b/chrome/installer/util/util_constants.h
+@@ -11,6 +11,7 @@
+ #include <stddef.h>
+ 
+ #include "base/files/file_path.h"
++#include "starry/common/platform_branding.h"
+ 
+ namespace installer {
+ 
+@@ -392,8 +393,8 @@ inline constexpr char kGoogleUpdateIsMachineEnvVar[] = "GoogleUpdateIsMachine";
+ // TODO(gab): Rename setup.exe itself altogether and use the same binary for
+ // Active Setup.
+ inline constexpr wchar_t kActiveSetupExe[] = L"chrmstp.exe";
+-inline constexpr wchar_t kChromeDll[] = L"chrome.dll";
+-inline constexpr wchar_t kChromeExe[] = L"chrome.exe";
++inline constexpr wchar_t kChromeDll[] = STARRY_WINDOWS_DLL;
++inline constexpr wchar_t kChromeExe[] = STARRY_WINDOWS_EXE;
+ inline constexpr wchar_t kChromeNewExe[] = L"new_chrome.exe";
+ inline constexpr wchar_t kChromeOldExe[] = L"old_chrome.exe";
+ inline constexpr wchar_t kChromeProxyExe[] = L"chrome_proxy.exe";

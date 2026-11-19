@@ -1,0 +1,42 @@
+diff --git a/chrome/browser/extensions/api/messaging/launch_context_win.cc b/chrome/browser/extensions/api/messaging/launch_context_win.cc
+index bde1be53e4..dcf78e117f 100644
+--- a/chrome/browser/extensions/api/messaging/launch_context_win.cc
++++ b/chrome/browser/extensions/api/messaging/launch_context_win.cc
+@@ -36,6 +36,7 @@
+ #include "crypto/random.h"
+ #include "net/base/file_stream.h"
+ #include "net/base/net_errors.h"
++#include "starry/common/platform_branding.h"
+ 
+ namespace extensions {
+ 
+@@ -63,23 +64,17 @@ bool GetManifestPathWithFlags(HKEY root_key,
+                               const std::wstring& host_name,
+                               std::wstring* result) {
+ #if BUILDFLAG(CHROMIUM_BRANDING)
+-  static constexpr wchar_t kChromiumNativeMessagingRegistryKey[] =
+-      L"SOFTWARE\\Chromium\\NativeMessagingHosts";
+-
+-  // Try to read the path using the Chromium-specific registry for Chromium.
+-  // If that fails, fallback to Chrome-specific registry key below.
+-  if (GetManifestPathWithFlagsFromSubkey(root_key, flags,
+-                                         kChromiumNativeMessagingRegistryKey,
+-                                         host_name, result)) {
+-    return true;
+-  }
+-#endif
+-
++  static constexpr wchar_t kNativeMessagingRegistryKey[] =
++      STARRY_WINDOWS_NATIVE_MESSAGING_KEY;
++  return GetManifestPathWithFlagsFromSubkey(
++      root_key, flags, kNativeMessagingRegistryKey, host_name, result);
++#else
+   static constexpr wchar_t kChromeNativeMessagingRegistryKey[] =
+       L"SOFTWARE\\Google\\Chrome\\NativeMessagingHosts";
+ 
+   return GetManifestPathWithFlagsFromSubkey(
+       root_key, flags, kChromeNativeMessagingRegistryKey, host_name, result);
++#endif
+ }
+ 
+ bool GetManifestPath(HKEY root_key,

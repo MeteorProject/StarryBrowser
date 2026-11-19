@@ -1,0 +1,54 @@
+# Copyright 2026 The Starry Browser Authors
+
+import("//build/toolchain/win/midl.gni")
+
+# The upstream MIDL action substitutes GUIDs and verifies its outputs on
+# Windows. Give it reference files with the matching IDL path and table order.
+template("starry_service_midl") {
+  service_target = target_name
+  if (defined(invoker.dynamic_guids)) {
+    reference_target = service_target + "_reference"
+    reference_dir = "$target_gen_dir/${service_target}_reference"
+    idl_sources = invoker.sources
+    name = get_path_info(idl_sources[0], "name")
+    service_dir = rebase_path(target_gen_dir, root_gen_dir)
+    original = "//third_party/win_build_output/midl/$service_dir/$current_cpu"
+    staged = "$reference_dir/$current_cpu"
+
+    action(reference_target) {
+      script = "//starry/build/branding/service_midl.py"
+      inputs = []
+      outputs = []
+      foreach(suffix,
+              [
+                ".h",
+                "_i.c",
+                "_p.c",
+                ".dlldata.c",
+                ".tlb",
+              ]) {
+        inputs += [ "$original/$name$suffix" ]
+        outputs += [ "$staged/$name$suffix" ]
+      }
+      args = [
+        rebase_path(original, root_build_dir),
+        rebase_path(staged, root_build_dir),
+        rebase_path("$target_gen_dir/$name.idl", root_build_dir),
+        invoker.dynamic_guids,
+      ]
+    }
+  }
+
+  midl(service_target) {
+    forward_variables_from(invoker,
+                           [
+                             "sources",
+                             "writes_tlb",
+                             "dynamic_guids",
+                           ])
+    if (defined(invoker.dynamic_guids)) {
+      generated_dir = reference_dir
+      deps = [ ":$reference_target" ]
+    }
+  }
+}

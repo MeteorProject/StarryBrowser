@@ -1,0 +1,30 @@
+diff --git a/cc/paint/paint_filter.cc b/cc/paint/paint_filter.cc
+index c73044a739..db2668f55c 100644
+--- a/cc/paint/paint_filter.cc
++++ b/cc/paint/paint_filter.cc
+@@ -22,6 +22,7 @@
+ #include "cc/paint/paint_op_writer.h"
+ #include "cc/paint/paint_record.h"
+ #include "cc/paint/scoped_raster_flags.h"
++#include "starry/cc/paint/starry_shader_paint_filter.h"
+ #include "third_party/skia/include/core/SkColorFilter.h"
+ #include "third_party/skia/include/core/SkColorSpace.h"
+ #include "third_party/skia/include/core/SkImage.h"
+@@ -134,6 +135,8 @@ std::string PaintFilter::TypeToString(Type type) {
+       return "kLightingPoint";
+     case Type::kLightingSpot:
+       return "kLightingSpot";
++    case Type::kStarryShader:
++      return "kStarryShader";
+   }
+   NOTREACHED();
+ }
+@@ -233,6 +236,8 @@ bool PaintFilter::EqualsForTesting(const PaintFilter& other) const {
+       return AreEqualForTesting<LightingPointPaintFilter>(*this, other);
+     case Type::kLightingSpot:
+       return AreEqualForTesting<LightingSpotPaintFilter>(*this, other);
++    case Type::kStarryShader:
++      return AreEqualForTesting<StarryShaderPaintFilter>(*this, other);
+   }
+   NOTREACHED();
+ }

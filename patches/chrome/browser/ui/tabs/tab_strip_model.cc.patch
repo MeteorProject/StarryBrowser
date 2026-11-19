@@ -1,0 +1,120 @@
+diff --git a/chrome/browser/ui/tabs/tab_strip_model.cc b/chrome/browser/ui/tabs/tab_strip_model.cc
+index c8c7e12466..2b08c7e329 100644
+--- a/chrome/browser/ui/tabs/tab_strip_model.cc
++++ b/chrome/browser/ui/tabs/tab_strip_model.cc
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "chrome/browser/ui/tabs/tab_strip_model.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ 
+ #include <algorithm>
+ #include <cstddef>
+@@ -1578,7 +1579,9 @@ void TabStripModel::DeselectTabAt(int index) {
+     // If the tab is already deselected, no need to do anything.
+     return;
+   } else if (selection_model_.size() == 1 ||
+-             (selection_model_.size() == 2 && tab->GetSplit().has_value())) {
++             (tab->GetSplit() &&
++              selection_model_.size() ==
++                  GetSplitData(*tab->GetSplit())->ListTabs().size())) {
+     // One tab must be selected and this tab is currently selected so we can't
+     // unselect it.
+     return;
+@@ -1738,7 +1741,9 @@ void TabStripModel::AddTab(std::unique_ptr<tabs::TabModel> tab,
+     // drag-and-drops a link to the tab strip), callers aren't really handling
+     // link clicks, they just want to score the navigation like a link click in
+     // the history backend, so we don't inherit the opener in this case.
+-    index = DetermineInsertionIndex(transition, add_types & ADD_ACTIVE);
++    index = starry::tab_tree::InsertionIndex(
++        this, tab.get(),
++        DetermineInsertionIndex(transition, add_types & ADD_ACTIVE));
+     inherit_opener = true;
+ 
+     // The current active index is our opener. If the tab we are adding is not
+@@ -1915,6 +1920,19 @@ void TabStripModel::UpdateSplitLayout(
+       SplitTabChange::SplitVisualChangeReason::kLayoutUpdated);
+ }
+ 
++void TabStripModel::UpdateStarrySplitLayout(
++    split_tabs::SplitTabId split_id,
++    const split_tabs::SplitTabVisualData& data,
++    bool is_intermediate) {
++  ReentrancyCheck reentrancy_check(&reentrancy_guard_);
++  auto* visual = GetSplitData(split_id)->visual_data();
++  const auto old = *visual;
++  *visual = data;
++  NotifySplitTabVisualsChanged(
++      split_id, old, data,
++      SplitTabChange::SplitVisualChangeReason::kRatioUpdated, is_intermediate);
++}
++
+ void TabStripModel::UpdateSplitRatio(split_tabs::SplitTabId split_id,
+                                      double split_ratio,
+                                      bool is_intermediate) {
+@@ -1977,7 +1995,7 @@ split_tabs::SplitTabId TabStripModel::AddToNewSplit(
+     split_tabs::SplitTabCreatedSource source) {
+   ReentrancyCheck reentrancy_check(&reentrancy_guard_);
+ 
+-  CHECK(indices.size() == 1u || indices.size() == 2u)
++  CHECK(indices.size() >= 1u && indices.size() <= 3u)
+       << "Invalid index count: " << indices.size();
+ 
+   // If there is only one entry in `indices`, use the active index as the pivot
+@@ -2020,7 +2038,7 @@ void TabStripModel::RestoreSplit(split_tabs::SplitTabId split_id,
+                                  split_tabs::SplitTabVisualData visual_data) {
+   ReentrancyCheck reentrancy_check(&reentrancy_guard_);
+   CHECK(std::ranges::is_sorted(indices));
+-  CHECK_EQ(indices.size(), 2u);
++  CHECK(indices.size() >= 2u && indices.size() <= 3u);
+ 
+   // Ideally these are consecutive indices from the restore flow and the pivot
+   // index does not matter. However, given there are numerous steps in restore
+@@ -4355,7 +4373,7 @@ void TabStripModel::SelectRelativeTab(TabRelativeDirection direction,
+ 
+   auto is_tab_invalid = [this, &focused_group](int i) {
+     // Do not select the tab if it is in a collapsed group.
+-    if (IsTabCollapsed(i)) {
++    if (IsTabCollapsed(i) || starry::tab_tree::IsHidden(this, i)) {
+       return true;
+     }
+ 
+@@ -4976,7 +4994,9 @@ std::unique_ptr<tabs::TabModel> TabStripModel::RemoveTabFromIndexImpl(
+   const std::optional<tab_groups::TabGroupId> old_group =
+       tab_to_remove->GetGroup();
+   std::optional<int> next_selected_index =
+-      DetermineNewSelectedIndex(tab_to_remove);
++      starry::tab_tree::SelectionAfterClose(
++          this, tab_to_remove, DetermineNewSelectedIndex(tab_to_remove));
++  starry::split::PreserveRemainingPanes(this, tab_to_remove);
+   const bool removed_tab_is_split = tab_to_remove->IsSplit();
+   if (removed_tab_is_split) {
+     next_selected_index = GetIndexOfTab(
+@@ -5073,15 +5093,10 @@ void TabStripModel::MoveTabToIndexImpl(
+     FixOpeners(initial_index);
+   }
+ 
+-  // TODO(crbug.com/469501104): Make MoveTabRecursive support splits, then
+-  // replace ReverseSplit with it.
++  // MoveTabRecursive also supports reordering within a split.
+   TabStripSelectionChange selection(GetActiveTab(),
+                                     selection_model().GetListSelectionModel());
+-  if (move_within_split) {
+-    contents_data_->ReverseSplit(tab->GetSplit().value());
+-  } else {
+-    contents_data_->MoveTabRecursive(initial_index, final_index, group, pin);
+-  }
++  contents_data_->MoveTabRecursive(initial_index, final_index, group, pin);
+ 
+   UpdateSelectionModelForMove(initial_index, final_index, select_after_move);
+ 
+@@ -6141,7 +6156,8 @@ void TabStripModel::CreateHistoricalSplitIfClosing(
+       }
+     }
+     for (const auto& [split_id, count] : split_closing_counts) {
+-      if (count == 2) {
++      if (static_cast<size_t>(count) ==
++          GetSplitData(split_id)->ListTabs().size()) {
+         delegate_->CreateHistoricalSplit(split_id);
+       }
+     }

@@ -1,0 +1,28 @@
+diff --git a/chrome/browser/ui/browser_tabrestore.cc b/chrome/browser/ui/browser_tabrestore.cc
+index 6aca93a450..7c01c89b5e 100644
+--- a/chrome/browser/ui/browser_tabrestore.cc
++++ b/chrome/browser/ui/browser_tabrestore.cc
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "chrome/browser/ui/browser_tabrestore.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ 
+ #include <map>
+ #include <memory>
+@@ -85,6 +86,7 @@ std::unique_ptr<WebContents> CreateRestoredTab(
+   glic::RestoreGlicStateFromExtraData(web_contents.get(), extra_data);
+   send_tab_to_self::SendTabToSelfActivationTracker::RestoreFromExtraData(
+       web_contents.get(), extra_data);
++  starry::RestoreTabExtraData(web_contents.get(), from_session_restore, extra_data);
+ 
+   std::vector<std::unique_ptr<NavigationEntry>> entries =
+       ContentSerializedNavigationBuilder::ToNavigationEntries(
+@@ -145,6 +147,7 @@ WebContents* AddRestoredTabImpl(std::unique_ptr<WebContents> web_contents,
+ 
+   int add_types = select ? AddTabTypes::ADD_ACTIVE : AddTabTypes::ADD_NONE;
+   if (pin) {
++    starry::EnsureRestoredPin(web_contents.get());
+     tab_index =
+         std::min(tab_index, tab_strip_model->IndexOfFirstNonPinnedTab());
+     add_types |= AddTabTypes::ADD_PINNED;

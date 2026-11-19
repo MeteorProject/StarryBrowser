@@ -1,0 +1,23 @@
+diff --git a/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc b/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc
+index c193579964..6594d3b545 100644
+--- a/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc
++++ b/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc
+@@ -33,6 +33,7 @@
+ #include "extensions/common/constants.h"
+ #include "extensions/common/extension.h"
+ #include "extensions/common/extension_urls.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "ui/accessibility/ax_enums.mojom.h"
+ #include "ui/base/l10n/l10n_util.h"
+ #include "ui/base/metadata/metadata_header_macros.h"
+@@ -101,6 +102,10 @@ void ShowExtensionInstallDialogImpl(
+     BrowserWebContentsDelegate::From(browser)->ActivateContents(web_contents);
+   }
+ 
++  if (starry::ShowExtensionInstallDialog(show_params, done_callback, prompt)) {
++    return;
++  }
++
+   gfx::NativeWindow parent_window = show_params->GetParentWindow();
+   auto dialog = std::make_unique<ExtensionInstallDialogView>(
+       std::move(show_params), std::move(done_callback), std::move(prompt));

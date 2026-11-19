@@ -1,0 +1,86 @@
+diff --git a/chrome/installer/linux/BUILD.gn b/chrome/installer/linux/BUILD.gn
+index 2a75b4c07d..90ed298364 100644
+--- a/chrome/installer/linux/BUILD.gn
++++ b/chrome/installer/linux/BUILD.gn
+@@ -14,6 +14,7 @@ import("//chrome/installer/installers.gni")
+ import("//chrome/version.gni")
+ import("//components/optimization_guide/features.gni")
+ import("//services/on_device_model/on_device_model.gni")
++import("//starry/build/branding/branding.gni")
+ import("//third_party/angle/gni/angle.gni")
+ import("//third_party/widevine/cdm/widevine.gni")
+ import("//ui/gl/features.gni")
+@@ -111,10 +112,22 @@ packaging_files_binaries = packaging_files_executables + packaging_files_shlibs
+ # (e.g. all locales, resources, etc.)
+ packaging_files = packaging_files_binaries + [
+                     "common/installer.py",
++                    "//starry/build/branding/linux_package.py",
+                     "$root_out_dir/locales/en-US.pak",
+                     "$root_out_dir/MEIPreload/manifest.json",
+                     "$root_out_dir/MEIPreload/preloaded_data.pb",
+                   ]
++if (!is_chrome_branded) {
++  packaging_files += [
++    "$root_out_dir/installer/common/chromium-browser.info",
++    "$root_out_dir/installer/common/apt.include",
++    "$root_out_dir/installer/common/rpm.include",
++    "$root_out_dir/installer/common/key.include",
++    "$root_out_dir/installer/common/repo.cron",
++    "$root_out_dir/installer/common/rpmrepo.cron",
++    "$root_out_dir/installer/common/appdata.xml.template",
++  ]
++}
+ if (enable_swiftshader) {
+   packaging_files += [ "$root_out_dir/vk_swiftshader_icd.json" ]
+ }
+@@ -322,7 +335,7 @@ action("deb_repo_package") {
+   if (is_chrome_branded) {
+     package = "google-chrome-repo"
+   } else {
+-    package = "chromium-browser-repo"
++    package = "${starry_product_id}-repo"
+   }
+ 
+   outputs = [ "$root_out_dir/${package}_${deb_arch}.deb" ]
+@@ -374,7 +387,15 @@ copy("common_packaging_files") {
+   if (is_chrome_branded) {
+     sources += [ "common/google-chrome.info" ]
+   } else {
+-    sources += [ "common/chromium-browser.info" ]
++    sources -= [
++      "common/appdata.xml.template",
++      "common/apt.include",
++      "common/key.include",
++      "common/repo.cron",
++      "common/rpm.include",
++      "common/rpmrepo.cron",
++    ]
++    deps = [ "//starry/build/branding:linux_packaging_files" ]
+   }
+ 
+   outputs = [ "$root_out_dir/installer/common/{{source_file_part}}" ]
+@@ -398,7 +419,6 @@ copy("deb_packaging_files") {
+ copy("theme_files") {
+   visibility = [ ":*" ]
+   sources = [
+-    "$branding_dir/BRANDING",
+     "$branding_dir/linux/product_logo_128.png",
+     "$branding_dir/linux/product_logo_24.png",
+     "$branding_dir/linux/product_logo_256.png",
+@@ -406,6 +426,7 @@ copy("theme_files") {
+     "$branding_dir/linux/product_logo_64.png",
+     "$branding_dir_100/linux/product_logo_16.png",
+     "$branding_dir_100/linux/product_logo_32.png",
++    branding_file_path,
+   ]
+   if (is_chrome_branded) {
+     sources += [
+@@ -565,7 +586,7 @@ template("linux_package") {
+   if (is_chrome_branded) {
+     package = "google-chrome"
+   } else {
+-    package = "chromium-browser"
++    package = starry_product_id
+   }
+ 
+   deb_target_name = "${target_name}_deb"

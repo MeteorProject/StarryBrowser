@@ -1,0 +1,28 @@
+diff --git a/ui/compositor/layer.h b/ui/compositor/layer.h
+index 03e580ea0b..f1a77894de 100644
+--- a/ui/compositor/layer.h
++++ b/ui/compositor/layer.h
+@@ -341,6 +341,13 @@ class COMPOSITOR_EXPORT Layer : public LayerAnimationDelegate,
+   // (e.g. as a fallback when the GPU process has crashed too many times).
+   void SetBackgroundZoom(float zoom, int inset);
+ 
++  // Starry: a filter over what is already drawn behind this layer (Liquid
++  // Glass), applied after the background blur and zoom. Null removes it.
++  void SetBackdropFilter(sk_sp<cc::PaintFilter> filter);
++  const sk_sp<cc::PaintFilter>& backdrop_filter() const {
++    return backdrop_filter_;
++  }
++
+   // Set the rounded clip bounds of the backdrop filter effect, relative to
+   // this Layer's coordinate space. Backdrop effects are only visible and can
+   // only sample from the intersection of the Layer's bounds and any set
+@@ -724,6 +731,9 @@ class COMPOSITOR_EXPORT Layer : public LayerAnimationDelegate,
+ 
+   bool background_inverted_ = false;
+ 
++  // Starry: see SetBackdropFilter().
++  sk_sp<cc::PaintFilter> backdrop_filter_;
++
+   // Several variables which will change the visible representation of
+   // the layer.
+   float layer_saturation_ = 0.0f;

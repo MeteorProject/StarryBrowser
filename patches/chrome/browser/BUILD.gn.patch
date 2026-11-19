@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index 814b9d649a..0527022e30 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -1811,6 +1811,7 @@ source_set("core") {
+       ":shell_integration_linux",
+       "//chrome/browser/lifetime",
+       "//components/os_crypt/browser:posix_key_provider",
++      "//starry/common:branding",
+       "//third_party/libxml:xml_writer",
+       "//ui/linux:display_server_utils",
+     ]

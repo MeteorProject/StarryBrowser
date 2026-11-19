@@ -1,0 +1,28 @@
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_compute_pass_encoder.h b/third_party/blink/renderer/modules/webgpu/gpu_compute_pass_encoder.h
+index 2156ba0397..1a85c36d40 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_compute_pass_encoder.h
++++ b/third_party/blink/renderer/modules/webgpu/gpu_compute_pass_encoder.h
+@@ -5,6 +5,7 @@
+ #ifndef THIRD_PARTY_BLINK_RENDERER_MODULES_WEBGPU_GPU_COMPUTE_PASS_ENCODER_H_
+ #define THIRD_PARTY_BLINK_RENDERER_MODULES_WEBGPU_GPU_COMPUTE_PASS_ENCODER_H_
+ 
++#include "starry/renderer/webgpu_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_union_arraybufferallowshared_arraybufferviewallowshared.h"
+ #include "third_party/blink/renderer/modules/webgpu/dawn_object.h"
+ #include "third_party/blink/renderer/modules/webgpu/gpu_programmable_pass_encoder.h"
+@@ -80,12 +81,15 @@ class GPUComputePassEncoder : public DawnObject<wgpu::ComputePassEncoder>,
+                           uint32_t workgroup_count_z) {
+     GetHandle().DispatchWorkgroups(workgroup_count_x, workgroup_count_y,
+                                    workgroup_count_z);
++    if (workgroup_count_x && workgroup_count_y && workgroup_count_z)
++      starry::RecordWebGPUShaderWrite(this);
+   }
+   void dispatchWorkgroupsIndirect(
+       const DawnObject<wgpu::Buffer>* indirectBuffer,
+       uint64_t indirectOffset) {
+     GetHandle().DispatchWorkgroupsIndirect(indirectBuffer->GetHandle(),
+                                            indirectOffset);
++    starry::RecordWebGPUShaderWrite(this);
+   }
+   void writeTimestamp(const DawnObject<wgpu::QuerySet>* querySet,
+                       uint32_t queryIndex,

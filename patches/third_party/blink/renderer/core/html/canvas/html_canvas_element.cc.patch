@@ -1,0 +1,21 @@
+diff --git a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
+index 3da40c38fa..125e7b6f9a 100644
+--- a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
++++ b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
+@@ -48,6 +48,7 @@
+ #include "cc/trees/layer_tree_host.h"
+ #include "services/metrics/public/cpp/ukm_recorder.h"
+ #include "services/metrics/public/cpp/ukm_source_id.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
+ #include "third_party/blink/public/mojom/gpu/gpu.mojom-blink.h"
+@@ -1434,6 +1435,8 @@ String HTMLCanvasElement::ToDataURLInternal(
+       ImageEncoderUtils::ToEncodingMimeType(mime_type);
+ 
+   scoped_refptr<StaticBitmapImage> image_bitmap = Snapshot(source_buffer);
++  image_bitmap =
++      starry::ProtectCanvasReadback(GetExecutionContext(), image_bitmap);
+   if (image_bitmap) {
+     std::unique_ptr<ImageDataBuffer> data_buffer =
+         ImageDataBuffer::Create(image_bitmap);

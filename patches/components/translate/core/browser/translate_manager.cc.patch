@@ -1,0 +1,22 @@
+diff --git a/components/translate/core/browser/translate_manager.cc b/components/translate/core/browser/translate_manager.cc
+index de791aedd3..d2d7d031b2 100644
+--- a/components/translate/core/browser/translate_manager.cc
++++ b/components/translate/core/browser/translate_manager.cc
+@@ -56,6 +56,7 @@
+ #include "net/base/network_change_notifier.h"
+ #include "net/base/url_util.h"
+ #include "net/http/http_status_code.h"
++#include "starry/common/google_services.h"
+ #include "third_party/metrics_proto/translate_event.pb.h"
+ 
+ namespace translate {
+@@ -366,6 +367,9 @@ void TranslateManager::TranslatePage(std::string_view original_source_lang,
+                                      std::string_view target_lang,
+                                      bool triggered_from_menu,
+                                      TranslationType translation_type) {
++  if (!starry::kGoogleTranslateEnabled) {
++    return;
++  }
+   const GURL& page_url = translate_driver_->GetVisibleURL();
+   language_state_.SetTranslationType(translation_type);
+   // TODO(crbug.com/40898004): Very rarely, users can reach a state where this

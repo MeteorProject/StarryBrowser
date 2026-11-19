@@ -1,0 +1,17 @@
+// Copyright 2026 The Starry Browser Authors
+
+module starry.mojom;
+
+import "third_party/blink/public/mojom/tokens/tokens.mojom";
+import "mojo/public/mojom/base/shared_memory.mojom";
+import "url/mojom/origin.mojom";
+
+// Queried on the first read in a document/worker and after policy changes. A synchronous
+// answer also covers the first script in an initial about:blank document and
+// workers. No web-visible API or JavaScript injection is involved.
+interface FingerprintProtection {
+  [Sync] GetSeed(blink.mojom.ExecutionContextToken context,
+                 url.mojom.Origin top_origin) =>
+      (bool enabled, uint64 seed, uint32 generation,
+       mojo_base.mojom.ReadOnlySharedMemoryRegion? policy_version);
+};

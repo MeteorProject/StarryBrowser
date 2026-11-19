@@ -1,0 +1,119 @@
+diff --git a/components/sessions/core/tab_restore_service_impl.cc b/components/sessions/core/tab_restore_service_impl.cc
+index fc0c2c5531..b8ff884eea 100644
+--- a/components/sessions/core/tab_restore_service_impl.cc
++++ b/components/sessions/core/tab_restore_service_impl.cc
+@@ -305,6 +305,10 @@ bool ReadSplitTabVisualData(base::PickleIterator* iter,
+   if (split_ratio >= 0.0 && split_ratio <= 1.0 &&
+       DeserializeSplitTabLayout(split_layout_type, &layout)) {
+     *visual_data = split_tabs::SplitTabVisualData(layout, split_ratio);
++    std::string starry_layout;
++    if (iter->ReadString(&starry_layout)) {
++      visual_data->set_starry_layout(starry_layout);
++    }
+     return true;
+   }
+   return false;
+@@ -529,7 +533,8 @@ std::unique_ptr<sessions::tab_restore::Group> CreateGroupEntryFromCommand(
+ 
+ std::unique_ptr<sessions::tab_restore::Split> CreateSplitEntryFromCommand(
+     const SessionCommand* command,
+-    SessionID* session_id) {
++    SessionID* session_id,
++    int* num_tabs) {
+   base::PickleIterator it = command->ContentsAsPickle();
+   std::optional<base::Token> split_token = ReadTokenFromPickle(&it);
+   if (!split_token.has_value()) {
+@@ -548,6 +553,14 @@ std::unique_ptr<sessions::tab_restore::Split> CreateSplitEntryFromCommand(
+   *session_id = SessionID::FromSerializedValue(session_id_val);
+ 
+   ReadSplitTabVisualData(&it, &split->visual_data);
++  *num_tabs = 2;
++  int stored_count = 2;
++  if (it.ReadInt(&stored_count)) {
++    if (stored_count < 2 || stored_count > 3) {
++      return nullptr;
++    }
++    *num_tabs = stored_count;
++  }
+ 
+   return split;
+ }
+@@ -661,7 +674,8 @@ class TabRestoreServiceImpl::PersistenceDelegate
+       SessionID session_id,
+       split_tabs::SplitTabId split_id,
+       const split_tabs::SplitTabVisualData& visual_data,
+-      base::Time timestamp);
++      base::Time timestamp,
++      int num_tabs);
+ 
+   // Creates a tab close command.
+   static std::unique_ptr<SessionCommand> CreateSelectedNavigationInTabCommand(
+@@ -963,7 +977,7 @@ void TabRestoreServiceImpl::PersistenceDelegate::ScheduleCommandsForGroup(
+ 
+ void TabRestoreServiceImpl::PersistenceDelegate::ScheduleCommandsForSplit(
+     const tab_restore::Split& split) {
+-  DCHECK_EQ(split.tabs.size(), 2u);
++  DCHECK(split.tabs.size() >= 2 && split.tabs.size() <= 3);
+ 
+   // Count how many tabs in the split are valid to persist.
+   std::vector<std::pair<const tab_restore::Tab*, int>> valid_tabs;
+@@ -974,11 +988,11 @@ void TabRestoreServiceImpl::PersistenceDelegate::ScheduleCommandsForSplit(
+     }
+   }
+ 
+-  if (valid_tabs.size() == 2) {
++  if (valid_tabs.size() >= 2 && valid_tabs.size() <= 3) {
+     command_storage_manager_->ScheduleCommand(CreateSplitCommand(
+         split.id,
+         split.split_id.value_or(split_tabs::SplitTabId::CreateEmpty()),
+-        split.visual_data, split.timestamp));
++        split.visual_data, split.timestamp, valid_tabs.size()));
+     for (const auto& [tab, index] : valid_tabs) {
+       ScheduleCommandsForTab(*tab, index);
+     }
+@@ -1058,6 +1072,7 @@ void TabRestoreServiceImpl::PersistenceDelegate::ScheduleCommandsForTab(
+         tab.split_visual_data.value_or(split_tabs::SplitTabVisualData());
+     pickle.WriteDouble(visual_data.split_ratio());
+     pickle.WriteInt(static_cast<int>(visual_data.split_layout()));
++    pickle.WriteString(visual_data.starry_layout());
+     command_storage_manager_->ScheduleCommand(
+         std::make_unique<SessionCommand>(kCommandSetTabSplitData, pickle));
+   }
+@@ -1168,13 +1183,16 @@ TabRestoreServiceImpl::PersistenceDelegate::CreateSplitCommand(
+     SessionID session_id,
+     split_tabs::SplitTabId split_id,
+     const split_tabs::SplitTabVisualData& visual_data,
+-    base::Time timestamp) {
++    base::Time timestamp,
++    int num_tabs) {
+   base::Pickle pickle;
+   WriteTokenToPickle(&pickle, split_id.token());
+   pickle.WriteInt(static_cast<int>(session_id.id()));
+   pickle.WriteInt64(timestamp.ToDeltaSinceWindowsEpoch().InMicroseconds());
+   pickle.WriteDouble(visual_data.split_ratio());
+   pickle.WriteInt(static_cast<int>(visual_data.split_layout()));
++  pickle.WriteString(visual_data.starry_layout());
++  pickle.WriteInt(num_tabs);
+ 
+   std::unique_ptr<SessionCommand> command =
+       std::make_unique<SessionCommand>(kCommandCreateSplit, pickle);
+@@ -1354,15 +1372,17 @@ void TabRestoreServiceImpl::PersistenceDelegate::CreateEntriesFromCommands(
+         }
+ 
+         SessionID split_id = SessionID::InvalidValue();
++        int num_tabs = 2;
+         std::unique_ptr<tab_restore::Split> split =
+-            CreateSplitEntryFromCommand(&command, &split_id);
++            CreateSplitEntryFromCommand(&command, &split_id, &num_tabs);
+         if (!split) {
+           return;
+         }
+ 
+         RemoveEntryByID(split_id, &entries);
+         split->original_id = split_id;
+-        current_split = std::make_optional(std::make_pair(split.get(), 2));
++        current_split =
++            std::make_optional(std::make_pair(split.get(), num_tabs));
+         entries.push_back(std::move(split));
+         break;
+       }

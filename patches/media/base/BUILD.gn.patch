@@ -1,0 +1,12 @@
+diff --git a/media/base/BUILD.gn b/media/base/BUILD.gn
+index be4a2d8864..754c9fb242 100644
+--- a/media/base/BUILD.gn
++++ b/media/base/BUILD.gn
+@@ -428,6 +428,7 @@ source_set("base") {
+     "//media/cdm:clear_key_cdm_common",
+     "//net",
+     "//skia",
++    "//starry/common:google_services",
+     "//third_party/libyuv",
+     "//third_party/widevine/cdm:headers",
+     "//ui/display",

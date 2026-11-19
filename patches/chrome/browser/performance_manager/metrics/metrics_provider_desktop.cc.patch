@@ -1,0 +1,21 @@
+diff --git a/chrome/browser/performance_manager/metrics/metrics_provider_desktop.cc b/chrome/browser/performance_manager/metrics/metrics_provider_desktop.cc
+index 2f2de03b7c..52b0c56c33 100644
+--- a/chrome/browser/performance_manager/metrics/metrics_provider_desktop.cc
++++ b/chrome/browser/performance_manager/metrics/metrics_provider_desktop.cc
+@@ -26,6 +26,7 @@
+ #if BUILDFLAG(IS_WIN)
+ #include "base/time/time.h"
+ #include "base/win/registry.h"
++#include "starry/common/platform_branding.h"
+ #endif
+ 
+ using performance_manager::user_tuning::prefs::kMemorySaverModeState;
+@@ -218,7 +219,7 @@ void RecordFrontEndHeapDebugOptionsHistogram() {
+   base::win::RegKey key;
+   if (key.Open(HKEY_LOCAL_MACHINE,
+                L"Software\\Microsoft\\Windows NT\\CurrentVersion\\Image File "
+-               L"Execution Options\\chrome.exe",
++               L"Execution Options\\" STARRY_WINDOWS_EXE,
+                KEY_QUERY_VALUE | KEY_WOW64_32KEY) == ERROR_SUCCESS) {
+     DWORD value = 0;
+     if (key.ReadValueDW(L"FrontEndHeapDebugOptions", &value) == ERROR_SUCCESS) {

@@ -1,0 +1,57 @@
+diff --git a/chrome/browser/sessions/session_restore.cc b/chrome/browser/sessions/session_restore.cc
+index 816c2a017b..a771ef7474 100644
+--- a/chrome/browser/sessions/session_restore.cc
++++ b/chrome/browser/sessions/session_restore.cc
+@@ -115,6 +115,7 @@
+ #include "content/public/browser/web_contents.h"
+ #include "extensions/browser/extension_registry.h"
+ #include "extensions/common/extension_set.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "ui/base/mojom/window_show_state.mojom.h"
+ #include "ui/base/page_transition_types.h"
+ #include "ui/base/window_open_disposition.h"
+@@ -600,6 +601,17 @@ class SessionRestoreImpl : public BrowserCollectionObserver {
+                   [](RestoredTab& tab) { return tab.contents() == nullptr; });
+ 
+     if (succeeded) {
++      // Starry: background tabs may sleep until they are shown. If none are
++      // left to load, nothing will report that loading finished.
++      if (std::erase_if(restored_tabs,
++                        [](RestoredTab& tab) {
++                          return !tab.is_active() &&
++                                 starry::DeferRestoredTabLoad(tab.contents());
++                        }) &&
++          restored_tabs.empty()) {
++        SessionRestore::OnTabLoaderFinishedLoadingTabs();
++      }
++
+       // Sort the tabs in the order they should be restored, and start loading
+       // them.
+       std::stable_sort(restored_tabs.begin(), restored_tabs.end());
+@@ -1122,9 +1134,8 @@ class SessionRestoreImpl : public BrowserCollectionObserver {
+             browser->GetTabStripModel()->GetIndexOfTab(tab));
+       }
+ 
+-      // The number of supported split tabs is 2. Do not attempt to restore
+-      // more than this to future proof it.
+-      if (tab_contents_list.size() == 2) {
++      // Starry supports two or three panes; ignore unsupported group sizes.
++      if (tab_contents_list.size() >= 2 && tab_contents_list.size() <= 3) {
+         browser->GetTabStripModel()->RestoreSplit(
+             split_id, tab_index_list, split_tabs::SplitTabVisualData());
+       }
+@@ -1227,12 +1238,8 @@ class SessionRestoreImpl : public BrowserCollectionObserver {
+       }
+ 
+       CHECK(browser->GetTabStripModel()->GetSplitData(session_split_tab->id_));
+-      browser->GetTabStripModel()->UpdateSplitLayout(
+-          session_split_tab->id_,
+-          session_split_tab->split_visual_data_.split_layout());
+-      browser->GetTabStripModel()->UpdateSplitRatio(
+-          session_split_tab->id_,
+-          session_split_tab->split_visual_data_.split_ratio());
++      browser->GetTabStripModel()->UpdateStarrySplitLayout(
++          session_split_tab->id_, session_split_tab->split_visual_data_);
+     }
+   }
+ 

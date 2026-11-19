@@ -1,0 +1,24 @@
+diff --git a/testing/scripts/common.py b/testing/scripts/common.py
+index 0b8c75eee2..397f76ee4a 100644
+--- a/testing/scripts/common.py
++++ b/testing/scripts/common.py
+@@ -81,8 +81,9 @@ def set_lpac_acls(acl_dir, is_test_script=False):
+   if sys.getwindowsversion().build < 19041:
+     return
+   try:
++    # icacls can emit localized bytes even when Python runs in UTF-8 mode.
+     existing_acls = subprocess.check_output(
+-      ['icacls', acl_dir], stderr=subprocess.STDOUT, universal_newlines=True
++      ['icacls', acl_dir], stderr=subprocess.STDOUT
+     )
+   except subprocess.CalledProcessError as e:
+     logging.error('Failed to retrieve existing ACLs for directory %s', acl_dir)
+@@ -90,7 +91,7 @@ def set_lpac_acls(acl_dir, is_test_script=False):
+     sys.exit(e.returncode)
+   acls_correct = False
+   for acl in CORRECT_ACL_VARIANTS:
+-    if acl in existing_acls:
++    if acl.encode('ascii') in existing_acls:
+       acls_correct = True
+   if not acls_correct:
+     try:

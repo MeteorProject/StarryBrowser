@@ -1,0 +1,80 @@
+diff --git a/components/viz/service/display/skia_renderer.cc b/components/viz/service/display/skia_renderer.cc
+index f24bb85953..69ff592597 100644
+--- a/components/viz/service/display/skia_renderer.cc
++++ b/components/viz/service/display/skia_renderer.cc
+@@ -71,6 +71,8 @@
+ #include "gpu/config/gpu_finch_features.h"
+ #include "media/base/media_switches.h"
+ #include "skia/ext/opacity_filter_canvas.h"
++#include "starry/cc/paint/starry_shader_paint_filter.h"
++#include "starry/components/viz/glass_backdrop_pass.h"
+ #include "third_party/skia/include/core/SkCanvas.h"
+ #include "third_party/skia/include/core/SkColor.h"
+ #include "third_party/skia/include/core/SkColorFilter.h"
+@@ -891,6 +893,11 @@ struct SkiaRenderer::DrawRPDQParams {
+   // Multiplier used for downscaling backdrop filter.
+   float backdrop_filter_quality = 1.0f;
+ 
++  // Starry: live glass, drawn straight from its backdrop pass instead of as an
++  // image filter (starry/components/viz/glass_backdrop_pass.h).
++  raw_ptr<const cc::StarryShaderPaintFilter> starry_material = nullptr;
++  SkMatrix starry_material_matrix;
++
+   // Geometry from the bypassed RenderPassDrawQuad.
+   std::optional<BypassGeometry> bypass_geometry;
+ 
+@@ -2553,6 +2560,15 @@ void SkiaRenderer::DrawSingleImage(const SkImage* image,
+   PrepareCanvas(params->scissor_rect, params->mask_filter_info,
+                 &params->content_device_transform);
+ 
++  // Starry: the glass shader reads the backdrop pass and draws straight into
++  // the target.
++  if (rpdq_params && rpdq_params->starry_material &&
++      rpdq_params->starry_material->DrawMaterial(
++          current_canvas_, image, rpdq_params->starry_material_matrix,
++          params->opacity)) {
++    return;
++  }
++
+   int matrix_index = -1;
+   const SkMatrix* bypass_transform = nullptr;
+   if (rpdq_params) {
+@@ -3124,6 +3140,13 @@ SkiaRenderer::DrawRPDQParams SkiaRenderer::CalculateRPDQParams(
+       [](sk_sp<cc::PaintFilter> paint_filter,
+          const SkMatrix& local_matrix) -> sk_sp<SkImageFilter> {
+     if (paint_filter && paint_filter->cached_sk_filter_) {
++      // Starry: match the render surface's scale, including animation, before
++      // applying the translation (RuntimeShader rejects a scaled local matrix).
++      if (paint_filter->type() == cc::PaintFilter::Type::kStarryShader) {
++        return static_cast<const cc::StarryShaderPaintFilter*>(
++                   paint_filter.get())
++            ->MakeWithLocalMatrix(local_matrix);
++      }
+       return paint_filter->cached_sk_filter_->makeWithLocalMatrix(local_matrix);
+     } else {
+       return nullptr;
+@@ -3131,7 +3154,13 @@ SkiaRenderer::DrawRPDQParams SkiaRenderer::CalculateRPDQParams(
+   };
+ 
+   // Convert CC image filters into a SkImageFilter root node
+-  if (!quad->filters.IsEmpty()) {
++  if (const auto* glass = starry::GlassPassFilter(quad->filters);
++      glass && glass->draws_material()) {
++    // Starry: the glass shader draws itself, see DrawSingleImage().
++    rpdq_params.starry_material = glass;
++    rpdq_params.starry_material_matrix = local_matrix;
++    rpdq_params.filter_bounds = glass->MaterialBounds(local_matrix);
++  } else if (!quad->filters.IsEmpty()) {
+     auto paint_filter =
+         cc::RenderSurfaceFilters::BuildImageFilter(quad->filters);
+     rpdq_params.image_filter =
+@@ -3440,7 +3469,8 @@ void SkiaRenderer::DrawRenderPassQuad(
+   // When the RPDQ was needed because of a copy request, it may not require any
+   // advanced filtering/effects at which point it's basically a tiled quad.
+   if (!rpdq_params.image_filter && !rpdq_params.backdrop_filter &&
+-      !rpdq_params.mask_shader && !rpdq_params.bypass_geometry) {
++      !rpdq_params.mask_shader && !rpdq_params.bypass_geometry &&
++      !rpdq_params.starry_material) {
+     DCHECK(!MustFlushBatchedQuads(quad, nullptr, *params));
+     AddQuadToBatch(content_image.get(), valid_texel_bounds, params);
+     return;

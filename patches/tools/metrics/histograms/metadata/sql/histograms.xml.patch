@@ -1,0 +1,12 @@
+diff --git a/tools/metrics/histograms/metadata/sql/histograms.xml b/tools/metrics/histograms/metadata/sql/histograms.xml
+index 4987233523..c8a8d0a34f 100644
+--- a/tools/metrics/histograms/metadata/sql/histograms.xml
++++ b/tools/metrics/histograms/metadata/sql/histograms.xml
+@@ -99,6 +99,7 @@ chromium-metrics-reviews@google.com.
+   <variant name="SharedStorage" summary="SharedStorage"/>
+   <variant name="Shortcuts" summary="Shortcuts"/>
+   <variant name="SQLiteDiagnostics" summary="SQLiteDiagnostics"/>
++  <variant name="StarryAssistantHistory" summary="StarryAssistantHistory"/>
+   <variant name="TabStateStorage" summary="TabStateStorage"/>
+   <variant name="Test" summary="Test"/>
+   <variant name="Thumbnail" summary="Thumbnail"/>

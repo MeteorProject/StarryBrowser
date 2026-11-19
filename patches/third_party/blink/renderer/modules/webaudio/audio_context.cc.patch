@@ -1,0 +1,54 @@
+diff --git a/third_party/blink/renderer/modules/webaudio/audio_context.cc b/third_party/blink/renderer/modules/webaudio/audio_context.cc
+index 1b7598ba43..b4c3defddd 100644
+--- a/third_party/blink/renderer/modules/webaudio/audio_context.cc
++++ b/third_party/blink/renderer/modules/webaudio/audio_context.cc
+@@ -19,6 +19,7 @@
+ #include "services/metrics/public/cpp/ukm_builders.h"
+ #include "services/metrics/public/cpp/ukm_recorder.h"
+ #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom-blink.h"
++#include "starry/renderer/audio_fingerprint_protection.h"
+ #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/common/mediastream/media_devices.h"
+@@ -1002,10 +1003,21 @@ AudioTimestamp* AudioContext::getOutputTimestamp(
+   WindowPerformance* performance = DOMWindowPerformance::performance(*window);
+   DCHECK(performance);
+ 
++  // Starry: before locking, the policy may have to ask the browser.
++  const std::optional<double> protected_latency =
++      starry::ProtectedOutputLatency(GetExecutionContext());
+   DeferredTaskHandler::GraphAutoLocker locker(GetDeferredTaskHandler());
+   double performance_time = performance->MonotonicTimeToDOMHighResTimeStamp(
+       base::TimeTicks() + base::Seconds(output_position_.timestamp));
+-  result->setContextTime(output_position_.position);
++  double context_time = output_position_.position;
++  if (protected_latency && output_position_.hardware_output_latency != 0) {
++    // What is playing now, given the protected output latency.
++    context_time =
++        std::clamp(context_time + output_position_.hardware_output_latency -
++                       *protected_latency,
++                   0.0, currentTime());
++  }
++  result->setContextTime(context_time);
+   result->setPerformanceTime(performance_time < 0.0 ? 0.0 : performance_time);
+   return result;
+ }
+@@ -1314,10 +1326,17 @@ double AudioContext::outputLatency() const {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
+   DCHECK(destinationNode());
+ 
++  // Starry: before locking, the policy may have to ask the browser.
++  const std::optional<double> protected_latency =
++      starry::ProtectedOutputLatency(GetExecutionContext());
++
+   DeferredTaskHandler::GraphAutoLocker locker(GetDeferredTaskHandler());
+ 
+   double factor = GetOutputLatencyQuantizingFactor();
+-  return std::round(output_position_.hardware_output_latency / factor) * factor;
++  const double latency =
++      std::round(output_position_.hardware_output_latency / factor) * factor;
++  // Zero until the device reports a position, as without protection.
++  return protected_latency && latency != 0 ? *protected_latency : latency;
+ }
+ 
+ AudioPlaybackStats* AudioContext::playbackStats() {

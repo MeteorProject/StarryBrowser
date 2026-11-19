@@ -1,0 +1,18 @@
+diff --git a/chrome/tools/build/win/create_installer_archive.py b/chrome/tools/build/win/create_installer_archive.py
+index d11825421e..cb141fccda 100755
+--- a/chrome/tools/build/win/create_installer_archive.py
++++ b/chrome/tools/build/win/create_installer_archive.py
+@@ -288,11 +288,11 @@ def GetPrevVersion(build_dir, temp_dir, last_chrome_installer, output_name):
+         'x',
+         '-o"%s"' % temp_dir,
+         prev_archive_file,
+-        'Chrome-bin/*/chrome.dll',
++        'Chrome-bin/*/chrome_elf.dll',
+     ]
+     RunSystemCommand(cmd, options.verbose)
+     dll_path = glob.glob(
+-        os.path.join(temp_dir, 'Chrome-bin', '*', 'chrome.dll')
++        os.path.join(temp_dir, 'Chrome-bin', '*', 'chrome_elf.dll')
+     )
+     return os.path.split(os.path.split(dll_path[0])[0])[1]
+ 

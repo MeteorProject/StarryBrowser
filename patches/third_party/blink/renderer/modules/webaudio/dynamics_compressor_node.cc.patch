@@ -1,0 +1,24 @@
+diff --git a/third_party/blink/renderer/modules/webaudio/dynamics_compressor_node.cc b/third_party/blink/renderer/modules/webaudio/dynamics_compressor_node.cc
+index 78143d2f98..319ac77e26 100644
+--- a/third_party/blink/renderer/modules/webaudio/dynamics_compressor_node.cc
++++ b/third_party/blink/renderer/modules/webaudio/dynamics_compressor_node.cc
+@@ -24,7 +24,7 @@
+  */
+ 
+ #include "third_party/blink/renderer/modules/webaudio/dynamics_compressor_node.h"
+-
++#include "starry/renderer/audio_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_automation_rate.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_dynamics_compressor_options.h"
+ #include "third_party/blink/renderer/modules/webaudio/audio_graph_tracer.h"
+@@ -171,7 +171,9 @@ AudioParam* DynamicsCompressorNode::ratio() const {
+ }
+ 
+ float DynamicsCompressorNode::reduction() const {
+-  return GetDynamicsCompressorHandler().ReductionValue();
++  return starry::ProtectAudioValue(
++      context()->GetExecutionContext(),
++      GetDynamicsCompressorHandler().ReductionValue());
+ }
+ 
+ AudioParam* DynamicsCompressorNode::attack() const {

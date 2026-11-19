@@ -1,0 +1,19 @@
+diff --git a/components/remote_cocoa/app_shim/native_widget_ns_window_host_helper.h b/components/remote_cocoa/app_shim/native_widget_ns_window_host_helper.h
+index 0b0dd04f6c..ea3c97f105 100644
+--- a/components/remote_cocoa/app_shim/native_widget_ns_window_host_helper.h
++++ b/components/remote_cocoa/app_shim/native_widget_ns_window_host_helper.h
+@@ -60,6 +60,14 @@ class REMOTE_COCOA_APP_SHIM_EXPORT NativeWidgetNSWindowHostHelper {
+   // TODO(ccameron): Remove the needs for this call.
+   virtual ui::TextInputClient* GetTextInputClient() = 0;
+ 
++  // Starry: return the NSView of the views::NativeViewHost that views hit
++  // testing finds at |location_in_content|, or nullptr. Hit testing sends the
++  // event there instead of to the frontmost attached NSView: an attached NSView
++  // is not clipped by its views ancestors, so it can cover other web contents
++  // where it is not visible.
++  // The default (in bridged_content_view.mm) returns nullptr.
++  virtual NSView* GetNativeViewHostViewAt(
++      const gfx::Point& location_in_content);
+ };
+ 
+ }  // namespace remote_cocoa

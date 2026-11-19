@@ -1,0 +1,23 @@
+diff --git a/chrome/browser/download/download_core_service_impl.cc b/chrome/browser/download/download_core_service_impl.cc
+index a3c565167c..00ff5cddf1 100644
+--- a/chrome/browser/download/download_core_service_impl.cc
++++ b/chrome/browser/download/download_core_service_impl.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/download/download_core_service_impl.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <memory>
+ 
+ #include "base/feature_list.h"
+@@ -142,7 +144,8 @@ bool DownloadCoreServiceImpl::HasCreatedDownloadManager() {
+ int DownloadCoreServiceImpl::BlockingShutdownCount() const {
+   if (!download_manager_created_)
+     return 0;
+-  return profile_->GetDownloadManager()->BlockingShutdownCount();
++  return profile_->GetDownloadManager()->BlockingShutdownCount() +
++         starry::DownloadsLostOnShutdown(profile_);
+ }
+ 
+ void DownloadCoreServiceImpl::CancelDownloads(

@@ -1,0 +1,23 @@
+diff --git a/third_party/blink/renderer/modules/screen_orientation/screen_orientation_controller.cc b/third_party/blink/renderer/modules/screen_orientation/screen_orientation_controller.cc
+index a8d9885cb4..15448d3f18 100644
+--- a/third_party/blink/renderer/modules/screen_orientation/screen_orientation_controller.cc
++++ b/third_party/blink/renderer/modules/screen_orientation/screen_orientation_controller.cc
+@@ -6,6 +6,7 @@
+ 
+ #include <memory>
+ #include <utility>
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
+ #include "third_party/blink/public/platform/task_type.h"
+ #include "third_party/blink/renderer/core/dom/events/event.h"
+@@ -195,6 +196,10 @@ void ScreenOrientationController::NotifyOrientationChangedInternal() {
+     return;
+ 
+   UpdateOrientation();
++  // Starry: protected pages see a fixed orientation.
++  if (starry::ShouldProtectFingerprint(GetExecutionContext())) {
++    return;
++  }
+   GetExecutionContext()
+       ->GetTaskRunner(TaskType::kMiscPlatformAPI)
+       ->PostTask(FROM_HERE,

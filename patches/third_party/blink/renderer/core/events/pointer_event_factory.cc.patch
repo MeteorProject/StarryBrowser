@@ -1,0 +1,21 @@
+diff --git a/third_party/blink/renderer/core/events/pointer_event_factory.cc b/third_party/blink/renderer/core/events/pointer_event_factory.cc
+index 31ebb95dae..ea79acb6e1 100644
+--- a/third_party/blink/renderer/core/events/pointer_event_factory.cc
++++ b/third_party/blink/renderer/core/events/pointer_event_factory.cc
+@@ -6,6 +6,7 @@
+ 
+ #include "base/notreached.h"
+ #include "base/trace_event/trace_event.h"
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_pointer_event_init.h"
+ #include "third_party/blink/renderer/core/dom/pseudo_element.h"
+ #include "third_party/blink/renderer/core/events/pointer_event_util.h"
+@@ -88,7 +89,7 @@ void UpdateCommonPointerEventInit(const WebPointerEvent& web_pointer_event,
+   if (!web_pointer_event.is_raw_movement_event &&
+       (web_pointer_event.GetType() == WebInputEvent::Type::kPointerMove ||
+        web_pointer_event.GetType() == WebInputEvent::Type::kPointerRawUpdate)) {
+-    float device_scale_factor = 1;
++    float device_scale_factor = starry::ProtectedMovementScale(dom_window);
+ 
+     // movementX/Y is type int for pointerevent, so we still need to truncated
+     // the coordinates before calculate movement.

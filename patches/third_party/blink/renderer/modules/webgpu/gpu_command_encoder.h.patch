@@ -1,0 +1,43 @@
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_command_encoder.h b/third_party/blink/renderer/modules/webgpu/gpu_command_encoder.h
+index cea6873688..4f6ee1d7c2 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_command_encoder.h
++++ b/third_party/blink/renderer/modules/webgpu/gpu_command_encoder.h
+@@ -5,6 +5,7 @@
+ #ifndef THIRD_PARTY_BLINK_RENDERER_MODULES_WEBGPU_GPU_COMMAND_ENCODER_H_
+ #define THIRD_PARTY_BLINK_RENDERER_MODULES_WEBGPU_GPU_COMMAND_ENCODER_H_
+ 
++#include "starry/renderer/webgpu_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_typedefs.h"
+ #include "third_party/blink/renderer/modules/webgpu/dawn_object.h"
+ #include "third_party/blink/renderer/platform/bindings/exception_state.h"
+@@ -79,6 +80,8 @@ class GPUCommandEncoder : public DawnObject<wgpu::CommandEncoder> {
+     GetHandle().CopyBufferToBuffer(source->GetHandle(), source_offset,
+                                    destination->GetHandle(), destination_offset,
+                                    size);
++    starry::RecordWebGPUBufferCopy(this, source, source_offset, destination,
++                                   destination_offset, size);
+   }
+   void copyBufferToTexture(GPUTexelCopyBufferInfo* source,
+                            GPUTexelCopyTextureInfo* destination,
+@@ -108,17 +111,21 @@ class GPUCommandEncoder : public DawnObject<wgpu::CommandEncoder> {
+                        uint64_t destinationOffset) {
+     GetHandle().ResolveQuerySet(querySet->GetHandle(), firstQuery, queryCount,
+                                 destination->GetHandle(), destinationOffset);
++    starry::RecordWebGPUQueryResolve(this, querySet, firstQuery, queryCount,
++                                     destination, destinationOffset);
+   }
+   void writeTimestamp(DawnObject<wgpu::QuerySet>* querySet,
+                       uint32_t queryIndex,
+                       ExceptionState& exception_state);
+   void clearBuffer(DawnObject<wgpu::Buffer>* buffer, uint64_t offset) {
+     GetHandle().ClearBuffer(buffer->GetHandle(), offset);
++    starry::RecordWebGPUBufferClear(this, buffer, offset, std::nullopt);
+   }
+   void clearBuffer(DawnObject<wgpu::Buffer>* buffer,
+                    uint64_t offset,
+                    uint64_t size) {
+     GetHandle().ClearBuffer(buffer->GetHandle(), offset, size);
++    starry::RecordWebGPUBufferClear(this, buffer, offset, size);
+   }
+   GPUCommandBuffer* finish(const GPUCommandBufferDescriptor* descriptor);
+   // }}} End of WebIDL binding implementation.

@@ -1,0 +1,21 @@
+diff --git a/chrome/install_static/BUILD.gn b/chrome/install_static/BUILD.gn
+index d23e787c71..d60c6796dd 100644
+--- a/chrome/install_static/BUILD.gn
++++ b/chrome/install_static/BUILD.gn
+@@ -26,6 +26,7 @@ if (is_win) {
+       "//base",
+       "//build:branding_buildflags",
+       "//chrome/chrome_elf:nt_registry",
++      "//starry/common:platform_branding",
+     ]
+ 
+     sources = [
+@@ -55,7 +56,7 @@ if (is_win) {
+     } else if (is_chrome_for_testing_branded) {
+       sources += [ "google_chrome_for_testing_install_modes.h" ]
+     } else {
+-      sources += [ "chromium_install_modes.h" ]
++      sources += [ "//starry/common/win/install_modes.h" ]
+     }
+ 
+     libs = [ "kernel32.lib" ]

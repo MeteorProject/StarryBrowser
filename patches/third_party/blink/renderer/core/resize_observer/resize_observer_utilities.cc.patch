@@ -1,0 +1,27 @@
+diff --git a/third_party/blink/renderer/core/resize_observer/resize_observer_utilities.cc b/third_party/blink/renderer/core/resize_observer/resize_observer_utilities.cc
+index ca602596da..a308a7c116 100644
+--- a/third_party/blink/renderer/core/resize_observer/resize_observer_utilities.cc
++++ b/third_party/blink/renderer/core/resize_observer/resize_observer_utilities.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "third_party/blink/renderer/core/resize_observer/resize_observer_utilities.h"
+ 
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/renderer/core/geometry/dom_rect_read_only.h"
+ #include "third_party/blink/renderer/core/layout/adjust_for_absolute_zoom.h"
+ #include "third_party/blink/renderer/core/layout/geometry/logical_offset.h"
+@@ -64,9 +65,11 @@ gfx::Size ResizeObserverUtilities::ComputeSnappedDevicePixelContentBox(
+     const LayoutObject& layout_object,
+     const ComputedStyle& style) {
+   LogicalOffset paint_offset = ComputePaintOffset(layout_object, style);
+-  return gfx::Size(
+-      SnapSizeToPixel(box_size.inline_size, paint_offset.inline_offset),
+-      SnapSizeToPixel(box_size.block_size, paint_offset.block_offset));
++  return starry::ProtectDevicePixelSize(
++      layout_object.GetFrame(),
++      gfx::Size(
++          SnapSizeToPixel(box_size.inline_size, paint_offset.inline_offset),
++          SnapSizeToPixel(box_size.block_size, paint_offset.block_offset)));
+ }
+ 
+ // static

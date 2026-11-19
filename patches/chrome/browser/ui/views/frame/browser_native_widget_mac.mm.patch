@@ -1,0 +1,60 @@
+diff --git a/chrome/browser/ui/views/frame/browser_native_widget_mac.mm b/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
+index 73a8db26c2..d5199cb03b 100644
+--- a/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
++++ b/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
+@@ -4,6 +4,9 @@
+ 
+ #import "chrome/browser/ui/views/frame/browser_native_widget_mac.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++#include "starry/browser/ui/mini_window/mini_window_activation.h"  // nogncheck
++
+ #include <array>
+ 
+ #import "base/apple/foundation_util.h"
+@@ -275,6 +278,12 @@ - (NSTouchBar*)makeTouchBar {
+ void BrowserNativeWidgetMac::GetWindowFrameTitlebarHeight(
+     bool* override_titlebar_height,
+     float* titlebar_height) {
++  // Starry：小窗口的标题栏和它的工具栏一样高（红绿灯在工具栏的中线上）。
++  if (const int starry_height = starry::StarryTitlebarHeight(browser_view_)) {
++    *override_titlebar_height = true;
++    *titlebar_height = starry_height;
++    return;
++  }
+   if (browser_view_ && browser_view_->browser_widget() &&
+       browser_view_->browser_widget()->GetFrameView()) {
+     *override_titlebar_height = true;
+@@ -735,7 +744,8 @@ - (NSTouchBar*)makeTouchBar {
+                          NSWindowStyleMaskTitled | NSWindowStyleMaskResizable;
+     params->window_title_hidden = true;
+   } else if (browser_view_->GetIsNormalType() ||
+-             browser_view_->GetIsWebAppType()) {
++             browser_view_->GetIsWebAppType() ||
++             starry::UsesStarryWindowFrame(browser_view_)) {
+     params->window_class = remote_cocoa::mojom::WindowClass::kBrowser;
+     params->style_mask |= NSWindowStyleMaskFullSizeContentView;
+ 
+@@ -743,7 +753,8 @@ - (NSTouchBar*)makeTouchBar {
+     params->titlebar_appears_transparent = true;
+ 
+     // Hosted apps draw their own window title.
+-    if (browser_view_->GetIsWebAppType()) {
++    if (browser_view_->GetIsWebAppType() ||
++        starry::UsesStarryWindowFrame(browser_view_)) {
+       params->window_title_hidden = true;
+     }
+   } else {
+@@ -755,7 +766,11 @@ - (NSTouchBar*)makeTouchBar {
+ NativeWidgetMacNSWindow* BrowserNativeWidgetMac::CreateNSWindow(
+     const remote_cocoa::mojom::CreateWindowParams* params) {
+   CHECK(browser_view_);
+-  NativeWidgetMacNSWindow* ns_window = NativeWidgetMac::CreateNSWindow(params);
++  NativeWidgetMacNSWindow* ns_window =
++      starry::mini_window::CreateNativeWindow(browser_view_, params);
++  if (!ns_window) {
++    ns_window = NativeWidgetMac::CreateNSWindow(params);
++  }
+   touch_bar_delegate_ = [[BrowserWindowTouchBarViewsDelegate alloc]
+       initWithBrowser:browser_view_->browser()
+                window:ns_window];

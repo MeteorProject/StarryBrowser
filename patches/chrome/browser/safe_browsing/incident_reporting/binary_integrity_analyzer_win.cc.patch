@@ -1,0 +1,25 @@
+diff --git a/chrome/browser/safe_browsing/incident_reporting/binary_integrity_analyzer_win.cc b/chrome/browser/safe_browsing/incident_reporting/binary_integrity_analyzer_win.cc
+index ae9775564c..37c721d4a8 100644
+--- a/chrome/browser/safe_browsing/incident_reporting/binary_integrity_analyzer_win.cc
++++ b/chrome/browser/safe_browsing/incident_reporting/binary_integrity_analyzer_win.cc
+@@ -16,6 +16,7 @@
+ #include "base/path_service.h"
+ #include "chrome/browser/safe_browsing/incident_reporting/binary_integrity_incident.h"
+ #include "chrome/browser/safe_browsing/incident_reporting/incident_receiver.h"
++#include "chrome/common/chrome_constants.h"
+ #include "chrome/common/chrome_version.h"
+ #include "chrome/common/safe_browsing/binary_feature_extractor.h"
+ #include "components/safe_browsing/core/common/proto/csd.pb.h"
+@@ -24,10 +25,10 @@ namespace safe_browsing {
+ 
+ std::vector<base::FilePath> GetCriticalBinariesPath() {
+   static constexpr auto kUnversionedFiles = std::to_array({
+-      FILE_PATH_LITERAL("chrome.exe"),
++      chrome::kBrowserProcessExecutableName,
+   });
+   static constexpr auto kVersionedFiles = std::to_array({
+-      FILE_PATH_LITERAL("chrome.dll"),
++      chrome::kBrowserResourcesDll,
+       FILE_PATH_LITERAL("chrome_child.dll"),
+       FILE_PATH_LITERAL("chrome_elf.dll"),
+   });

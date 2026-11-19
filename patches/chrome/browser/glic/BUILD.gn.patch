@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/glic/BUILD.gn b/chrome/browser/glic/BUILD.gn
+index e42a0cebb3..08d754ce91 100644
+--- a/chrome/browser/glic/BUILD.gn
++++ b/chrome/browser/glic/BUILD.gn
+@@ -626,6 +626,7 @@ source_set("impl") {
+     "//extensions/buildflags",
+     "//net",
+     "//pdf:buildflags",
++    "//starry/common:google_services",
+     "//third_party/blink/public/common",
+     "//third_party/metrics_proto",
+     "//ui/base",

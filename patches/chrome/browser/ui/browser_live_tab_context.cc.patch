@@ -1,0 +1,47 @@
+diff --git a/chrome/browser/ui/browser_live_tab_context.cc b/chrome/browser/ui/browser_live_tab_context.cc
+index d48ee3c659..93407c2fbb 100644
+--- a/chrome/browser/ui/browser_live_tab_context.cc
++++ b/chrome/browser/ui/browser_live_tab_context.cc
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "chrome/browser/ui/browser_live_tab_context.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ 
+ #include <algorithm>
+ #include <memory>
+@@ -200,6 +201,8 @@ std::map<std::string, std::string> BrowserLiveTabContext::GetExtraDataForTab(
+ 
+   glic::PopulateGlicExtraData(tab_strip_model_->GetTabAtIndex(index),
+                               &extra_data);
++  starry::AddTabExtraData(tab_strip_model_->GetWebContentsAt(index),
++                          tab_strip_model_->IsTabPinned(index), &extra_data);
+ 
+   return extra_data;
+ }
+@@ -493,6 +496,25 @@ void BrowserLiveTabContext::ReconstructSplit(
+   }
+ }
+ 
++void BrowserLiveTabContext::ReconstructSplitTabs(
++    const std::vector<sessions::LiveTab*>& tabs,
++    split_tabs::SplitTabId split_id,
++    const split_tabs::SplitTabVisualData& visual_data) {
++  std::vector<int> indices;
++  for (auto* tab : tabs) {
++    const int index = tab_strip_model_->GetIndexOfWebContents(
++        &static_cast<sessions::ContentLiveTab*>(tab)->GetWebContents());
++    if (index == TabStripModel::kNoTab) {
++      return;
++    }
++    indices.push_back(index);
++  }
++  std::ranges::sort(indices);
++  if (indices.size() >= 2 && indices.size() <= 3) {
++    tab_strip_model_->RestoreSplit(split_id, indices, visual_data);
++  }
++}
++
+ void BrowserLiveTabContext::CloseTab() {
+   chrome::CloseTab(&*browser_);
+ }

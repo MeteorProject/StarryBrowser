@@ -1,0 +1,29 @@
+diff --git a/chrome/chrome_proxy/chrome_proxy_main_win.cc b/chrome/chrome_proxy/chrome_proxy_main_win.cc
+index 776f544e46..c1e93bc51a 100644
+--- a/chrome/chrome_proxy/chrome_proxy_main_win.cc
++++ b/chrome/chrome_proxy/chrome_proxy_main_win.cc
+@@ -10,13 +10,11 @@
+ #include "base/logging/logging_settings.h"
+ #include "base/path_service.h"
+ #include "base/process/launch.h"
++#include "chrome/common/chrome_constants.h"
+ #include "chrome/common/chrome_switches.h"
+ 
+ namespace {
+ 
+-constexpr base::FilePath::CharType kChromeExecutable[] =
+-    FILE_PATH_LITERAL("chrome.exe");
+-
+ constexpr base::FilePath::CharType kChromeProxyExecutable[] =
+     FILE_PATH_LITERAL("chrome_proxy.exe");
+ 
+@@ -50,7 +48,8 @@ int WINAPI wWinMain(HINSTANCE instance,
+ 
+   base::FilePath chrome_dir;
+   CHECK(base::PathService::Get(base::DIR_EXE, &chrome_dir));
+-  base::CommandLine chrome_command_line(chrome_dir.Append(kChromeExecutable));
++  base::CommandLine chrome_command_line(
++      chrome_dir.Append(chrome::kBrowserProcessExecutableName));
+ 
+   // Forward all command line arguments.
+   const std::vector<std::wstring>& argv =

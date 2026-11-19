@@ -1,0 +1,22 @@
+diff --git a/third_party/blink/renderer/core/events/mouse_event.cc b/third_party/blink/renderer/core/events/mouse_event.cc
+index 7f9b51bb4d..cb8d90c537 100644
+--- a/third_party/blink/renderer/core/events/mouse_event.cc
++++ b/third_party/blink/renderer/core/events/mouse_event.cc
+@@ -22,6 +22,7 @@
+ 
+ #include "third_party/blink/renderer/core/events/mouse_event.h"
+ 
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/common/input/web_pointer_properties.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_mouse_event_init.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
+@@ -217,6 +218,9 @@ void MouseEvent::SetCoordinatesFromWebPointerProperties(
+         frame->View()->ConvertFromRootFrame(root_frame_point);
+     inverse_zoom_factor = 1.0f / frame->LayoutZoomFactor();
+     client_point = gfx::ScalePoint(frame_point, inverse_zoom_factor);
++    if (auto point = starry::ProtectedScreenPoint(*frame, client_point)) {
++      screen_point = *point;
++    }
+   }
+ 
+   initializer->setScreenX(screen_point.x());

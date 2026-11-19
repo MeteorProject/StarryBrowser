@@ -1,0 +1,23 @@
+diff --git a/components/viz/service/display/direct_renderer.cc b/components/viz/service/display/direct_renderer.cc
+index 93c637769d..321701127b 100644
+--- a/components/viz/service/display/direct_renderer.cc
++++ b/components/viz/service/display/direct_renderer.cc
+@@ -43,6 +43,7 @@
+ #include "components/viz/service/display/skia_output_surface.h"
+ #include "gpu/command_buffer/common/capabilities.h"
+ #include "media/base/video_util.h"
++#include "starry/components/viz/glass_backdrop_pass.h"
+ #include "ui/gfx/buffer_types.h"
+ #include "ui/gfx/display_color_spaces.h"
+ #include "ui/gfx/geometry/quad_f.h"
+@@ -208,6 +209,10 @@ void DirectRenderer::DrawFrame(
+   DCHECK(has_back_buffers_);
+   TRACE_EVENT0("viz,benchmark", "DirectRenderer::DrawFrame");
+ 
++  // Starry: draw what is behind live glass into its own pass instead of
++  // reading the framebuffer back.
++  starry::RewriteGlassBackdrops(render_passes_in_draw_order);
++
+   auto* root_render_pass = render_passes_in_draw_order->back().get();
+   DCHECK(root_render_pass);
+ 

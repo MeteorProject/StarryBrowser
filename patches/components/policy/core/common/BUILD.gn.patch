@@ -1,0 +1,16 @@
+diff --git a/components/policy/core/common/BUILD.gn b/components/policy/core/common/BUILD.gn
+index 1344e5cf74..f28a7aae95 100644
+--- a/components/policy/core/common/BUILD.gn
++++ b/components/policy/core/common/BUILD.gn
+@@ -536,7 +536,10 @@ source_set("policy_path_constants") {
+ 
+   # NOTE: This target is intentionally separated from other targets, with
+   # minimal dependencies.
+-  deps = [ "//build:branding_buildflags" ]
++  deps = [
++    "//build:branding_buildflags",
++    "//starry/common:platform_branding",
++  ]
+ }
+ 
+ source_set("unit_tests") {

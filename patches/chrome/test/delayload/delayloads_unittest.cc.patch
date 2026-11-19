@@ -1,0 +1,66 @@
+diff --git a/chrome/test/delayload/delayloads_unittest.cc b/chrome/test/delayload/delayloads_unittest.cc
+index 5da3dae3df..56e0ef7519 100644
+--- a/chrome/test/delayload/delayloads_unittest.cc
++++ b/chrome/test/delayload/delayloads_unittest.cc
+@@ -27,6 +27,7 @@
+ #include "build/build_config.h"
+ #include "chrome/install_static/test/scoped_install_details.h"
+ #include "mojo/buildflags.h"
++#include "starry/common/platform_branding.h"
+ #include "testing/gmock/include/gmock/gmock-matchers.h"
+ #include "testing/gmock/include/gmock/gmock.h"
+ #include "testing/gtest/include/gtest/gtest-spi.h"
+@@ -233,7 +234,7 @@ class MinimumWindowsSupportTest : public DelayloadsTest {
+ TEST_F(DelayloadsTest, ChromeDllDelayloadsCheck) {
+   base::FilePath dll;
+   ASSERT_TRUE(base::PathService::Get(base::DIR_EXE, &dll));
+-  dll = dll.Append(L"chrome.dll");
++  dll = dll.Append(STARRY_WINDOWS_DLL);
+   std::vector<std::string> dll_imports = GetImports(dll);
+ 
+   // Check that the dll has imports.
+@@ -306,7 +307,7 @@ TEST_F(DelayloadsTest, MAYBE_ChromeDllLoadSanityTest) {
+ TEST_F(DelayloadsTest, DISABLED_ChromeDllLoadSanityTestImpl) {
+   base::FilePath dll;
+   ASSERT_TRUE(base::PathService::Get(base::DIR_EXE, &dll));
+-  dll = dll.Append(L"chrome.dll");
++  dll = dll.Append(STARRY_WINDOWS_DLL);
+ 
+   // We don't expect user32 to be loaded in delayloads_unittests. If this
+   // test case fails, then it means that a dependency on user32 has crept into
+@@ -413,7 +414,7 @@ TEST_F(DelayloadsTest, DISABLED_ChromeElfDllLoadSanityTestImpl) {
+ TEST_F(DelayloadsTest, ChromeExeDelayloadsCheck) {
+   base::FilePath exe;
+   ASSERT_TRUE(base::PathService::Get(base::DIR_EXE, &exe));
+-  exe = exe.Append(L"chrome.exe");
++  exe = exe.Append(STARRY_WINDOWS_EXE);
+   std::vector<std::string> exe_imports = GetImports(exe);
+ 
+   // Check that chrome.exe has imports.
+@@ -471,7 +472,7 @@ TEST_F(MinimumWindowsSupportTest, ChromeExe) {
+       "clang_rt.asan_dynamic-x86_64.dll",
+ #endif
+   });
+-  Validate(L"chrome.exe");
++  Validate(STARRY_WINDOWS_EXE);
+ }
+ 
+ TEST_F(MinimumWindowsSupportTest, ChromeDll) {
+@@ -481,7 +482,7 @@ TEST_F(MinimumWindowsSupportTest, ChromeDll) {
+       "clang_rt.asan_dynamic-x86_64.dll",
+ #endif
+   });
+-  Validate(L"chrome.dll");
++  Validate(STARRY_WINDOWS_DLL);
+ }
+ 
+ TEST_F(MinimumWindowsSupportTest, ChromeExtraDlls) {
+@@ -511,7 +512,7 @@ TEST_F(MinimumWindowsSupportTest, ChromeOptimizationGuide) {
+ TEST_F(DelayloadsTest, ChromeExeLoadSanityCheck) {
+   base::FilePath exe;
+   ASSERT_TRUE(base::PathService::Get(base::DIR_EXE, &exe));
+-  exe = exe.Append(L"chrome.exe");
++  exe = exe.Append(STARRY_WINDOWS_EXE);
+   std::vector<std::string> exe_imports = GetImports(exe);
+ 
+   // Check that chrome.exe has imports.

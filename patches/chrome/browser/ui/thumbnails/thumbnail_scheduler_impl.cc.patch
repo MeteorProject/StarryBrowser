@@ -1,0 +1,42 @@
+diff --git a/chrome/browser/ui/thumbnails/thumbnail_scheduler_impl.cc b/chrome/browser/ui/thumbnails/thumbnail_scheduler_impl.cc
+index 4d2a624390..219aa641df 100644
+--- a/chrome/browser/ui/thumbnails/thumbnail_scheduler_impl.cc
++++ b/chrome/browser/ui/thumbnails/thumbnail_scheduler_impl.cc
+@@ -10,6 +10,7 @@
+ #include "base/check_op.h"
+ #include "base/memory/raw_ptr.h"
+ #include "base/notreached.h"
++#include "starry/browser/ui/tabs/thumbnail_capture_state.h"  // nogncheck
+ 
+ // static
+ constexpr int ThumbnailSchedulerImpl::kMaxTotalCaptures;
+@@ -21,10 +22,10 @@ struct ThumbnailSchedulerImpl::TabSchedulingData {
+   TabCapturePriority priority = TabCapturePriority::kNone;
+ };
+ 
+-struct ThumbnailSchedulerImpl::TabNode : public base::LinkNode<TabNode> {
++struct ThumbnailSchedulerImpl::TabNode : public base::LinkNode<TabNode>,
++                                         public starry::ThumbnailCaptureState {
+   raw_ptr<TabCapturer> capturer = nullptr;
+   TabSchedulingData data;
+-  bool is_capturing = false;
+ };
+ 
+ ThumbnailSchedulerImpl::ThumbnailSchedulerImpl(int max_total_captures,
+@@ -173,15 +174,7 @@ void ThumbnailSchedulerImpl::Schedule(TabNode* tab_node,
+     lo_prio_capture_count_ += 1;
+   }
+ 
+-  if (descheduled_tab) {
+-    descheduled_tab->capturer->SetCapturePermittedByScheduler(false);
+-    descheduled_tab->is_capturing = false;
+-  }
+-
+-  if (scheduled_tab) {
+-    scheduled_tab->capturer->SetCapturePermittedByScheduler(true);
+-    scheduled_tab->is_capturing = true;
+-  }
++  starry::UpdateThumbnailCaptureState(tabs_, descheduled_tab, scheduled_tab);
+ }
+ 
+ ThumbnailSchedulerImpl::TabNode* ThumbnailSchedulerImpl::GetTabNode(

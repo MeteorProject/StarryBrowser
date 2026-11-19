@@ -1,0 +1,22 @@
+diff --git a/chrome/app/chrome_main.cc b/chrome/app/chrome_main.cc
+index 199142d671..a814441f55 100644
+--- a/chrome/app/chrome_main.cc
++++ b/chrome/app/chrome_main.cc
+@@ -30,6 +30,7 @@
+ #include "content/public/app/content_main.h"
+ #include "content/public/common/content_switches.h"
+ #include "partition_alloc/buildflags.h"
++#include "starry/browser/agent/agent_bridge.h"  // nogncheck
+ 
+ #if BUILDFLAG(IS_MAC)
+ #include "chrome/app/chrome_main_mac.h"
+@@ -187,6 +188,9 @@ int ChromeMain(int argc, const char** argv) {
+   AppendExtraArgumentsToCommandLine(command_line);
+ #endif
+ 
++  // Starry: `--mcp` is the stdio bridge MCP clients launch; it never returns.
++  starry::MaybeRunAgentBridge();
++
+   // PoissonAllocationSampler's TLS slots need to be set up before
+   // MainThreadStackSamplingProfiler (in ChromeMainDelegate::ThreadPoolCreated),
+   // which can allocate TLS slots of its own. On some platforms pthreads can

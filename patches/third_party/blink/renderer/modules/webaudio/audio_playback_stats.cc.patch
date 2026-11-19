@@ -1,0 +1,48 @@
+diff --git a/third_party/blink/renderer/modules/webaudio/audio_playback_stats.cc b/third_party/blink/renderer/modules/webaudio/audio_playback_stats.cc
+index 7e37afe11e..8397d87b00 100644
+--- a/third_party/blink/renderer/modules/webaudio/audio_playback_stats.cc
++++ b/third_party/blink/renderer/modules/webaudio/audio_playback_stats.cc
+@@ -5,6 +5,7 @@
+ #include "third_party/blink/renderer/modules/webaudio/audio_playback_stats.h"
+ 
+ #include "base/numerics/safe_conversions.h"
++#include "starry/renderer/audio_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_binding_for_core.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_object_builder.h"
+ #include "third_party/blink/renderer/core/dom/dom_high_res_time_stamp.h"
+@@ -53,23 +54,26 @@ double AudioPlaybackStats::totalDuration(ScriptState* script_state) {
+ 
+ double AudioPlaybackStats::averageLatency(ScriptState* script_state) {
+   MaybeUpdateStats(script_state);
+-  return ConvertDOMHighResTimeStampToSeconds(
+-      Performance::ClampTimeResolution(stats_.average_latency(),
+-                                       IsCrossOriginIsolated(script_state)));
++  return starry::ProtectPlaybackLatency(
++      ExecutionContext::From(script_state),
++      ConvertDOMHighResTimeStampToSeconds(Performance::ClampTimeResolution(
++          stats_.average_latency(), IsCrossOriginIsolated(script_state))));
+ }
+ 
+ double AudioPlaybackStats::minimumLatency(ScriptState* script_state) {
+   MaybeUpdateStats(script_state);
+-  return ConvertDOMHighResTimeStampToSeconds(
+-      Performance::ClampTimeResolution(stats_.min_latency(),
+-                                       IsCrossOriginIsolated(script_state)));
++  return starry::ProtectPlaybackLatency(
++      ExecutionContext::From(script_state),
++      ConvertDOMHighResTimeStampToSeconds(Performance::ClampTimeResolution(
++          stats_.min_latency(), IsCrossOriginIsolated(script_state))));
+ }
+ 
+ double AudioPlaybackStats::maximumLatency(ScriptState* script_state) {
+   MaybeUpdateStats(script_state);
+-  return ConvertDOMHighResTimeStampToSeconds(
+-      Performance::ClampTimeResolution(stats_.max_latency(),
+-                                       IsCrossOriginIsolated(script_state)));
++  return starry::ProtectPlaybackLatency(
++      ExecutionContext::From(script_state),
++      ConvertDOMHighResTimeStampToSeconds(Performance::ClampTimeResolution(
++          stats_.max_latency(), IsCrossOriginIsolated(script_state))));
+ }
+ 
+ void AudioPlaybackStats::resetLatency(ScriptState* script_state) {

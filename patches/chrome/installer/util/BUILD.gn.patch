@@ -1,0 +1,29 @@
+diff --git a/chrome/installer/util/BUILD.gn b/chrome/installer/util/BUILD.gn
+index d0dc85a334..34faea3256 100644
+--- a/chrome/installer/util/BUILD.gn
++++ b/chrome/installer/util/BUILD.gn
+@@ -220,6 +220,12 @@ group("with_rc_strings") {
+ }
+ 
+ generate_embedded_i18n("generate_strings") {
++  script = "//starry/build/branding/installer_strings.py"
++  extra_inputs = [
++    "//starry/build/branding/repack_locales.py",
++    "//base/i18n/win/embedded_i18n/create_string_rc.py",
++    branding_file_path,
++  ]
+   visibility = [
+     ":strings",
+     ":with_no_strings",
+@@ -261,7 +267,10 @@ source_set("constants") {
+ 
+     sources += [ "google_update_constants.cc" ]
+ 
+-    public_deps = [ "//base" ]
++    public_deps = [
++      "//base",
++      "//starry/common:platform_branding",
++    ]
+   }
+ }
+ 

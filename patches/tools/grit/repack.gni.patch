@@ -1,0 +1,22 @@
+diff --git a/tools/grit/repack.gni b/tools/grit/repack.gni
+index c52e0e5076..1a08fd1c84 100644
+--- a/tools/grit/repack.gni
++++ b/tools/grit/repack.gni
+@@ -57,6 +57,9 @@ template("repack") {
+     assert(defined(invoker.output), "Need output for $target_name")
+ 
+     script = "//tools/grit/pak_util.py"
++    if (defined(invoker.repack_script)) {
++      script = invoker.repack_script
++    }
+ 
+     inputs = []
+     foreach(source, invoker.sources) {
+@@ -171,6 +174,7 @@ template("repack_locales") {
+                                  "deps",
+                                  "mark_as_data",
+                                  "repack_allowlist",
++                                 "repack_script",
+                                  "testonly",
+                                ])
+         visibility = [ ":${invoker.target_name}" ]

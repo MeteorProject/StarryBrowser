@@ -1,0 +1,25 @@
+diff --git a/third_party/blink/renderer/core/css/media_query_exp.cc b/third_party/blink/renderer/core/css/media_query_exp.cc
+index 78f9ea8206..ce431b5520 100644
+--- a/third_party/blink/renderer/core/css/media_query_exp.cc
++++ b/third_party/blink/renderer/core/css/media_query_exp.cc
+@@ -388,7 +388,19 @@ bool MediaQueryExp::IsViewportDependent() const {
+          media_feature_ == media_feature_names::kMaxAspectRatioMediaFeature ||
+          media_feature_ == kMaxDevicePixelRatioMediaFeature ||
+          media_feature_ ==
+-             media_feature_names::kMinDevicePixelRatioMediaFeature;
++             media_feature_names::kMinDevicePixelRatioMediaFeature ||
++         // Starry: with fingerprint protection the device size is the
++         // viewport (starry/renderer/fingerprint_protection.h).
++         media_feature_ == media_feature_names::kDeviceWidthMediaFeature ||
++         media_feature_ == media_feature_names::kDeviceHeightMediaFeature ||
++         media_feature_ == media_feature_names::kMinDeviceWidthMediaFeature ||
++         media_feature_ == media_feature_names::kMinDeviceHeightMediaFeature ||
++         media_feature_ == media_feature_names::kMaxDeviceWidthMediaFeature ||
++         media_feature_ == media_feature_names::kMaxDeviceHeightMediaFeature ||
++         media_feature_ ==
++             media_feature_names::kDeviceAspectRatioMediaFeature ||
++         media_feature_ == kMinDeviceAspectRatioMediaFeature ||
++         media_feature_ == kMaxDeviceAspectRatioMediaFeature;
+ }
+ 
+ bool MediaQueryExp::IsDeviceDependent() const {

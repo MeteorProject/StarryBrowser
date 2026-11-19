@@ -1,0 +1,26 @@
+diff --git a/third_party/blink/renderer/core/frame/navigator_device_memory.cc b/third_party/blink/renderer/core/frame/navigator_device_memory.cc
+index 05fa33e456..9ed8a9966d 100644
+--- a/third_party/blink/renderer/core/frame/navigator_device_memory.cc
++++ b/third_party/blink/renderer/core/frame/navigator_device_memory.cc
+@@ -4,15 +4,20 @@
+ 
+ #include "third_party/blink/renderer/core/frame/navigator_device_memory.h"
+ 
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/common/device_memory/approximated_device_memory.h"
+ #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-shared.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
++#include "third_party/blink/renderer/core/execution_context/navigator_base.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+ 
+ namespace blink {
+ 
+ float NavigatorDeviceMemory::deviceMemory() const {
+-  return ApproximatedDeviceMemory::GetApproximatedDeviceMemory();
++  // Starry: NavigatorBase (Navigator, WorkerNavigator) is the only user.
++  return starry::ProtectDeviceMemory(
++      static_cast<const NavigatorBase*>(this)->GetExecutionContext(),
++      ApproximatedDeviceMemory::GetApproximatedDeviceMemory());
+ }
+ 
+ }  // namespace blink

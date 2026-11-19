@@ -1,0 +1,28 @@
+diff --git a/chrome/browser/ui/startup/startup_browser_creator.cc b/chrome/browser/ui/startup/startup_browser_creator.cc
+index 49f777ff63..6ef0cb73b0 100644
+--- a/chrome/browser/ui/startup/startup_browser_creator.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/startup/startup_browser_creator.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <stddef.h>
+ 
+ #include <optional>
+@@ -754,6 +756,14 @@ void StartupBrowserCreator::LaunchBrowser(
+   DCHECK(!command_line.HasSwitch(credential_provider::kGcpwSigninSwitch));
+   DCHECK(!command_line.HasSwitch(switches::kNotificationLaunchId));
+ #endif  // BUILDFLAG(IS_WIN)
++  // Starry：其他 App 打开的链接用小窗口，启动窗口可能推迟。
++  if (starry::InterceptLaunchBrowser(
++          command_line, profile, cur_dir,
++          process_startup == chrome::startup::IsProcessStartup::kYes,
++          is_first_run == chrome::startup::IsFirstRun::kYes,
++          restore_tabbed_browser)) {
++    return;
++  }
+   in_synchronous_profile_launch_ =
+       process_startup == chrome::startup::IsProcessStartup::kYes;
+ 

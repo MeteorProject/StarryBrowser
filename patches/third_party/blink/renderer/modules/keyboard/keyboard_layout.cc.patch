@@ -1,0 +1,21 @@
+diff --git a/third_party/blink/renderer/modules/keyboard/keyboard_layout.cc b/third_party/blink/renderer/modules/keyboard/keyboard_layout.cc
+index e2b697b768..d02b3681c1 100644
+--- a/third_party/blink/renderer/modules/keyboard/keyboard_layout.cc
++++ b/third_party/blink/renderer/modules/keyboard/keyboard_layout.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "third_party/blink/renderer/modules/keyboard/keyboard_layout.h"
+ 
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/platform/browser_interface_broker_proxy.h"
+ #include "third_party/blink/public/platform/platform.h"
+ #include "third_party/blink/public/platform/task_type.h"
+@@ -93,6 +94,8 @@ void KeyboardLayout::GotKeyboardLayoutMap(
+ 
+   switch (result->status) {
+     case mojom::blink::GetKeyboardLayoutMapStatus::kSuccess:
++      starry::ProtectKeyboardLayoutMap(
++          layout_map_property_->GetExecutionContext(), result->layout_map);
+       layout_map_property_->Resolve(
+           MakeGarbageCollected<KeyboardLayoutMap>(result->layout_map));
+       break;

@@ -1,0 +1,32 @@
+diff --git a/chrome/browser/picture_in_picture/auto_picture_in_picture_tab_helper.cc b/chrome/browser/picture_in_picture/auto_picture_in_picture_tab_helper.cc
+index 46dd2104b7..1b0adaceb0 100644
+--- a/chrome/browser/picture_in_picture/auto_picture_in_picture_tab_helper.cc
++++ b/chrome/browser/picture_in_picture/auto_picture_in_picture_tab_helper.cc
+@@ -32,6 +32,7 @@
+ #include "content/public/browser/render_frame_host.h"
+ #include "media/base/media_switches.h"
+ #include "mojo/public/cpp/bindings/remote.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/common/frame/user_activation_state.h"
+ 
+@@ -667,6 +668,9 @@ void AutoPictureInPictureTabHelper::StopAndResetAsyncTasks() {
+ }
+ 
+ void AutoPictureInPictureTabHelper::MaybeExitAutoPictureInPicture() {
++  if (starry::DeferAutoPictureInPictureExit(web_contents())) {
++    return;
++  }
+   blocked_due_to_content_setting_ = false;
+   MaybeRecordPictureInPictureChanged(false);
+   StopAndResetAsyncTasks();
+@@ -715,6 +719,9 @@ void AutoPictureInPictureTabHelper::MaybeStartOrStopObservers() {
+ 
+ bool AutoPictureInPictureTabHelper::IsEligibleForAutoPictureInPicture(
+     bool should_record_blocking_metrics) {
++  if (!starry::AllowAutoPictureInPicture(web_contents())) {
++    return false;
++  }
+   // Don't try to autopip if picture-in-picture is currently disabled.
+   if (PictureInPictureWindowManager::GetInstance()
+           ->IsPictureInPictureDisabled()) {

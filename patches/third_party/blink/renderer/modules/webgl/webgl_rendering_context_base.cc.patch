@@ -1,0 +1,64 @@
+diff --git a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc b/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
+index e72f6f7ca6..8208ca50d7 100644
+--- a/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
++++ b/third_party/blink/renderer/modules/webgl/webgl_rendering_context_base.cc
+@@ -63,6 +63,8 @@
+ #include "media/base/video_frame.h"
+ #include "media/gfx/paint_canvas_video_renderer.h"
+ #include "media/gfx/video_frame_shared_image_cache.h"
++#include "starry/renderer/fingerprint_protection.h"
++#include "starry/renderer/webgl_fingerprint_protection.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
+ #include "third_party/blink/public/mojom/gpu/gpu.mojom-blink.h"
+@@ -2806,6 +2808,7 @@ void WebGLRenderingContextBase::BufferDataImpl(GLenum target,
+   buffer->SetSize(size);
+ 
+   ContextGL()->BufferData(target, static_cast<GLsizeiptr>(size), data, usage);
++  starry::ResetWebGLBuffer(GetExecutionContext(), buffer);
+ }
+ 
+ void WebGLRenderingContextBase::bufferData(GLenum target,
+@@ -2861,6 +2864,7 @@ void WebGLRenderingContextBase::BufferSubDataImpl(GLenum target,
+ 
+   ContextGL()->BufferSubData(target, static_cast<GLintptr>(offset),
+                              static_cast<GLintptr>(size), data);
++  starry::OverwriteWebGLBuffer(GetExecutionContext(), buffer, offset, size);
+ }
+ 
+ void WebGLRenderingContextBase::bufferSubData(GLenum target,
+@@ -4219,6 +4223,9 @@ ScriptValue WebGLRenderingContextBase::getParameter(ScriptState* script_state,
+       return ScriptValue::CreateNull(script_state->GetIsolate());
+     case WebGLDebugRendererInfo::kUnmaskedRendererWebgl:
+       if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
++        if (starry::ShouldProtectFingerprint(GetExecutionContext())) {
++          return WebGLAny(script_state, String("WebKit WebGL"));
++        }
+         return WebGLAny(script_state,
+                         String(ContextGL()->GetString(GL_RENDERER)));
+       }
+@@ -4228,6 +4235,9 @@ ScriptValue WebGLRenderingContextBase::getParameter(ScriptState* script_state,
+       return ScriptValue::CreateNull(script_state->GetIsolate());
+     case WebGLDebugRendererInfo::kUnmaskedVendorWebgl:
+       if (ExtensionEnabled(kWebGLDebugRendererInfoName)) {
++        if (starry::ShouldProtectFingerprint(GetExecutionContext())) {
++          return WebGLAny(script_state, String("WebKit"));
++        }
+         return WebGLAny(script_state,
+                         String(ContextGL()->GetString(GL_VENDOR)));
+       }
+@@ -5374,7 +5384,14 @@ void WebGLRenderingContextBase::ReadPixelsHelper(GLint x,
+     if (!binder.Succeeded()) {
+       return;
+     }
++    const bool protect_readback =
++        starry::ShouldProtectFingerprint(GetExecutionContext()) &&
++        starry::WebGLReadbackIsValid(ContextGL(), IsWebGL2(), format, type);
+     ContextGL()->ReadPixels(x, y, width, height, format, type, data);
++    if (protect_readback && !isContextLost())
++      starry::ProtectWebGLPixels(GetExecutionContext(), width, height, format,
++                                 type, GetPackPixelStoreParams(), data,
++                                 buffer_size.ValueOrDie());
+   }
+ }
+ 

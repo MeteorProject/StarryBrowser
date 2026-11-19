@@ -1,0 +1,78 @@
+diff --git a/chrome/browser/extensions/api/downloads/downloads_api.cc b/chrome/browser/extensions/api/downloads/downloads_api.cc
+index cc185e77fe..cd657449f5 100644
+--- a/chrome/browser/extensions/api/downloads/downloads_api.cc
++++ b/chrome/browser/extensions/api/downloads/downloads_api.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/extensions/api/downloads/downloads_api.h"
+ 
++#include "starry/browser/starry_hooks.h"  // nogncheck
++
+ #include <stddef.h>
+ #include <stdint.h>
+ 
+@@ -513,7 +515,8 @@ void InitSortTypeMap(SortTypeMap* sorter_types_ptr) {
+ bool ShouldExport(const DownloadItem& download_item) {
+   return !download_item.IsTemporary() &&
+          download_item.GetDownloadSource() !=
+-             download::DownloadSource::INTERNAL_API;
++             download::DownloadSource::INTERNAL_API &&
++         !starry::IsHiddenFromExtensions(download_item);
+ }
+ 
+ // Set |manager| to the on-record DownloadManager, and |incognito_manager| to
+@@ -582,6 +585,10 @@ void InitializeDownloadHistory(content::BrowserContext* context) {
+ DownloadItem* GetDownload(content::BrowserContext* context,
+                           bool include_incognito,
+                           int id) {
++  if (DownloadItem* item =
++          starry::FindDownloadForExtensions(context, include_incognito, id)) {
++    return item;
++  }
+   DownloadManager* manager = nullptr;
+   DownloadManager* incognito_manager = nullptr;
+   GetManagers(context, include_incognito, &manager, &incognito_manager);
+@@ -740,6 +747,8 @@ void RunDownloadQuery(const downloads::DownloadQuery& query_in,
+       incognito_manager->GetAllDownloads(&all_items);
+     }
+   }
++  starry::AppendDownloadsForExtensions(manager, incognito_manager, query_in.id,
++                                       &all_items);
+   query_out.AddFilter(base::BindRepeating(&ShouldExport));
+   query_out.Search(all_items.begin(), all_items.end(), results);
+ }
+@@ -771,6 +780,13 @@ class ExtensionDownloadsEventRouterData : public base::SupportsUserData::Data {
+     download_item->RemoveUserData(kKey);
+   }
+ 
++  static void Move(DownloadItem* from, DownloadItem* to) {
++    if (std::unique_ptr<base::SupportsUserData::Data> data =
++            from->TakeUserData(kKey)) {
++      to->SetUserData(kKey, std::move(data));
++    }
++  }
++
+   explicit ExtensionDownloadsEventRouterData(DownloadItem* download_item,
+                                              base::DictValue json_item)
+       : json_(std::move(json_item)),
+@@ -1329,6 +1345,7 @@ ExtensionFunction::ResponseAction DownloadsSearchFunction::RunInternal() {
+     bool off_record =
+         ((incognito_manager != nullptr) &&
+          (incognito_manager->GetDownload(download_id) != nullptr));
++    off_record = off_record || starry::IsOffTheRecordDownload(*result);
+     Profile* profile = Profile::FromBrowserContext(browser_context());
+     base::DictValue json_item = DownloadItemToJSON(
+         result, off_record
+@@ -1930,6 +1947,12 @@ void ExtensionDownloadsEventRouter::OnManagerGoingDown(
+   }
+ }
+ 
++// static
++void ExtensionDownloadsEventRouter::MoveItemData(DownloadItem* from,
++                                                 DownloadItem* to) {
++  ExtensionDownloadsEventRouterData::Move(from, to);
++}
++
+ void ExtensionDownloadsEventRouter::SetDetermineFilenameTimeoutForTesting(
+     base::TimeDelta timeout) {
+   ExtensionDownloadsEventRouterData::SetDetermineFilenameTimeoutForTesting(

@@ -1,0 +1,18 @@
+diff --git a/chrome/installer/util/auto_launch_util.cc b/chrome/installer/util/auto_launch_util.cc
+index 0285da4924..3a101bda53 100644
+--- a/chrome/installer/util/auto_launch_util.cc
++++ b/chrome/installer/util/auto_launch_util.cc
+@@ -22,11 +22,12 @@
+ #include "chrome/installer/util/util_constants.h"
+ #include "components/app_launch_prefetch/app_launch_prefetch.h"
+ #include "crypto/hash.h"
++#include "starry/common/platform_branding.h"
+ 
+ namespace auto_launch_util {
+ 
+ // The prefix of the Chrome Auto-launch key under the Run key.
+-constexpr wchar_t kAutolaunchKeyValue[] = L"GoogleChromeAutoLaunch";
++constexpr wchar_t kAutolaunchKeyValue[] = STARRY_WINDOWS_APP_ID L"AutoLaunch";
+ 
+ // Builds a registry key name to use when deciding where to read/write the auto-
+ // launch value to/from. It takes into account the path of the profile so that

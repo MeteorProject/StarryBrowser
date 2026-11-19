@@ -1,0 +1,76 @@
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_command_encoder.cc b/third_party/blink/renderer/modules/webgpu/gpu_command_encoder.cc
+index dda2fc46f6..fb72257e89 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_command_encoder.cc
++++ b/third_party/blink/renderer/modules/webgpu/gpu_command_encoder.cc
+@@ -261,6 +261,7 @@ GPURenderPassEncoder* GPUCommandEncoder::beginRenderPass(
+         descriptor->colorAttachments(), label.c_str());
+     if (!error.empty()) {
+       GetHandle().InjectValidationError(error.c_str());
++      starry::InvalidateWebGPUCommands(this);
+     }
+ 
+     if (!ConvertToDawn(descriptor->colorAttachments(), &color_attachments,
+@@ -291,6 +292,7 @@ GPURenderPassEncoder* GPUCommandEncoder::beginRenderPass(
+         label.c_str());
+     if (!error.empty()) {
+       GetHandle().InjectValidationError(error.c_str());
++      starry::InvalidateWebGPUCommands(this);
+     } else {
+       dawn_desc.timestampWrites = &timestampWrites;
+     }
+@@ -304,6 +306,7 @@ GPURenderPassEncoder* GPUCommandEncoder::beginRenderPass(
+ 
+   GPURenderPassEncoder* encoder = MakeGarbageCollected<GPURenderPassEncoder>(
+       device_, GetHandle().BeginRenderPass(&dawn_desc), descriptor->label());
++  starry::RegisterWebGPUPass(this, encoder);
+ 
+   // TODO(https://crbug.com/435317394): Use the extension struct exposed by
+   // webgpu.h if/when it is added instead of
+@@ -334,6 +337,7 @@ GPUComputePassEncoder* GPUCommandEncoder::beginComputePass(
+         label.c_str());
+     if (!error.empty()) {
+       GetHandle().InjectValidationError(error.c_str());
++      starry::InvalidateWebGPUCommands(this);
+     } else {
+       dawn_desc.timestampWrites = &timestampWrites;
+     }
+@@ -341,6 +345,7 @@ GPUComputePassEncoder* GPUCommandEncoder::beginComputePass(
+ 
+   GPUComputePassEncoder* encoder = MakeGarbageCollected<GPUComputePassEncoder>(
+       device_, GetHandle().BeginComputePass(&dawn_desc), descriptor->label());
++  starry::RegisterWebGPUPass(this, encoder);
+   return encoder;
+ }
+ 
+@@ -361,6 +366,7 @@ void GPUCommandEncoder::copyBufferToTexture(
+       ValidateAndConvertTexelCopyBufferInfo(source, &error);
+   if (error) {
+     GetHandle().InjectValidationError(error);
++    starry::InvalidateWebGPUCommands(this);
+     return;
+   }
+ 
+@@ -384,11 +390,15 @@ void GPUCommandEncoder::copyTextureToBuffer(GPUTexelCopyTextureInfo* source,
+       ValidateAndConvertTexelCopyBufferInfo(destination, &error);
+   if (error) {
+     GetHandle().InjectValidationError(error);
++    starry::InvalidateWebGPUCommands(this);
+     return;
+   }
+ 
+   GetHandle().CopyTextureToBuffer(&dawn_source, &dawn_destination,
+                                   &dawn_copy_size);
++  starry::RecordWebGPUTextureCopy(this, source->texture(),
++                                  destination->buffer(), dawn_source,
++                                  dawn_destination.layout, dawn_copy_size);
+ }
+ 
+ void GPUCommandEncoder::copyTextureToTexture(
+@@ -434,6 +444,7 @@ GPUCommandBuffer* GPUCommandEncoder::finish(
+ 
+   GPUCommandBuffer* command_buffer = MakeGarbageCollected<GPUCommandBuffer>(
+       device_, GetHandle().Finish(&dawn_desc), descriptor->label());
++  starry::FinishWebGPUCommands(this, command_buffer);
+ 
+   return command_buffer;
+ }

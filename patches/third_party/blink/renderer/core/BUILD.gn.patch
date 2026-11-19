@@ -1,0 +1,31 @@
+diff --git a/third_party/blink/renderer/core/BUILD.gn b/third_party/blink/renderer/core/BUILD.gn
+index e5fe811ee0..48da6b9079 100644
+--- a/third_party/blink/renderer/core/BUILD.gn
++++ b/third_party/blink/renderer/core/BUILD.gn
+@@ -265,6 +265,18 @@ component("core") {
+     "core_initializer.h",
+   ]
+ 
++  sources += [
++    "//starry/renderer/fingerprint_protection.cc",
++    "//starry/renderer/fingerprint_protection.h",
++    "//starry/common/fingerprint_values.h",
++    "//starry/common/shared_style_sheet.h",
++    "//starry/common/web_time_zone.h",
++    "//starry/renderer/shared_style_sheets.cc",
++    "//starry/renderer/shared_style_sheets.h",
++    "//starry/renderer/web_time_zone.cc",
++    "//starry/renderer/web_time_zone.h",
++  ]
++
+   sources += blink_core_sources_bindings
+ 
+   # If you create a new subdirectory 'foo', make 'foo/build.gni' to define
+@@ -412,6 +424,7 @@ component("core") {
+     ":xml_ffi",
+     "//base",
+     "//components/paint_preview/common",
++    "//starry/components/privacy/mojom",
+     "//components/performance_manager/public/mojom:mojom_blink",
+     "//components/shared_highlighting/core/common",
+     "//components/subresource_filter/core/common",

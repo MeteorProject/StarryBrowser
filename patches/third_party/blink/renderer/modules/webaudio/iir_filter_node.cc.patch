@@ -1,0 +1,23 @@
+diff --git a/third_party/blink/renderer/modules/webaudio/iir_filter_node.cc b/third_party/blink/renderer/modules/webaudio/iir_filter_node.cc
+index 01ea6bf1b6..f7f11778a2 100644
+--- a/third_party/blink/renderer/modules/webaudio/iir_filter_node.cc
++++ b/third_party/blink/renderer/modules/webaudio/iir_filter_node.cc
+@@ -5,6 +5,7 @@
+ #include "third_party/blink/renderer/modules/webaudio/iir_filter_node.h"
+ 
+ #include "base/metrics/histogram_functions.h"
++#include "starry/renderer/audio_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_iir_filter_options.h"
+ #include "third_party/blink/renderer/core/execution_context/execution_context.h"
+ #include "third_party/blink/renderer/core/inspector/console_message.h"
+@@ -227,6 +228,10 @@ void IIRFilterNode::getFrequencyResponse(
+     GetIIRFilterHandler().GetFrequencyResponse(frequency_hz->AsSpan(),
+                                                mag_response->AsSpan(),
+                                                phase_response->AsSpan());
++    starry::ProtectAudioSamples(context()->GetExecutionContext(),
++                                mag_response->AsSpan());
++    starry::ProtectAudioSamples(context()->GetExecutionContext(),
++                                phase_response->AsSpan());
+   }
+ }
+ 

@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/web_applications/BUILD.gn b/chrome/browser/web_applications/BUILD.gn
+index 0f477a1376..8a52cb8c3e 100644
+--- a/chrome/browser/web_applications/BUILD.gn
++++ b/chrome/browser/web_applications/BUILD.gn
+@@ -606,6 +606,7 @@ source_set("web_applications") {
+     "//services/network/public/cpp",
+     "//services/preferences/public/cpp",
+     "//skia",
++    "//starry/common:branding",
+     "//third_party/abseil-cpp:absl",
+     "//third_party/blink/public/common",
+     "//ui/base",

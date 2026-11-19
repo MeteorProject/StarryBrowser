@@ -1,0 +1,15 @@
+// Copyright 2026 The Starry Browser Authors
+// Starry's monochrome product mark (star and horizon).
+
+CANVAS_DIMENSIONS, 24,
+MOVE_TO, 12, 2,
+CUBIC_TO, 13, 5.3f, 13.7f, 6, 17, 7,
+CUBIC_TO, 13.7f, 8, 13, 8.7f, 12, 12,
+CUBIC_TO, 11, 8.7f, 10.3f, 8, 7, 7,
+CUBIC_TO, 10.3f, 6, 11, 5.3f, 12, 2,
+CLOSE,
+MOVE_TO, 2, 18,
+CUBIC_TO, 7, 12, 17, 12, 22, 18,
+LINE_TO, 22, 21,
+CUBIC_TO, 17, 15, 7, 15, 2, 21,
+CLOSE

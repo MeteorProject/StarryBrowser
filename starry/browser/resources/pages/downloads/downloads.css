@@ -1,0 +1,632 @@
+/* Copyright 2026 The Starry Browser Authors */
+
+.title-row {
+  align-items: center;
+  display: flex;
+  margin-top: 8px;
+}
+
+.title-row .title {
+  margin: 0;
+}
+
+/* 筛选胶囊：选中项由滑动高亮层衬底。 */
+.filter-picker {
+  background: color-mix(in srgb, var(--on-surface) calc(5% + var(--is-dark) * 2%), transparent);
+  border-radius: 18px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  position: relative;
+}
+
+.filter-highlight {
+  background: color-mix(in srgb, var(--surface-bright) calc(100% - var(--is-dark) * 20%), transparent);
+  border-radius: 15px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / calc(0.06 - var(--is-dark) * 0.06));
+  height: 30px;
+  left: 0;
+  position: absolute;
+  top: 3px;
+  transition: transform var(--duration-page-filter) var(--ease-page-filter),
+      width var(--duration-page-filter) var(--ease-page-filter);
+}
+
+.filter {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: 15px;
+  color: var(--on-surface-variant);
+  display: flex;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 4px;
+  height: 30px;
+  padding: 0 14px;
+  position: relative;
+  transition: color var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+}
+
+.filter:active {
+  transform: scale(0.96);
+}
+
+.filter.selected {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+.filter-count {
+  color: var(--on-surface-variant);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.filter-count.danger {
+  color: var(--danger);
+}
+
+.download-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 24px;
+}
+
+.download-section-header {
+  align-items: baseline;
+  display: flex;
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 4px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.section-count {
+  color: var(--on-surface-variant);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ghost-pill {
+  align-items: center;
+  align-self: center;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  color: var(--on-surface-variant);
+  display: flex;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  transition: background-color var(--hover);
+}
+
+.ghost-pill:hover {
+  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+}
+
+.download-card {
+  background: var(--surface-alt);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) calc(6% + var(--is-dark) * 1%), transparent);
+  overflow: hidden;
+}
+
+.download-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  position: relative;
+  transition: background-color var(--hover);
+}
+
+.download-row:hover {
+  background: color-mix(in srgb, var(--on-surface) 3.5%, transparent);
+}
+
+/* 行与行之间一条细线，从文字那里开始（进行中 64，结束的 58）。 */
+.download-row + .download-row::before {
+  background: color-mix(in srgb, var(--on-surface) calc(6% + var(--is-dark) * 1%), transparent);
+  content: '';
+  height: 1px;
+  left: 58px;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.active-row + .active-row::before {
+  left: 64px;
+}
+
+/* 进行中的一行：上面是摘要（点一下展开详情），展开时下面是详情，整行垫一层很浅的底。 */
+.active-row {
+  display: block;
+}
+
+.active-row:hover {
+  background: transparent;
+}
+
+.active-row.expanded {
+  background: color-mix(in srgb, var(--on-surface) calc(2% + var(--is-dark) * 1%), transparent);
+}
+
+.active-summary {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  transition: background-color var(--hover);
+}
+
+.active-row:not(.expanded) .active-summary:hover {
+  background: color-mix(in srgb, var(--on-surface) 3.5%, transparent);
+}
+
+.row-chevron {
+  color: var(--on-surface-variant);
+  display: flex;
+  opacity: 0.45;
+  transition: opacity var(--hover), transform var(--duration-fold) var(--ease-fold);
+  width: 12px;
+}
+
+.active-summary:hover .row-chevron,
+.active-row.expanded .row-chevron {
+  opacity: 0.9;
+}
+
+.active-row.expanded .row-chevron {
+  transform: rotate(90deg);
+}
+
+/* 展开详情：左边距 64px 与上方文件名对齐（16 + 36 + 12）。 */
+.download-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 16px 16px 64px;
+}
+
+.detail-grid {
+  align-items: baseline;
+  display: grid;
+  font-size: 11.5px;
+  gap: 7px 14px;
+  grid-template-columns: auto 1fr;
+}
+
+.detail-title {
+  color: var(--on-surface-variant);
+  font-weight: 500;
+  text-align: right;
+}
+
+.detail-value {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.detail-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-pill {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: none;
+  border-radius: 13px;
+  display: flex;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 5px;
+  height: 26px;
+  padding: 0 11px;
+  transition: background-color var(--hover), transform 100ms cubic-bezier(0, 0, 0.58, 1);
+}
+
+.detail-pill:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.detail-pill:active {
+  transform: scale(0.96);
+}
+
+/* 总速度仪表盘卡片。 */
+.download-dashboard {
+  align-items: center;
+  background: var(--surface-alt);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) calc(6% + var(--is-dark) * 1%), transparent);
+  display: flex;
+  gap: 24px;
+  margin: 6px 0 22px;
+  padding: 14px 18px;
+}
+
+.dashboard-numbers {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-label {
+  color: var(--on-surface-variant);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.dashboard-speed {
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.dashboard-stats {
+  display: flex;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 14px;
+}
+
+.dashboard-stats .stat {
+  display: flex;
+  gap: 4px;
+}
+
+.dashboard-stats .stat span {
+  color: var(--on-surface-variant);
+}
+
+.dashboard-stats .stat b {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.speed-chart {
+  flex: 1;
+  height: 70px;
+  min-width: 0;
+}
+
+.finished-row {
+  min-height: 52px;
+  padding: 0 10px 0 16px;
+}
+
+.row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.active-row .row-text {
+  gap: 6px;
+}
+
+.finished-row .row-text {
+  gap: 2px;
+}
+
+.filename {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.active-row .filename {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.filename.missing {
+  color: var(--on-surface-variant);
+  text-decoration: line-through;
+}
+
+.filename.dim {
+  color: var(--on-surface-variant);
+}
+
+.status {
+  color: var(--on-surface-variant);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.status.danger {
+  color: var(--danger);
+}
+
+.status.warning {
+  color: var(--warning);
+}
+
+.row-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.icon-button.large {
+  height: 28px;
+  width: 28px;
+}
+
+.icon-button.medium {
+  height: 26px;
+  width: 26px;
+}
+
+.icon-button:disabled {
+  opacity: 0.35;
+}
+
+/* 结束的行：右边平时是时间，悬停时换成操作按钮。 */
+.row-trailing {
+  align-items: center;
+  display: grid;
+  justify-items: end;
+}
+
+.row-trailing > * {
+  grid-area: 1 / 1;
+}
+
+.row-trailing .time {
+  color: var(--on-surface-variant);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: opacity var(--hover);
+}
+
+.hover-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hover);
+}
+
+.finished-row:hover .time {
+  opacity: 0;
+}
+
+.finished-row:hover .hover-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 文件图标，右下角是状态小标（暂停、失败）。 */
+.file-icon {
+  flex: none;
+  height: var(--size);
+  position: relative;
+  width: var(--size);
+}
+
+.file-icon img {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.file-icon.dimmed img {
+  filter: saturate(0);
+  opacity: 0.55;
+}
+
+.file-icon .badge {
+  align-items: center;
+  background: var(--on-surface-variant);
+  border-radius: 50%;
+  bottom: calc(var(--size) * -0.06);
+  box-shadow: 0 0 0 1.5px var(--surface-alt);
+  color: #fff;
+  display: flex;
+  height: calc(var(--size) * 0.42);
+  justify-content: center;
+  position: absolute;
+  right: calc(var(--size) * -0.08);
+  width: calc(var(--size) * 0.42);
+}
+
+.file-icon .badge.danger {
+  background: var(--danger);
+}
+
+/* 进度条：高 5 的胶囊，进行中是强调色；不知道总大小时一小段来回移动。 */
+.progress {
+  background: color-mix(in srgb, var(--on-surface) calc(8% + var(--is-dark) * 2%), transparent);
+  border-radius: 3px;
+  height: 5px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  background: var(--accent);
+  border-radius: 3px;
+  height: 100%;
+  min-width: 5px;
+  transition: width 250ms var(--ease-progress, ease-out), background-color var(--hover);
+}
+
+.progress.paused .progress-fill,
+.progress.queued .progress-fill,
+.progress.paused .segment-fill,
+.progress.queued .segment-fill {
+  background: color-mix(in srgb, var(--on-surface-variant) 70%, transparent);
+}
+
+.progress.tall {
+  border-radius: 5px;
+  height: 10px;
+}
+
+/* Starry 分段下载：每一段从它的起点长，新切出来的一段从零长出来；段的起点是一道 1 px 的细缝。 */
+.segment-fill {
+  background: var(--accent);
+  bottom: 0;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  transition: width 250ms var(--ease-progress, ease-out), background-color var(--hover);
+  width: var(--fill);
+}
+
+@starting-style {
+  .segment-fill {
+    width: 0;
+  }
+}
+
+.segment-seam {
+  background: color-mix(in srgb, var(--surface-alt) 90%, transparent);
+  bottom: 0;
+  position: absolute;
+  top: 0;
+  transition: opacity var(--hover);
+  width: 1px;
+}
+
+@starting-style {
+  .segment-seam {
+    opacity: 0;
+  }
+}
+
+/* 下载中扫光效果：轨道与进度条等宽，仅在已下载区域内可见。 */
+.progress-fill {
+  overflow: hidden;
+  position: relative;
+}
+
+.sheen-track {
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+}
+
+.sheen {
+  animation: sheen 1.6s linear infinite;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0), rgb(255 255 255 / 0.35), rgb(255 255 255 / 0));
+  bottom: 0;
+  left: -30%;
+  position: absolute;
+  top: 0;
+  width: max(60px, 25%);
+}
+
+@keyframes sheen {
+  from {
+    left: -30%;
+  }
+  to {
+    left: 130%;
+  }
+}
+
+.progress.indeterminate .progress-fill {
+  animation: indeterminate 1.4s ease-in-out infinite;
+  position: absolute;
+  transition: none;
+}
+
+@keyframes indeterminate {
+  from {
+    left: -30%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress.indeterminate .progress-fill {
+    animation: none;
+  }
+
+  .sheen {
+    display: none;
+  }
+
+  .segment-fill,
+  .soft-tag {
+    transition: none;
+  }
+}
+
+/* 文件名后的状态标签（「N 线程」「不能续传」），出现时缩放淡入。 */
+.filename-row {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filename-row .filename {
+  min-width: 0;
+}
+
+.soft-tag {
+  background: color-mix(in srgb, var(--on-surface) calc(7% + var(--is-dark) * 2%), transparent);
+  border-radius: 4px;
+  color: var(--on-surface-variant);
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 16px;
+  padding: 0 6px;
+  transition: opacity var(--hover), transform 300ms var(--ease-lift, ease-out);
+  white-space: nowrap;
+}
+
+@starting-style {
+  .soft-tag {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.soft-tag.accent {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.soft-tag.warning {
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: var(--warning);
+}
+
+.detail-segments {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.detail-segments .detail-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+}

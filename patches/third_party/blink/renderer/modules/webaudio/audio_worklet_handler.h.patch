@@ -1,0 +1,22 @@
+diff --git a/third_party/blink/renderer/modules/webaudio/audio_worklet_handler.h b/third_party/blink/renderer/modules/webaudio/audio_worklet_handler.h
+index 3e9ad7e1a8..676859dd9f 100644
+--- a/third_party/blink/renderer/modules/webaudio/audio_worklet_handler.h
++++ b/third_party/blink/renderer/modules/webaudio/audio_worklet_handler.h
+@@ -11,6 +11,7 @@
+ #include "base/memory/scoped_refptr.h"
+ #include "base/memory/weak_ptr.h"
+ #include "base/task/single_thread_task_runner.h"
++#include "starry/renderer/audio_fingerprint_protection.h"
+ #include "third_party/blink/renderer/bindings/modules/v8/v8_audio_worklet_node_options.h"
+ #include "third_party/blink/renderer/modules/modules_export.h"
+ #include "third_party/blink/renderer/modules/webaudio/audio_node.h"
+@@ -93,6 +94,9 @@ class MODULES_EXPORT AudioWorkletHandler final : public AudioHandler {
+   HashMap<String, std::unique_ptr<AudioFloatArray>> param_buffers_;
+   HashMap<String, base::span<const float>> param_value_map_;
+ 
++  // Starry: protected copies of the inputs process() reads.
++  starry::AudioWorkletProtection fingerprint_protection_;
++
+   scoped_refptr<base::SingleThreadTaskRunner> main_thread_task_runner_;
+ 
+   // Used only if number of inputs and outputs are 1.

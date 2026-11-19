@@ -1,0 +1,24 @@
+diff --git a/third_party/blink/renderer/modules/battery/battery_manager.cc b/third_party/blink/renderer/modules/battery/battery_manager.cc
+index 51cdc75cee..19096409e8 100644
+--- a/third_party/blink/renderer/modules/battery/battery_manager.cc
++++ b/third_party/blink/renderer/modules/battery/battery_manager.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "third_party/blink/renderer/modules/battery/battery_manager.h"
+ 
++#include "starry/renderer/fingerprint_protection.h"
+ #include "third_party/blink/public/mojom/frame/lifecycle.mojom-blink.h"
+ #include "third_party/blink/renderer/core/dom/dom_exception.h"
+ #include "third_party/blink/renderer/core/dom/events/event.h"
+@@ -68,7 +69,10 @@ ScriptPromise<BatteryManager> BatteryManager::StartRequest(
+         ExecutionContext::From(script_state));
+ 
+     // If the context is in a stopped state already, do not start updating.
+-    if (!GetExecutionContext() || GetExecutionContext()->IsContextDestroyed()) {
++    // Starry: a protected page keeps the default status (charging, full), as
++    // a computer without a battery reports, and receives no change events.
++    if (!GetExecutionContext() || GetExecutionContext()->IsContextDestroyed() ||
++        starry::ShouldProtectFingerprint(GetExecutionContext())) {
+       battery_property_->Resolve(this);
+     } else {
+       has_event_listener_ = true;

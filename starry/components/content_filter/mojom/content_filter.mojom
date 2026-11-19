@@ -1,0 +1,38 @@
+// Copyright 2026 The Starry Browser Authors
+
+module starry.mojom;
+
+import "url/mojom/url.mojom";
+
+// 一个文档的元素隐藏和脚本片段（starry/browser/content_blocking/content_filter_tab_helper.h
+// 在导航提交前算好送过去）。
+struct CosmeticFilters {
+  // 给哪个文档：网页进程只在提交的文档正是这个网址时用，别的（被取消的导航、下载）
+  // 不会错用到下一个文档上。
+  url.mojom.Url url;
+  // 不限网站的那份的版本（SetGenericSelectors），0 是不用。
+  uint64 generic_version;
+  // 这个网站上不用的通用选择器（下标）。
+  array<uint32> generic_exclusions;
+  // 限定这个网站的，已经写成 CSS。
+  string css;
+  // 扩展选择器（:has-text() 这类）编成的 JSON
+  // （starry/components/content_filter/procedural_selector.h），网页进程在隔离的 world 里
+  // 用 procedural.js 做。空的是没有。
+  string procedural;
+  // procedural 里 :style() 用到的样式（第 i 种写成 `[属性-i]{样式}`）。
+  array<string> procedural_styles;
+  // 脚本片段拼好的一段脚本（starry/components/content_filter/scriptlets.h），在网页的
+  // 主 world 里、网页自己的脚本之前跑一次。空的是没有。
+  string scripts;
+};
+
+// 网页进程里每个 frame 一个（channel-associated，和提交导航的消息同序）。
+interface ContentFilterAgent {
+  // 不限网站的选择器。每个网页进程送一次（规则变了再送），进程里所有文档共用，
+  // 解析一次（Blink 里按版本缓存的样式表，见 starry/renderer/shared_style_sheets.h）。
+  SetGenericSelectors(uint64 version, array<string> selectors);
+
+  // 下一个提交的文档用的元素隐藏和脚本片段。在 ReadyToCommitNavigation 里发，先于提交。
+  ActivateForNextDocument(CosmeticFilters filters);
+};

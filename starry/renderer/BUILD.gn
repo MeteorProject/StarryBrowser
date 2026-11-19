@@ -1,0 +1,57 @@
+# 网页进程：在 Chrome 的 ContentRendererClient 上加功能。
+# patches/chrome/BUILD.gn.patch 接进 //chrome:dependencies。
+# patches/chrome/app/chrome_main_delegate.cc.patch 选用本客户端。
+#
+# web_time_zone.*、shared_style_sheets.*、fingerprint_protection.*
+# 直接编进 Blink core，见对应的 BUILD.gn 补丁。
+# audio_fingerprint_protection.*、webgl_fingerprint_protection.* 和
+# webgpu_fingerprint_protection.* 分别编进对应的 Blink modules 目标。
+
+# media/youtube_media_session.js 编成 C++（YouTubeMediaSessionScript()）。
+action("youtube_media_session_script_gen") {
+  script = "//starry/build/embed_js.py"
+  inputs = [ "media/youtube_media_session.js" ]
+  outputs = [
+    "$target_gen_dir/media/youtube_media_session_script.cc",
+    "$target_gen_dir/media/youtube_media_session_script.h",
+  ]
+  args = [
+    "--out-cc",
+    rebase_path(outputs[0], root_build_dir),
+    "--out-h",
+    rebase_path(outputs[1], root_build_dir),
+    "--header-include",
+    "starry/renderer/media/youtube_media_session_script.h",
+    "--namespace",
+    "starry",
+    "--function",
+    "YouTubeMediaSessionScript",
+    rebase_path("media/youtube_media_session.js", root_build_dir),
+  ]
+}
+
+source_set("renderer") {
+  sources = [
+    "../common/shared_style_sheet.h",
+    "content_filter/content_filter_agent.cc",
+    "content_filter/content_filter_agent.h",
+    "media/youtube_media_session.cc",
+    "media/youtube_media_session.h",
+    "starry_content_renderer_client.cc",
+    "starry_content_renderer_client.h",
+  ]
+  sources += get_target_outputs(":youtube_media_session_script_gen")
+  deps = [
+    ":youtube_media_session_script_gen",
+    "//base",
+    "//chrome/common",
+    "//chrome/renderer",
+    "//content/public/renderer",
+    "//mojo/public/cpp/bindings",
+    "//starry/components/content_filter:procedural_script",
+    "//starry/components/content_filter/mojom",
+    "//third_party/blink/public:blink",
+    "//third_party/blink/public/common",
+    "//url",
+  ]
+}

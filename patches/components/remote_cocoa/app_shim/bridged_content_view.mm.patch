@@ -1,0 +1,46 @@
+diff --git a/components/remote_cocoa/app_shim/bridged_content_view.mm b/components/remote_cocoa/app_shim/bridged_content_view.mm
+index 06f9415fc3..18084ada20 100644
+--- a/components/remote_cocoa/app_shim/bridged_content_view.mm
++++ b/components/remote_cocoa/app_shim/bridged_content_view.mm
+@@ -124,6 +124,16 @@ bool ShouldIgnoreAcceleratorWithMarkedText(NSEvent* event) {
+ 
+ }  // namespace
+ 
++namespace remote_cocoa {
++
++// Starry: see -hitTest:.
++NSView* NativeWidgetNSWindowHostHelper::GetNativeViewHostViewAt(
++    const gfx::Point& location_in_content) {
++  return nullptr;
++}
++
++}  // namespace remote_cocoa
++
+ @interface BridgedContentView ()
+ 
+ // Dispatch |event| to |bridge_|'s host.
+@@ -338,6 +348,24 @@ - (NSView*)hitTest:(NSPoint)point {
+     return self;
+   }
+ 
++  // Starry: send the event to the NSView of the NativeViewHost that views
++  // found here, not to whichever attached NSView is frontmost: an attached
++  // NSView is not clipped by its views ancestors, so where it is not visible it
++  // would take events meant for the web contents under it.
++  if (hitTestResult == remote_cocoa::mojom::HitTestResult::kSubView &&
++      _bridge->host_helper()) {
++    NSView* subview =
++        _bridge->host_helper()->GetNativeViewHostViewAt(flippedPoint);
++    if (subview && [subview isDescendantOf:self]) {
++      NSView* hit =
++          [subview hitTest:[subview.superview convertPoint:point
++                                                  fromView:self.superview]];
++      if (hit) {
++        return hit;
++      }
++    }
++  }
++
+   return [super hitTest:point];
+ }
+ 
