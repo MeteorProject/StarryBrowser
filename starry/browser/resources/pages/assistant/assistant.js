@@ -572,8 +572,12 @@ class StarryAssistant extends LitElement {
     if (!textarea) {
       return;
     }
-    textarea.style.height = 'auto';
     const line = parseFloat(getComputedStyle(textarea).lineHeight) || 19;
+    if (!textarea.value) {
+      textarea.style.height = `${line}px`;
+      return;
+    }
+    textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, line * COMPOSER_MAX_LINES)}px`;
   }
 

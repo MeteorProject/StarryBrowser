@@ -1240,7 +1240,7 @@ textarea {
   color: var(--text);
   flex: 1 1 auto;
   font: 14px/19px var(--font);
-  margin: 0 4px 8.5px 6px;
+  margin: 8.5px 4px 8.5px 6px;
   min-width: 0;
   outline: none;
   padding: 0;
@@ -1249,6 +1249,9 @@ textarea {
 
 textarea::placeholder {
   color: var(--secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chip.mode,
