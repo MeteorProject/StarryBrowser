@@ -40,53 +40,31 @@ constexpr int kSmallButton = 28;
 constexpr int kPlayButton = 44;
 constexpr int kSkipButton = 34;
 constexpr int kControlSpacing = 14;
-// 紧凑的样子里下面那一行按钮之间最多隔这么多（宽的时候不摊开，聚在中间）。
-constexpr int kUtilitySpacing = 20;
 // 其余的媒体：视频的封面是宽的；一行不到这么宽时和音乐一样用方的，标题多留一点。
 constexpr int kWideRowArt = 260;
 
 // 上面一块（不算其余的媒体）里各部分从哪里开始。
 struct Metrics {
-  // 对称频谱。
+  // 实时波形。
   int wave_top;
   int wave_height;
   int seek_top;
   // 上一首、播放暂停、下一首那一行。
   int controls_top;
   int controls_height;
-  // 紧凑的样子下面多一行小按钮；完整的样子没有（是 0）。
-  int utility_top;
   int main_height;
 };
 
-constexpr Metrics MetricsFor(bool compact) {
+constexpr Metrics MetricsFor(bool header) {
   Metrics m{};
-  if (compact) {
-    m.wave_top = 0;
-    m.wave_height = 26;
-    m.seek_top = m.wave_top + m.wave_height + 6;
-    m.controls_top = m.seek_top + MediaSeekBar::kHeight + kTimesHeight + 2;
-    m.controls_height = 46;
-    m.utility_top = m.controls_top + m.controls_height + 2;
-    m.main_height = m.utility_top + kSmallButton;
-  } else {
-    // 封面下面是对称频谱。
-    m.wave_top = kHeaderHeight + kHeaderGap + kArt + 12;
-    m.wave_height = 28;
-    m.seek_top = m.wave_top + m.wave_height + 8;
-    m.controls_top = m.seek_top + MediaSeekBar::kHeight + kTimesHeight + 4;
-    m.controls_height = 48;
-    m.utility_top = 0;
-    m.main_height = m.controls_top + m.controls_height;
-  }
+  // 封面下面是实时波形；没有标题行时从它开始。
+  m.wave_top = header ? kHeaderHeight + kHeaderGap + kArt + 12 : 0;
+  m.wave_height = 28;
+  m.seek_top = m.wave_top + m.wave_height + 8;
+  m.controls_top = m.seek_top + MediaSeekBar::kHeight + kTimesHeight + 4;
+  m.controls_height = 48;
+  m.main_height = m.controls_top + m.controls_height;
   return m;
-}
-
-std::u16string Subtitle(const MediaEntry& entry) {
-  if (!entry.artist.empty() && !entry.album.empty()) {
-    return entry.artist + u" · " + entry.album;
-  }
-  return entry.artist.empty() ? entry.source : entry.artist;
 }
 
 }  // namespace
@@ -151,7 +129,7 @@ class MediaPlayerView::Row : public views::Button {
     const int right = toggle_->x() - 8;
     DrawMediaText(canvas, entry_.title, 12, /*semibold=*/false,
                   theme_.on_surface, gfx::Rect(x, 6, right - x, 17));
-    DrawMediaText(canvas, Subtitle(entry_), 11, false,
+    DrawMediaText(canvas, MediaSubtitle(entry_), 11, false,
                   theme_.on_surface_variant, gfx::Rect(x, 23, right - x, 15));
   }
 
@@ -170,18 +148,16 @@ END_METADATA
 MediaPlayerView::MediaPlayerView(MediaHub* hub, Options options)
     : hub_(hub), options_(std::move(options)) {
   if (options_.placement_glyph) {
-    // 紧凑的样子里它和静音、画中画排在一行，一样大。
     placement_ = AddChildView(std::make_unique<MediaButton>(
         options_.placement, *options_.placement_glyph,
-        options_.placement_tooltip, options_.compact ? kSmallButton : 24,
-        options_.compact ? 15 : 14));
+        options_.placement_tooltip, 24, 14));
   }
-  if (options_.collapse && !options_.compact) {
+  if (options_.collapse) {
     collapse_ = AddChildView(std::make_unique<MediaButton>(
         options_.collapse, MediaGlyph::kCollapse, L("media.collapse"), 24, 14));
   }
   wave_ = AddChildView(
-      std::make_unique<MediaWaveform>(hub_, MediaWaveform::Style::kSpectrum));
+      std::make_unique<MediaWaveform>(hub_, MediaWaveform::Style::kLive));
   wave_->SetBar(2.2f, 1.8f);
   seek_ = AddChildView(std::make_unique<MediaSeekBar>(
       base::BindRepeating(&MediaPlayerView::Seek, base::Unretained(this))));
@@ -304,7 +280,7 @@ int MediaPlayerView::ContentHeight() const {
 }
 
 int MediaPlayerView::MainHeight() const {
-  return MetricsFor(options_.compact).main_height;
+  return MetricsFor(options_.header).main_height;
 }
 
 int MediaPlayerView::HeightForOthers(int others) const {
@@ -489,7 +465,7 @@ gfx::Size MediaPlayerView::CalculatePreferredSize(
 
 void MediaPlayerView::Layout(PassKey) {
   const int w = width();
-  const Metrics m = MetricsFor(options_.compact);
+  const Metrics m = MetricsFor(options_.header);
   wave_->SetBounds(0, m.wave_top, w, m.wave_height);
   seek_->SetBounds(0, m.seek_top, w, MediaSeekBar::kHeight);
   const int cy = m.controls_top + m.controls_height / 2;
@@ -502,40 +478,19 @@ void MediaPlayerView::Layout(PassKey) {
                        kSkipButton, kSkipButton);
   next_->SetBounds(play_->bounds().right() + spacing, cy - kSkipButton / 2,
                    kSkipButton, kSkipButton);
-  if (options_.compact) {
-    // 下面一行小按钮，聚在中间；放不开时挨近。
-    std::vector<MediaButton*> buttons = {mute_.get()};
-    if (pip_->GetVisible()) {
-      buttons.push_back(pip_.get());
-    }
-    buttons.push_back(show_tab_.get());
-    if (placement_) {
-      buttons.push_back(placement_.get());
-    }
-    const int n = static_cast<int>(buttons.size());
-    const int gap =
-        n > 1 ? std::clamp((w - n * kSmallButton) / (n - 1), 0, kUtilitySpacing)
-              : 0;
-    int x = (w - n * kSmallButton - (n - 1) * gap) / 2;
-    for (MediaButton* button : buttons) {
-      button->SetBounds(x, m.utility_top, kSmallButton, kSmallButton);
-      x += kSmallButton + gap;
-    }
-  } else {
-    int header_right = w;
-    if (collapse_) {
-      collapse_->SetBounds(header_right - 24, 0, 24, 24);
-      header_right -= 28;
-    }
-    if (placement_) {
-      placement_->SetBounds(header_right - 24, 0, 24, 24);
-    }
-    mute_->SetBounds(-4, cy - kSmallButton / 2, kSmallButton, kSmallButton);
-    show_tab_->SetBounds(w - kSmallButton + 4, cy - kSmallButton / 2,
-                         kSmallButton, kSmallButton);
-    pip_->SetBounds(show_tab_->x() - kSmallButton, cy - kSmallButton / 2,
-                    kSmallButton, kSmallButton);
+  int header_right = w;
+  if (collapse_) {
+    collapse_->SetBounds(header_right - 24, 0, 24, 24);
+    header_right -= 28;
   }
+  if (placement_) {
+    placement_->SetBounds(header_right - 24, 0, 24, 24);
+  }
+  mute_->SetBounds(-4, cy - kSmallButton / 2, kSmallButton, kSmallButton);
+  show_tab_->SetBounds(w - kSmallButton + 4, cy - kSmallButton / 2,
+                       kSmallButton, kSmallButton);
+  pip_->SetBounds(show_tab_->x() - kSmallButton, cy - kSmallButton / 2,
+                  kSmallButton, kSmallButton);
   int y = m.main_height + kOthersGap * 2 + 1;
   for (Row* row : rows_) {
     row->SetBounds(-4, y, w + 8, kRowHeight);
@@ -550,8 +505,8 @@ void MediaPlayerView::OnPaint(gfx::Canvas* canvas) {
   }
   const int w = width();
   const Theme& theme = media_theme_;
-  const Metrics m = MetricsFor(options_.compact);
-  if (!options_.compact) {
+  const Metrics m = MetricsFor(options_.header);
+  if (options_.header) {
     PaintHeader(canvas, *entry);
   }
 
@@ -614,8 +569,8 @@ void MediaPlayerView::PaintHeader(gfx::Canvas* canvas,
   const int x = kArt + kArtGap;
   DrawMediaText(canvas, entry->title, 15, /*semibold=*/true, theme.on_surface,
                 gfx::Rect(x, top + 4, w - x, 20));
-  DrawMediaText(canvas, Subtitle(*entry), 12, false, theme.on_surface_variant,
-                gfx::Rect(x, top + 26, w - x, 16));
+  DrawMediaText(canvas, MediaSubtitle(*entry), 12, false,
+                theme.on_surface_variant, gfx::Rect(x, top + 26, w - x, 16));
   int source_x = x;
   if (!entry->favicon.isNull()) {
     canvas->DrawImageInt(entry->favicon, 0, 0, entry->favicon.width(),

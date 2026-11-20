@@ -166,26 +166,6 @@ SidebarView::SidebarView(BrowserWindowInterface* browser,
       content_->AddChildView(std::make_unique<OrganizePage>(browser_, false));
   organize_page_->SetVisible(false);
 
-  // 媒体坞：在标签列表上面（展开时盖住它），工具按钮那一行上面。
-  media_ = content_->AddChildView(std::make_unique<MediaDock>(browser_));
-  media_->SetPresenceChangedCallback(base::BindRepeating(
-      [](SidebarView* sidebar) {
-        const double target = sidebar->media_->ShouldShow() ? 1 : 0;
-        if (sidebar->GetWidget() && sidebar->GetVisible()) {
-          sidebar->media_row_.AnimateTo(target,
-                                        MotionCurve::Of(motion::kMediaDockRow));
-        } else {
-          sidebar->media_row_.SetValue(target);
-          sidebar->NotifyLayoutChanged();
-        }
-      },
-      base::Unretained(this)));
-  // 坞的高度变了（其余的媒体多了、少了）：只有侧栏自己重新排，窗口别的地方不动。
-  media_->SetLayoutChangedCallback(base::BindRepeating(
-      [](SidebarView* sidebar) { sidebar->InvalidateLayout(); },
-      base::Unretained(this)));
-  media_row_.SetValue(media_->ShouldShow() ? 1 : 0);
-
   utility_ = content_->AddChildView(
       std::make_unique<UtilityButtons>(browser_, ChromePlacement::kSidebar));
   utility_->SetContentChangedCallback(
@@ -222,6 +202,28 @@ SidebarView::SidebarView(BrowserWindowInterface* browser,
       base::Unretained(this));
   resize_handle_ =
       AddChildView(std::make_unique<SidebarResizeHandle>(std::move(callbacks)));
+
+  // 媒体坞：在工具按钮那一行上面，展开时盖住标签列表，还会越过侧栏的右边盖到网页上：
+  // 挂在侧栏自己这一层（内容和调宽把手上面），不被内容那一层裁掉、不被把手抢走鼠标，
+  // 仍跟着侧栏滑出、淡出。
+  media_ = AddChildView(std::make_unique<MediaDock>(browser_));
+  media_->SetPresenceChangedCallback(base::BindRepeating(
+      [](SidebarView* sidebar) {
+        const double target = sidebar->media_->ShouldShow() ? 1 : 0;
+        if (sidebar->GetWidget() && sidebar->GetVisible()) {
+          sidebar->media_row_.AnimateTo(target,
+                                        MotionCurve::Of(motion::kMediaDockRow));
+        } else {
+          sidebar->media_row_.SetValue(target);
+          sidebar->NotifyLayoutChanged();
+        }
+      },
+      base::Unretained(this)));
+  // 坞的高度变了（其余的媒体多了、少了）：只有侧栏自己重新排，窗口别的地方不动。
+  media_->SetLayoutChangedCallback(base::BindRepeating(
+      [](SidebarView* sidebar) { sidebar->InvalidateLayout(); },
+      base::Unretained(this)));
+  media_row_.SetValue(media_->ShouldShow() ? 1 : 0);
 
   PrefService* prefs = prefs::PrefsFor(browser_->GetProfile());
   prefs_.Init(prefs);
@@ -575,6 +577,7 @@ void SidebarView::Unpeek() {
   }
   peeking_ = false;
   pointer_timer_.Stop();
+  media_->SetExpanded(false);
   SlideTo(/*shown=*/false, motion::SidebarUnpeek());
   NotifyLayoutChanged();
 }
@@ -623,6 +626,15 @@ bool SidebarView::ShouldStayOpen() const {
   } else {
     point = display::Screen::Get()->GetCursorScreenPoint();
     views::View::ConvertPointFromScreen(parent(), &point);
+  }
+  // 媒体坞展开后越过了侧栏的右边：鼠标在它上面也算在侧栏里。
+  if (media_->GetVisible() && media_->ShouldShow()) {
+    gfx::Rect media = views::View::ConvertRectToTarget(media_.get(), parent(),
+                                                       media_->PanelRect());
+    media.Outset(7);
+    if (media.Contains(point)) {
+      return true;
+    }
   }
   const int right =
       x() + metrics::kFloatingSidebarInset * 2 + sidebar_width();
@@ -742,21 +754,27 @@ void SidebarView::Layout(PassKey) {
   const int row_height =
       utility_->HasContent() ? kToolRowHeight : kToolRowCollapsedHeight;
   const int tools_top = panel.height() - row_height;
-  // 媒体坞占的位置：动画里是中间值。坞的视图一直是展开后那么大（最多到标签列表的顶上），
-  // 底边贴着工具按钮那一行，盖在标签列表上面；展开、收回是它自己里面的事，这里不用
-  // 跟着重新排。
+  // 媒体坞占的位置：动画里是中间值。坞的视图一直是展开后那么大（高最多到标签列表的
+  // 顶上，宽可以越过侧栏、不出窗口），左下角对齐卡片的位置；展开、收回是它自己里面的
+  // 事，这里不用跟着重新排。它挂在侧栏这一层，坐标要加上面板的位置。
   const double media = std::clamp(media_row_.value(), 0.0, 1.0);
   const int media_slot = static_cast<int>(std::round(
       (MediaDock::kSlotHeight + kMediaTopGap + kMediaBottomGap) * media));
   media_->SetVisible(media > 0.001);
   if (media_->GetVisible()) {
     media_->SetMaxHeight(tools_top - kMediaBottomGap - y);
+    const int media_x = panel.x() + metrics::kSidebarPadding;
+    const int max_width =
+        parent() ? std::max(inner_width, parent()->width() - x() - media_x -
+                                             metrics::kContentInset)
+                 : inner_width;
+    media_->SetWidths(inner_width, max_width);
     const int media_height = media_->FullHeight();
-    media_->SetBounds(metrics::kSidebarPadding,
-                      tools_top - kMediaBottomGap - media_height +
+    media_->SetBounds(media_x,
+                      panel.y() + tools_top - kMediaBottomGap - media_height +
                           (MediaDock::kSlotHeight + kMediaTopGap +
                            kMediaBottomGap - media_slot),
-                      inner_width, media_height);
+                      media_->ExpandedWidth(), media_height);
   }
   tabs_->SetBounds(metrics::kSidebarPadding, y, inner_width,
                    std::max(0, tools_top - media_slot - y));
@@ -905,7 +923,13 @@ bool SidebarView::DoesIntersectRect(const views::View* target,
   if ((auto_hide_ && !peeking_) || layout_.tab_strip()) {
     return false;
   }
-  return GetLocalBounds().Intersects(rect);
+  if (GetLocalBounds().Intersects(rect)) {
+    return true;
+  }
+  // 展开的媒体坞越过了侧栏的右边：那一截也接鼠标。
+  return media_->GetVisible() &&
+         media_->HitTestRect(
+             views::View::ConvertRectToTarget(this, media_.get(), rect));
 }
 
 void SidebarView::UpdateColors() {

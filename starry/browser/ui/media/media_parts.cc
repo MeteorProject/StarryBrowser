@@ -384,6 +384,13 @@ std::u16string FormatMediaTime(base::TimeDelta time) {
   return base::NumberToString16(minutes) + u":" + two(seconds);
 }
 
+std::u16string MediaSubtitle(const MediaEntry& entry) {
+  if (!entry.artist.empty() && !entry.album.empty()) {
+    return entry.artist + u" · " + entry.album;
+  }
+  return entry.artist.empty() ? entry.source : entry.artist;
+}
+
 void DrawMediaText(gfx::Canvas* canvas,
                    const std::u16string& text,
                    int size,

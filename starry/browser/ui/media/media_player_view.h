@@ -27,16 +27,13 @@ class MediaWaveform;
 // 展开的媒体播放器内容视图：供媒体岛悬停展开、侧栏播放坞展开及标签行胶囊弹出框共用。
 // 仅绘制内部内容，背景（玻璃或实色）由外层容器提供。
 //
-// 从上到下：标题行（「正在播放」、个数，右边是换位置、收起的按钮）；封面
-// 64、标题、 艺术家、来源；进度条和时间；控制（静音，上一首 / 后退 10
-// 秒、播放暂停、下一首 / 前进 10
-// 秒，画中画或者转到标签页）；其余的媒体一行一个，点一行换到上面。卡片的颜色从
-// 选中的那个的封面取。
+// 从上到下：标题行（「正在播放」、个数，右边是换位置、收起的按钮）；封面 64、标题、
+// 艺术家、来源；实时波形；进度条和时间；控制（静音，上一首 / 后退 10 秒、播放暂停、
+// 下一首 / 前进 10 秒，画中画或者转到标签页）；其余的媒体一行一个，点一行换到上面。
+// 卡片的颜色从选中的那个的封面取。
 //
-// 紧凑的样子（Options::compact，侧栏的坞）给很窄的地方用，160
-// 宽也摆得开：没有标题行
-// 和封面（坞自己有那一行），从频谱开始；控制分成两行，上面是上一首、播放暂停、下一首，
-// 下面是静音、画中画、转到标签页和换位置的按钮。
+// 没有标题行的样子（Options::header = false，侧栏的坞）从波形开始：封面和标题那一行
+// 坞自己画（展开时它们从卡片上长大），换位置、收起的按钮也在坞上。
 class MediaPlayerView : public views::View, public MediaHub::Observer {
   METADATA_HEADER(MediaPlayerView, views::View)
 
@@ -57,8 +54,8 @@ class MediaPlayerView : public views::View, public MediaHub::Observer {
     base::RepeatingClosure size_changed;
     // 选中的那个换了（点了下面的一行）。
     base::RepeatingClosure selection_changed;
-    // 紧凑的样子，见上面。
-    bool compact = false;
+    // 上面的标题行和封面那一行，见上面。
+    bool header = true;
     // 在这个标签里的媒体不显示（岛：当前标签里看得见的那个）。
     std::optional<base::UnguessableToken> exclude;
   };

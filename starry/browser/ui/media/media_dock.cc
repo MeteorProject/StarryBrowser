@@ -24,10 +24,14 @@
 #include "starry/browser/ui/media/media_player_view.h"
 #include "starry/browser/ui/media/media_waveform.h"
 #include "starry/browser/ui/motion/motion.h"
+#include "starry/browser/ui/swipe/haptics.h"
+#include "third_party/skia/include/core/SkRRect.h"
 #include "ui/base/metadata/metadata_impl_macros.h"
 #include "ui/compositor/layer.h"
+#include "ui/display/screen.h"
 #include "ui/events/event.h"
 #include "ui/gfx/canvas.h"
+#include "ui/gfx/geometry/rect_conversions.h"
 #include "ui/gfx/geometry/rounded_corners_f.h"
 #include "ui/gfx/geometry/skia_conversions.h"
 #include "ui/gfx/geometry/transform.h"
@@ -42,36 +46,53 @@ namespace starry {
 
 namespace {
 
-// 左右留的边。
+// 卡片：左右留 10，封面 36（离上边 8），标题从封面右边 9 开始。
 constexpr int kInset = 10;
-// 最上面那一行：封面、标题、艺术家和来源，右边一个按钮。
 constexpr int kArt = 36;
 constexpr int kArtTop = 8;
 constexpr int kArtGap = 9;
+constexpr float kArtRadius = 7;
 // 视频的封面是宽的；卡片不到这么宽时和音乐一样用方的，标题多留一点。
 constexpr int kVideoArt = 58;
 constexpr int kWideCard = 260;
-// 右边的按钮：收着时是播放暂停，展开后在同一个位置换成收起（标题的宽度不跟着变）。
+// 卡片右边的播放暂停。
 constexpr int kAccessory = 28;
 constexpr int kAccessoryTop = kArtTop + (kArt - kAccessory) / 2;
 // 卡片下面边播边画的进度波形。
 constexpr int kWaveTop = 47;
 constexpr int kWaveHeight = 10;
-// 播放器从最上面那一行下面开始，到底留这么多。
-constexpr int kPlayerTop = 50;
-constexpr int kBottomPadding = 10;
+// 展开后：四周留 14，封面 64，标题从封面右边 12 开始、比封面低 4。
+constexpr int kPadding = 14;
+constexpr int kFullArt = 64;
+constexpr float kFullArtRadius = 12;
+constexpr int kFullArtGap = 12;
+constexpr int kFullTitleTop = kPadding + 4;
+// 展开后右上角的浮出、收起。
+constexpr int kCornerButton = 28;
+constexpr int kCornerTop = 10;
+constexpr int kCornerGap = 2;
+// 播放器（从波形开始）在封面下面 12，到底留 12。
+constexpr int kPlayerTop = kPadding + kFullArt + 12;
+constexpr int kBottomPadding = 12;
+// 圆角：卡片 12，展开后 18。
 constexpr float kRadius = 12;
-// 升起来的那一层的底比面板长出这么多，框也往上多出这么多：弹簧冲过头、展开着少了一行
-// 时底下不露空，上面的阴影不被裁掉。
+constexpr float kFullRadius = 18;
+// 弹簧过冲或展开中少了一行时允许的额外范围。
 constexpr int kSlack = 64;
-// 展开后面板上边的阴影往上散这么多。
-constexpr int kShadowMargin = 20;
-// 底边那一段描边的高度；角刚开始拐的这一小段还是那一层自己的侧边，不重复画。
-constexpr int kRim = 12;
-constexpr int kRimSkip = 4;
+// 展开后面板四周投影向外扩散的留白。
+constexpr int kShadowMargin = 44;
 
 float Clamp01(double v) {
   return static_cast<float>(std::clamp(v, 0.0, 1.0));
+}
+
+// e 在 [from, to] 里走到了哪（0…1）。
+float Segment(double e, double from, double to) {
+  return Clamp01((e - from) / (to - from));
+}
+
+float Lerp(float from, float to, double t) {
+  return from + (to - from) * static_cast<float>(t);
 }
 
 }  // namespace
@@ -99,7 +120,8 @@ class MediaDock::Piece : public views::View {
 BEGIN_METADATA(MediaDock, Piece)
 END_METADATA
 
-// 最上面那一行（收着时就是整张卡片）：点一下展开，再点一下收回。
+// 卡片（展开后是最上面封面和标题那一行）：点一下展开，再点一下收回。自己不画东西，封面、
+// 标题是另外的几层。
 class MediaDock::Row : public views::Button {
   METADATA_HEADER(Row, views::Button)
 
@@ -107,19 +129,10 @@ class MediaDock::Row : public views::Button {
   explicit Row(MediaDock* dock)
       : views::Button(base::BindRepeating(
             [](MediaDock* dock) { dock->SetExpanded(!dock->expanded()); },
-            base::Unretained(dock))),
-        dock_(dock) {
+            base::Unretained(dock))) {
     SetPaintToLayer();
     layer()->SetFillsBoundsOpaquely(false);
   }
-
-  // views::Button:
-  void PaintButtonContents(gfx::Canvas* canvas) override {
-    dock_->PaintRow(canvas, size());
-  }
-
- private:
-  const raw_ptr<MediaDock> dock_;
 };
 
 BEGIN_METADATA(MediaDock, Row)
@@ -142,22 +155,27 @@ MediaDock::MediaDock(BrowserWindowInterface* browser)
 
   stack_ = AddChildView(std::make_unique<Piece>(
       base::BindRepeating(&MediaDock::PaintStack, base::Unretained(this))));
+  shadow_ = AddChildView(std::make_unique<Piece>(
+      base::BindRepeating(&MediaDock::PaintShadow, base::Unretained(this))));
+  shadow_->SetVisible(false);
 
   clip_ = AddChildView(std::make_unique<views::View>());
   clip_->SetPaintToLayer(ui::LAYER_NOT_DRAWN);
   clip_->layer()->SetMasksToBounds(true);
-  clip_->layer()->SetRoundedCornerRadius(
-      gfx::RoundedCornersF(0, 0, kRadius, kRadius));
+  clip_->layer()->SetRoundedCornerRadius(gfx::RoundedCornersF(kRadius));
   clip_->layer()->SetIsFastRoundedCorner(true);
 
-  rider_ = clip_->AddChildView(std::make_unique<views::View>());
-  rider_->SetPaintToLayer(ui::LAYER_NOT_DRAWN);
-  shadow_ = rider_->AddChildView(std::make_unique<Piece>(
-      base::BindRepeating(&MediaDock::PaintShadow, base::Unretained(this))));
-  sheet_ = rider_->AddChildView(std::make_unique<Piece>(
+  sheet_ = clip_->AddChildView(std::make_unique<Piece>(
       base::BindRepeating(&MediaDock::PaintSheet, base::Unretained(this))));
-  row_ = rider_->AddChildView(std::make_unique<Row>(this));
-  toggle_ = rider_->AddChildView(std::make_unique<MediaButton>(
+  row_ = clip_->AddChildView(std::make_unique<Row>(this));
+  art_ = clip_->AddChildView(std::make_unique<Piece>(
+      base::BindRepeating(&MediaDock::PaintArt, base::Unretained(this))));
+  card_title_ = clip_->AddChildView(std::make_unique<Piece>(
+      base::BindRepeating(&MediaDock::PaintCardTitle, base::Unretained(this))));
+  full_title_ = clip_->AddChildView(std::make_unique<Piece>(
+      base::BindRepeating(&MediaDock::PaintFullTitle, base::Unretained(this))));
+  full_title_->SetVisible(false);
+  toggle_ = clip_->AddChildView(std::make_unique<MediaButton>(
       base::BindRepeating(
           [](MediaDock* dock) {
             if (dock->has_entry_) {
@@ -167,47 +185,48 @@ MediaDock::MediaDock(BrowserWindowInterface* browser)
           base::Unretained(this)),
       MediaGlyph::kPause, L("media.pause"), kAccessory, 12,
       MediaButton::Style::kTonal));
-  collapse_ = rider_->AddChildView(std::make_unique<MediaButton>(
-      base::BindRepeating([](MediaDock* dock) { dock->SetExpanded(false); },
-                          base::Unretained(this)),
-      MediaGlyph::kCollapse, L("media.collapse"), kAccessory, 14));
-  wave_ = rider_->AddChildView(
+  wave_ = clip_->AddChildView(
       std::make_unique<MediaWaveform>(hub_, MediaWaveform::Style::kRecorded));
   wave_->SetBar(2, 1.6f);
+  float_ = clip_->AddChildView(std::make_unique<MediaButton>(
+      base::BindRepeating(
+          [](MediaDock* dock) {
+            // 浮出去以后这张卡片会收起：不在按钮自己的回调里改。
+            base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+                FROM_HERE, base::BindOnce(
+                               [](base::WeakPtr<MediaDock> dock) {
+                                 if (dock) {
+                                   dock->SetExpanded(false);
+                                   prefs::PrefsFor(dock->browser_->GetProfile())
+                                       ->SetBoolean(prefs::kMediaDocked, false);
+                                 }
+                               },
+                               dock->weak_factory_.GetWeakPtr()));
+          },
+          base::Unretained(this)),
+      MediaGlyph::kFloat, L("media.float"), kCornerButton, 14));
+  collapse_ = clip_->AddChildView(std::make_unique<MediaButton>(
+      base::BindRepeating([](MediaDock* dock) { dock->SetExpanded(false); },
+                          base::Unretained(this)),
+      MediaGlyph::kCollapse, L("media.collapse"), kCornerButton, 14));
+  for (MediaButton* button : {float_.get(), collapse_.get()}) {
+    button->layer()->SetOpacity(0);
+    button->SetVisible(false);
+  }
 
   MediaPlayerView::Options options;
-  options.compact = true;
-  options.placement_glyph = MediaGlyph::kFloat;
-  options.placement_tooltip = L("media.float");
-  options.placement = base::BindRepeating(
-      [](MediaDock* dock) {
-        // 浮出去以后这张卡片会收起：不在按钮自己的回调里改。
-        base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
-            FROM_HERE, base::BindOnce(
-                           [](base::WeakPtr<MediaDock> dock) {
-                             if (dock) {
-                               dock->SetExpanded(false);
-                               prefs::PrefsFor(dock->browser_->GetProfile())
-                                   ->SetBoolean(prefs::kMediaDocked, false);
-                             }
-                           },
-                           dock->weak_factory_.GetWeakPtr()));
-      },
-      base::Unretained(this));
+  options.header = false;
   options.size_changed = base::BindRepeating(&MediaDock::OnPlayerSizeChanged,
                                              base::Unretained(this));
   // 点了其余的媒体里的一行：最上面那一行换成它。
   options.selection_changed =
       base::BindRepeating(&MediaDock::Update, base::Unretained(this));
   player_ =
-      rider_->AddChildView(std::make_unique<MediaPlayerView>(hub_, options));
+      clip_->AddChildView(std::make_unique<MediaPlayerView>(hub_, options));
   player_->SetPaintToLayer();
   player_->layer()->SetFillsBoundsOpaquely(false);
   player_->SetVisible(false);
   full_height_ = FullHeight();
-
-  rim_ = clip_->AddChildView(std::make_unique<Piece>(
-      base::BindRepeating(&MediaDock::PaintRim, base::Unretained(this))));
 
   prefs_.Init(prefs::PrefsFor(browser->GetProfile()));
   prefs_.Add(prefs::kMediaControlsEnabled,
@@ -228,7 +247,6 @@ void MediaDock::SetTheme(const Theme& theme) {
   theme_ = theme;
   player_->SetTheme(theme);
   sheet_->SchedulePaint();
-  rim_->SchedulePaint();
   shadow_->SchedulePaint();
   Update();
 }
@@ -270,6 +288,7 @@ void MediaDock::Update() {
     return;
   }
   const MediaEntry* entry = Entry();
+  const int art_width = CardArtWidth();
   has_entry_ = entry != nullptr;
   if (entry) {
     entry_ = *entry;
@@ -289,8 +308,9 @@ void MediaDock::Update() {
   media_theme_ = media_theme;
   sheet_playing_ = playing;
   count_ = count;
-  toggle_->SetTheme(media_theme_);
-  collapse_->SetTheme(media_theme_);
+  for (MediaButton* button : {toggle_.get(), float_.get(), collapse_.get()}) {
+    button->SetTheme(media_theme_);
+  }
   if (has_entry_) {
     toggle_->SetGlyph(entry_.playing ? MediaGlyph::kPause : MediaGlyph::kPlay,
                       L(entry_.playing ? "media.pause" : "media.play"));
@@ -304,7 +324,13 @@ void MediaDock::Update() {
                              ? entry_.title
                              : entry_.title + u" · " + entry_.artist);
   }
-  row_->SchedulePaint();
+  art_->SchedulePaint();
+  card_title_->SchedulePaint();
+  full_title_->SchedulePaint();
+  if (CardArtWidth() != art_width) {
+    // 视频和音乐的封面宽不一样，卡片上的标题跟着挪。
+    InvalidateLayout();
+  }
   const bool docked =
       prefs::PrefsFor(browser_->GetProfile())->GetBoolean(prefs::kMediaDocked);
   const bool show = has_entry_ && docked && sidebar_active_ &&
@@ -375,6 +401,36 @@ void MediaDock::SetMaxHeight(int max_height) {
   player_->SetMaxOthers(others);
 }
 
+void MediaDock::SetWidths(int collapsed_width, int max_width) {
+  collapsed_width = std::max(0, collapsed_width);
+  max_width = std::max(0, max_width);
+  if (collapsed_width_ == collapsed_width && max_width_ == max_width) {
+    return;
+  }
+  if (collapsed_width_ != collapsed_width) {
+    stack_->SchedulePaint();
+  }
+  collapsed_width_ = collapsed_width;
+  max_width_ = max_width;
+  InvalidateLayout();
+}
+
+int MediaDock::ExpandedWidth() const {
+  const int width =
+      max_width_ > 0 ? std::min(kExpandedWidth, max_width_) : kExpandedWidth;
+  return std::max(collapsed_width_, width);
+}
+
+int MediaDock::CollapsedWidth() const {
+  return collapsed_width_ > 0 ? std::min(collapsed_width_, width()) : width();
+}
+
+int MediaDock::CardArtWidth() const {
+  return has_entry_ && entry_.has_video && CollapsedWidth() >= kWideCard
+             ? kVideoArt
+             : kArt;
+}
+
 void MediaDock::OnPlayerSizeChanged() {
   if (!player_) {
     return;
@@ -389,8 +445,7 @@ void MediaDock::OnPlayerSizeChanged() {
   if (e > 0 && Compositor()) {
     // 展开着：视图的上边挪了，面板先留在原处再滑到位。多出来的行从底边露出来；少了
     // 一行时上面的内容滑下来补上。
-    resize_.SetValue(
-        std::max<double>(resize_.value() + delta * e, kShadowMargin - kSlack));
+    resize_.SetValue(std::max<double>(resize_.value() + delta * e, -kSlack));
     resize_.AnimateTo(Compositor(), 0, MotionCurve::Of(motion::kMediaDockRow));
   }
   if (!setting_max_height_) {
@@ -402,16 +457,22 @@ void MediaDock::OnPlayerSizeChanged() {
 }
 
 gfx::Rect MediaDock::CardRect() const {
-  return gfx::Rect(0, height() - kCardHeight, width(), kCardHeight);
+  return gfx::Rect(0, height() - kCardHeight, CollapsedWidth(), kCardHeight);
 }
 
 gfx::Rect MediaDock::PanelRect() const {
-  const int travel = std::max(0, height() - kCardHeight);
-  const int top =
-      std::clamp(static_cast<int>(std::lround((1 - expand_.value()) * travel +
-                                              resize_.value())),
-                 0, travel);
-  return gfx::Rect(0, top, width(), height() - top);
+  const int h = height();
+  const int full_width = width();
+  const int card_width = CollapsedWidth();
+  const double e = expand_.value();
+  const int travel = std::max(0, h - kCardHeight);
+  const int top = std::clamp(
+      static_cast<int>(std::lround((1 - e) * travel + resize_.value())),
+      -kSlack, travel);
+  const int w = std::clamp(
+      static_cast<int>(std::lround(card_width + (full_width - card_width) * e)),
+      std::min(card_width, full_width), full_width + kSlack);
+  return gfx::Rect(0, top, std::max(1, w), std::max(1, h - top));
 }
 
 ui::Compositor* MediaDock::Compositor() {
@@ -428,8 +489,12 @@ void MediaDock::SetExpanded(bool expanded) {
     return;
   }
   expanded_ = expanded;
-  if (expanded && has_entry_) {
-    player_->Select(entry_.id);
+  if (expanded) {
+    if (has_entry_) {
+      player_->Select(entry_.id);
+    }
+    // Mac 上触控板轻振一下（手指在触控板上时才感觉得到）。
+    PerformHaptic(Haptic::kLevelChange);
   }
   frames_ = 0;
   frame_gap_sum_ = 0;
@@ -455,66 +520,137 @@ void MediaDock::OnExpandFrame() {
 }
 
 void MediaDock::ApplyFrame() {
-  if (!rim_) {
+  if (!clip_ || width() <= 0 || height() <= 0) {
     return;
   }
   const double e = expand_.value();
   if (e == 0 && !expand_.is_animating() && !resize_.is_animating()) {
     resize_.SetValue(0);
   }
-  // 升起来的那一层：收着时往下沉到只露出最上面那一行（卡片）。弹簧冲过头时再往上一点，
-  // 底下是那一层多出来的底。
-  gfx::Transform transform;
-  transform.Translate(
-      0, static_cast<float>((1 - e) * std::max(0, height() - kCardHeight) +
-                            resize_.value()));
-  rider_->layer()->SetTransform(transform);
-
   const float shown = Clamp01(e);
-  // 卡片独有的（播放暂停、进度波形、后面那一摞）先淡掉，播放器的再淡进来。
-  const float card = 1 - std::min(1.0f, shown * 3);
-  const float controls = Clamp01((shown - 0.2) / 0.5);
+  const gfx::Rect panel = PanelRect();
+  const int w = panel.width();
+
+  // 框：左下角不动，往上、往右长，圆角 12 → 18。底板跟着大小重画。
+  const float radius = Lerp(kRadius, kFullRadius, shown);
+  clip_->SetBoundsRect(panel);
+  clip_->layer()->SetRoundedCornerRadius(gfx::RoundedCornersF(radius));
+  if (std::abs(radius - sheet_radius_) > 0.01f) {
+    sheet_radius_ = radius;
+    sheet_->SchedulePaint();
+  }
+  sheet_->SetBounds(0, 0, w, panel.height());
+
+  // 封面：卡片上的位置 → 展开后的位置，跟着大小重画（视频在宽卡片上从宽的变成方的）。
+  const int card_art = CardArtWidth();
+  const gfx::RectF art(Lerp(kInset, kPadding, e), Lerp(kArtTop, kPadding, e),
+                       Lerp(card_art, kFullArt, e), Lerp(kArt, kFullArt, e));
+  const float art_radius = Lerp(kArtRadius, kFullArtRadius, shown);
+  if (std::abs(art_radius - art_radius_) > 0.01f) {
+    art_radius_ = art_radius;
+    art_->SchedulePaint();
+  }
+  art_->SetBoundsRect(gfx::ToRoundedRect(art));
+
+  // 标题：两份一起从卡片上的位置平移到展开后的位置；卡片上的那份先淡掉，展开后的那份从
+  // 13/15 放大到 1、随后淡进来。
+  const int card_text_x = kInset + card_art + kArtGap;
+  const int full_text_x = kPadding + kFullArt + kFullArtGap;
+  const float text_x = Lerp(card_text_x, full_text_x, e);
+  const float text_y = Lerp(kArtTop + 1, kFullTitleTop, e);
+  gfx::Transform card_transform;
+  card_transform.Translate(text_x, text_y);
+  card_title_->layer()->SetTransform(card_transform);
+  const float card_text = 1 - Segment(e, 0, 0.2);
+  card_title_->layer()->SetOpacity(card_text);
+  card_title_->SetVisible(card_text > 0);
+  gfx::Transform full_transform;
+  full_transform.Translate(text_x, text_y);
+  const float scale = Lerp(13.0f / 15, 1, shown);
+  full_transform.Scale(scale, scale);
+  full_title_->layer()->SetTransform(full_transform);
+  const float full_text = Segment(e, 0.18, 0.45);
+  full_title_->layer()->SetOpacity(full_text);
+  full_title_->SetVisible(full_text > 0);
+
+  // 卡片才有的（播放暂停、进度波形、后面那一摞）先淡掉；播放暂停贴着右边缘走。
+  const float card = 1 - Segment(e, 0, 0.3);
+  toggle_->SetBounds(std::max(kInset, w - kInset - kAccessory), kAccessoryTop,
+                     kAccessory, kAccessory);
   toggle_->layer()->SetOpacity(card);
   toggle_->SetVisible(card > 0);
   wave_->layer()->SetOpacity(card);
   wave_->SetVisible(card > 0);
-  stack_->layer()->SetOpacity(card);
-  stack_->SetVisible(count_ > 1 && card > 0);
-  collapse_->layer()->SetOpacity(controls);
-  collapse_->SetVisible(shown > 0.01f);
-  player_->layer()->SetOpacity(controls);
+  const float stack = 1 - Segment(e, 0, 0.25);
+  stack_->layer()->SetOpacity(stack);
+  stack_->SetVisible(count_ > 1 && stack > 0);
+
+  // 右上角的浮出、收起后淡进来。
+  const float corner = Segment(e, 0.4, 0.85);
+  collapse_->SetBounds(w - kInset - kCornerButton, kCornerTop, kCornerButton,
+                       kCornerButton);
+  float_->SetBounds(collapse_->x() - kCornerGap - kCornerButton, kCornerTop,
+                    kCornerButton, kCornerButton);
+  for (MediaButton* button : {float_.get(), collapse_.get()}) {
+    button->layer()->SetOpacity(corner);
+    button->SetVisible(corner > 0.01f);
+  }
+
+  // 下面的波形、进度、控制和其余的媒体跟着上边升起来，从底边露出；中途淡入、上移 8。
+  const float body = Segment(e, 0.25, 0.7);
+  player_->layer()->SetOpacity(body);
+  gfx::Transform lift;
+  lift.Translate(0, 8 * (1 - body));
+  player_->layer()->SetTransform(lift);
   player_->SetVisible(shown > 0.01f);
-  shadow_->layer()->SetOpacity(Clamp01(shown * 2));
+
+  // 投影：按展开后的大小画的，以左下角为锚点缩放到面板的大小；越过侧栏盖到网页上时
+  // 把面板和网页分开。
+  const float shadow = Clamp01(e * 2);
+  shadow_->layer()->SetOpacity(shadow);
   shadow_->SetVisible(shown > 0.01f);
+  if (shadow_->GetVisible()) {
+    const float sx = static_cast<float>(w) / width();
+    const float sy = static_cast<float>(panel.height()) / height();
+    gfx::Transform transform;
+    transform.Translate(kShadowMargin, kShadowMargin + height());
+    transform.Scale(sx, sy);
+    transform.Translate(-kShadowMargin, -(kShadowMargin + height()));
+    shadow_->layer()->SetTransform(transform);
+  }
 }
 
 void MediaDock::Layout(PassKey) {
   const int w = width();
   const int h = height();
-  stack_->SetBounds(0, h - kSlotHeight, w, kStackHeight + 24);
-  clip_->SetBounds(0, -kSlack, w, h + kSlack);
-  rider_->SetBounds(0, kSlack, w, h + kSlack);
-  shadow_->SetBounds(0, -kShadowMargin, w, kShadowMargin + 2);
-  sheet_->SetBounds(0, 0, w, h + kSlack);
-  row_->SetBounds(0, 0, w, kCardHeight);
-  const gfx::Rect accessory(w - kInset - kAccessory, kAccessoryTop, kAccessory,
-                            kAccessory);
-  toggle_->SetBoundsRect(accessory);
-  collapse_->SetBoundsRect(accessory);
-  wave_->SetBounds(kInset, kWaveTop, w - 2 * kInset, kWaveHeight);
-  player_->SetBounds(kInset, kPlayerTop, w - 2 * kInset,
+  const int card_width = CollapsedWidth();
+  stack_->SetBounds(0, h - kSlotHeight, card_width, kStackHeight + 24);
+  shadow_->SetBounds(-kShadowMargin, -kShadowMargin, w + 2 * kShadowMargin,
+                     h + 2 * kShadowMargin);
+  // 露出来多少按裁剪框算：收着时是整张卡片，展开后是播放器上面那一块。
+  row_->SetBounds(0, 0, w, kPlayerTop - 2);
+  const int card_text_x = kInset + CardArtWidth() + kArtGap;
+  card_title_->SetBounds(
+      0, 0, std::max(0, card_width - card_text_x - kInset - kAccessory - 6),
+      40);
+  const int full_text_x = kPadding + kFullArt + kFullArtGap;
+  full_title_->SetBounds(0, 0,
+                         std::max(0, w - full_text_x - kInset -
+                                         2 * kCornerButton - kCornerGap - 4),
+                         kFullArt);
+  wave_->SetBounds(kInset, kWaveTop, std::max(0, card_width - 2 * kInset),
+                   kWaveHeight);
+  player_->SetBounds(kPadding, kPlayerTop, std::max(0, w - 2 * kPadding),
                      player_->ContentHeight());
-  rim_->SetBounds(0, kSlack + h - kRim, w, kRim);
   ApplyFrame();
 }
 
 void MediaDock::PaintSheet(gfx::Canvas* canvas, const gfx::Size& size) {
-  // 下面两个角在框外面，看得见的是上面两个角和两条侧边。
   const gfx::RectF panel(0, 0, size.width(), size.height());
   cc::PaintFlags base;
   base.setAntiAlias(true);
   base.setColor(theme_.surface_panel);
-  canvas->DrawRoundRect(panel, kRadius, base);
+  canvas->DrawRoundRect(panel, sheet_radius_, base);
   // 一层封面的颜色，从左往右淡掉。
   cc::PaintFlags wash;
   wash.setAntiAlias(true);
@@ -526,7 +662,7 @@ void MediaDock::PaintSheet(gfx::Canvas* canvas, const gfx::Size& size) {
       SkColor4f::FromColor(SkColorSetA(media_theme_.primary_container, 0))};
   wash.setShader(cc::PaintShader::MakeLinearGradient(points, colors, nullptr, 2,
                                                      SkTileMode::kClamp));
-  canvas->DrawRoundRect(panel, kRadius, wash);
+  canvas->DrawRoundRect(panel, sheet_radius_, wash);
   cc::PaintFlags edge;
   edge.setAntiAlias(true);
   edge.setStyle(cc::PaintFlags::kStroke_Style);
@@ -534,34 +670,32 @@ void MediaDock::PaintSheet(gfx::Canvas* canvas, const gfx::Size& size) {
   edge.setColor(theme_.OnSurface(0.08f));
   gfx::RectF stroke = panel;
   stroke.Inset(0.5f);
-  canvas->DrawRoundRect(stroke, kRadius - 0.5f, edge);
-}
-
-void MediaDock::PaintRim(gfx::Canvas* canvas, const gfx::Size& size) {
-  canvas->ClipRect(
-      gfx::RectF(0, kRimSkip, size.width(), size.height() - kRimSkip));
-  cc::PaintFlags edge;
-  edge.setAntiAlias(true);
-  edge.setStyle(cc::PaintFlags::kStroke_Style);
-  edge.setStrokeWidth(1);
-  edge.setColor(theme_.OnSurface(0.08f));
-  gfx::RectF stroke(0, size.height() - 4 * kRadius, size.width(), 4 * kRadius);
-  stroke.Inset(0.5f);
-  canvas->DrawRoundRect(stroke, kRadius - 0.5f, edge);
+  canvas->DrawRoundRect(stroke, sheet_radius_ - 0.5f, edge);
 }
 
 void MediaDock::PaintShadow(gfx::Canvas* canvas, const gfx::Size& size) {
-  // 只要面板上边线以上散出来的那一截；两头收进去一点，到面板的边上正好淡完。
-  canvas->ClipRect(gfx::RectF(0, 0, size.width(), kShadowMargin));
+  gfx::RectF panel(0, 0, size.width(), size.height());
+  panel.Inset(kShadowMargin);
+  if (panel.IsEmpty()) {
+    return;
+  }
+  const SkRRect rrect =
+      SkRRect::MakeRectXY(gfx::RectFToSkRect(panel), kFullRadius, kFullRadius);
+  canvas->Save();
+  canvas->sk_canvas()->clipRRect(rrect, SkClipOp::kDifference, true);
   cc::PaintFlags flags;
   flags.setAntiAlias(true);
   flags.setColor(SK_ColorBLACK);
-  flags.setLooper(gfx::CreateShadowDrawLooper({gfx::ShadowValue(
-      gfx::Vector2d(0, -2), 28,
-      SkColorSetA(SK_ColorBLACK, (theme_.is_dark ? 0.42f : 0.22f) * 255))}));
-  canvas->DrawRoundRect(
-      gfx::RectF(kRadius, kShadowMargin + 4, size.width() - 2 * kRadius, 40),
-      kRadius, flags);
+  flags.setLooper(gfx::CreateShadowDrawLooper({
+      gfx::ShadowValue(
+          gfx::Vector2d(0, 6), 36,
+          SkColorSetA(SK_ColorBLACK, (theme_.is_dark ? 0.48f : 0.22f) * 255)),
+      gfx::ShadowValue(
+          gfx::Vector2d(0, 2), 12,
+          SkColorSetA(SK_ColorBLACK, (theme_.is_dark ? 0.28f : 0.1f) * 255)),
+  }));
+  canvas->sk_canvas()->drawRRect(rrect, flags);
+  canvas->Restore();
 }
 
 void MediaDock::PaintStack(gfx::Canvas* canvas, const gfx::Size& size) {
@@ -581,24 +715,46 @@ void MediaDock::PaintStack(gfx::Canvas* canvas, const gfx::Size& size) {
   }
 }
 
-void MediaDock::PaintRow(gfx::Canvas* canvas, const gfx::Size& size) {
+void MediaDock::PaintArt(gfx::Canvas* canvas, const gfx::Size& size) {
   if (!has_entry_) {
     return;
   }
-  const int w = size.width();
-  const int art_width = entry_.has_video && w >= kWideCard ? kVideoArt : kArt;
-  PaintArtwork(canvas, gfx::RectF(kInset, kArtTop, art_width, kArt), 7, entry_,
-               media_theme_);
-  const int x = kInset + art_width + kArtGap;
-  const int right = w - kInset - kAccessory - 6;
-  DrawMediaText(canvas, entry_.title, 13, /*semibold=*/true,
-                entry_.playing ? theme_.on_surface : theme_.on_surface_variant,
-                gfx::Rect(x, kArtTop + 1, right - x, 18));
+  PaintArtwork(canvas, gfx::RectF(0, 0, size.width(), size.height()),
+               art_radius_, entry_, media_theme_);
+}
+
+void MediaDock::PaintCardTitle(gfx::Canvas* canvas, const gfx::Size& size) {
+  if (!has_entry_ || size.width() <= 0) {
+    return;
+  }
   const std::u16string subtitle = entry_.artist.empty()
                                       ? entry_.source
                                       : entry_.artist + u" · " + entry_.source;
+  DrawMediaText(canvas, entry_.title, 13, /*semibold=*/true,
+                entry_.playing ? theme_.on_surface : theme_.on_surface_variant,
+                gfx::Rect(0, 0, size.width(), 18));
   DrawMediaText(canvas, subtitle, 11, false, theme_.on_surface_variant,
-                gfx::Rect(x, kArtTop + 20, right - x, 15));
+                gfx::Rect(0, 19, size.width(), 15));
+}
+
+void MediaDock::PaintFullTitle(gfx::Canvas* canvas, const gfx::Size& size) {
+  if (!has_entry_ || size.width() <= 0) {
+    return;
+  }
+  // 同媒体岛展开后封面右边的三行。
+  const int w = size.width();
+  DrawMediaText(canvas, entry_.title, 15, /*semibold=*/true, theme_.on_surface,
+                gfx::Rect(0, 0, w, 20));
+  DrawMediaText(canvas, MediaSubtitle(entry_), 12, false,
+                theme_.on_surface_variant, gfx::Rect(0, 22, w, 16));
+  int source_x = 0;
+  if (!entry_.favicon.isNull()) {
+    canvas->DrawImageInt(entry_.favicon, 0, 0, entry_.favicon.width(),
+                         entry_.favicon.height(), 0, 43, 12, 12, true);
+    source_x = 17;
+  }
+  DrawMediaText(canvas, entry_.source, 11, false, theme_.on_surface_variant,
+                gfx::Rect(source_x, 41, w - source_x, 15));
 }
 
 bool MediaDock::OnMousePressed(const ui::MouseEvent& event) {
@@ -608,6 +764,7 @@ bool MediaDock::OnMousePressed(const ui::MouseEvent& event) {
 
 void MediaDock::OnMouseEntered(const ui::MouseEvent& event) {
   leave_timer_.Stop();
+  exited_while_expanding_ = false;
   if (!expanded_ && !hover_timer_.IsRunning()) {
     hover_timer_.Start(
         FROM_HERE, base::Seconds(motion::kMediaIslandHoverDelay),
@@ -618,10 +775,28 @@ void MediaDock::OnMouseEntered(const ui::MouseEvent& event) {
 void MediaDock::OnMouseExited(const ui::MouseEvent& event) {
   hover_timer_.Stop();
   if (expanded_ && !leave_timer_.IsRunning()) {
+    exited_while_expanding_ = expand_.is_animating();
     leave_timer_.Start(
         FROM_HERE, base::Seconds(motion::kMediaIslandLeaveDelay),
-        base::BindOnce(&MediaDock::SetExpanded, base::Unretained(this), false));
+        base::BindOnce(&MediaDock::LeaveCollapse, base::Unretained(this)));
   }
+}
+
+void MediaDock::LeaveCollapse() {
+  const bool during_expand = exited_while_expanding_;
+  exited_while_expanding_ = false;
+  if (!expanded_) {
+    return;
+  }
+  if (during_expand && GetWidget()) {
+    // 面板还在长的时候鼠标出了原来的边，又落进了长大的面板：不收。
+    gfx::Point point = display::Screen::Get()->GetCursorScreenPoint();
+    views::View::ConvertPointFromScreen(this, &point);
+    if (PanelRect().Contains(point)) {
+      return;
+    }
+  }
+  SetExpanded(false);
 }
 
 void MediaDock::HoverExpand() {
@@ -645,7 +820,10 @@ void MediaDock::RemovedFromWidget() {
 
 bool MediaDock::DoesIntersectRect(const views::View* target,
                                   const gfx::Rect& rect) const {
-  // 视图一直是展开后那么大：只有面板露出来的部分接鼠标，上面空着的地方留给标签列表。
+  if (!should_show_) {
+    return false;
+  }
+  // 视图一直是展开后那么大：只有面板露出来的部分接鼠标，空着的地方留给标签列表和网页。
   return PanelRect().Intersects(rect);
 }
 

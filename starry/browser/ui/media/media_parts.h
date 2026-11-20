@@ -74,6 +74,9 @@ void PaintProgressRing(gfx::Canvas* canvas,
 // 1:24、1:02:03。
 std::u16string FormatMediaTime(base::TimeDelta time);
 
+// 播放器标题下面那一行：艺术家 · 专辑；没有专辑时只写艺术家，没有艺术家时是来源。
+std::u16string MediaSubtitle(const MediaEntry& entry);
+
 // 只写一行，放不下截断加「…」。
 void DrawMediaText(gfx::Canvas* canvas,
                    const std::u16string& text,
