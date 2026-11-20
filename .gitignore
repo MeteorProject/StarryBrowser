@@ -20,3 +20,4 @@ __pycache__/
 /internal/
 /args.local.gn
 /AGENTS.md
+/temp/
