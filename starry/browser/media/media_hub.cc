@@ -47,8 +47,6 @@ constexpr int kFaviconDesiredSize = 64;
 constexpr base::TimeDelta kLostGrace = base::Seconds(2);
 // 没人看了过这么久才关回环流：展开、收起、换位置时不反复开关。
 constexpr base::TimeDelta kLevelsLinger = base::Seconds(1);
-// 按位置记电平最多记这么长（再长的不记）。
-constexpr double kRecordedMaxSeconds = 6 * 60 * 60;
 
 }  // namespace
 
@@ -163,7 +161,6 @@ class MediaHub::Session
         base::BindOnce(&Session::StopLevels, base::Unretained(this)));
   }
   const MediaLevels* levels() const { return levels_.get(); }
-  const std::vector<float>& recorded() const { return recorded_; }
 
   // 网页没给的字用标签的标题、域名补上（标签的标题会变，每次通知前重新取）。
   void RefreshText() {
@@ -223,13 +220,7 @@ class MediaHub::Session
 
   void MediaSessionMetadataChanged(
       const std::optional<media_session::MediaMetadata>& metadata) override {
-    const media_session::MediaMetadata next =
-        metadata.value_or(media_session::MediaMetadata());
-    if (next.title != metadata_.title || next.artist != metadata_.artist) {
-      // 换了一首：记下的波形不再对得上。
-      recorded_.clear();
-    }
-    metadata_ = next;
+    metadata_ = metadata.value_or(media_session::MediaMetadata());
     RefreshText();
     hub_->NotifySoon();
   }
@@ -300,28 +291,10 @@ class MediaHub::Session
     if (!contents) {
       return;
     }
-    levels_ = std::make_unique<MediaLevels>(
-        contents,
-        base::BindRepeating(&Session::OnLevels, base::Unretained(this)));
+    levels_ = std::make_unique<MediaLevels>(contents, base::RepeatingClosure());
   }
 
   void StopLevels() { levels_.reset(); }
-
-  // 来了一帧：按现在放到的位置记下电平。
-  void OnLevels() {
-    if (!levels_ || !entry_.playing || !entry_.position) {
-      return;
-    }
-    const double seconds = entry_.position->GetPosition().InSecondsF();
-    if (seconds < 0 || seconds > kRecordedMaxSeconds) {
-      return;
-    }
-    const size_t bucket = static_cast<size_t>(seconds * kRecordedPerSecond);
-    if (recorded_.size() <= bucket) {
-      recorded_.resize(bucket + 1, -1);
-    }
-    recorded_[bucket] = std::max(recorded_[bucket], levels_->frame().level);
-  }
 
   const raw_ptr<MediaHub> hub_;
   MediaEntry entry_;
@@ -333,7 +306,6 @@ class MediaHub::Session
   int watchers_ = 0;
   std::unique_ptr<MediaLevels> levels_;
   base::OneShotTimer stop_timer_;
-  std::vector<float> recorded_;
   mojo::Remote<media_session::mojom::MediaController> controller_;
   mojo::Receiver<media_session::mojom::MediaControllerObserver>
       observer_receiver_{this};
@@ -536,12 +508,6 @@ void MediaHub::Unwatch(const base::UnguessableToken& id) {
 const MediaLevels* MediaHub::Levels(const base::UnguessableToken& id) const {
   Session* session = FindSession(id);
   return session ? session->levels() : nullptr;
-}
-
-const std::vector<float>* MediaHub::Recorded(
-    const base::UnguessableToken& id) const {
-  Session* session = FindSession(id);
-  return session ? &session->recorded() : nullptr;
 }
 
 void MediaHub::OnFocusGained(

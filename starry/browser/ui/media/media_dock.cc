@@ -58,8 +58,8 @@ constexpr int kWideCard = 260;
 // 卡片右边的播放暂停。
 constexpr int kAccessory = 28;
 constexpr int kAccessoryTop = kArtTop + (kArt - kAccessory) / 2;
-// 卡片下面边播边画的进度波形。
-constexpr int kWaveTop = 47;
+// 卡片下面的波浪进度条（居中于封面底边 44 与卡片底边 62 之间）。
+constexpr int kWaveTop = 48;
 constexpr int kWaveHeight = 10;
 // 展开后：四周留 14，封面 64，标题从封面右边 12 开始、比封面低 4。
 constexpr int kPadding = 14;
@@ -186,8 +186,7 @@ MediaDock::MediaDock(BrowserWindowInterface* browser)
       MediaGlyph::kPause, L("media.pause"), kAccessory, 12,
       MediaButton::Style::kTonal));
   wave_ = clip_->AddChildView(
-      std::make_unique<MediaWaveform>(hub_, MediaWaveform::Style::kRecorded));
-  wave_->SetBar(2, 1.6f);
+      std::make_unique<MediaWaveform>(hub_, MediaWaveform::Style::kProgress));
   float_ = clip_->AddChildView(std::make_unique<MediaButton>(
       base::BindRepeating(
           [](MediaDock* dock) {
@@ -314,7 +313,7 @@ void MediaDock::Update() {
   if (has_entry_) {
     toggle_->SetGlyph(entry_.playing ? MediaGlyph::kPause : MediaGlyph::kPlay,
                       L(entry_.playing ? "media.pause" : "media.play"));
-    wave_->Set(entry_, media_theme_.accent, media_theme_.accent,
+    wave_->Set(entry_, media_theme_.accent, theme_.danger(),
                theme_.OnSurface(0.2f));
     row_->GetViewAccessibility().SetName(
         L("media.accessibility",
@@ -541,7 +540,8 @@ void MediaDock::ApplyFrame() {
   }
   sheet_->SetBounds(0, 0, w, panel.height());
 
-  // 封面：卡片上的位置 → 展开后的位置，跟着大小重画（视频在宽卡片上从宽的变成方的）。
+  // 封面：卡片上的位置 →
+  // 展开后的位置，跟着大小重画（视频在宽卡片上从宽的变成方的）。
   const int card_art = CardArtWidth();
   const gfx::RectF art(Lerp(kInset, kPadding, e), Lerp(kArtTop, kPadding, e),
                        Lerp(card_art, kFullArt, e), Lerp(kArt, kFullArt, e));
@@ -596,7 +596,8 @@ void MediaDock::ApplyFrame() {
     button->SetVisible(corner > 0.01f);
   }
 
-  // 下面的波形、进度、控制和其余的媒体跟着上边升起来，从底边露出；中途淡入、上移 8。
+  // 下面的波形、进度、控制和其余的媒体跟着上边升起来，从底边露出；中途淡入、上移
+  // 8。
   const float body = Segment(e, 0.25, 0.7);
   player_->layer()->SetOpacity(body);
   gfx::Transform lift;

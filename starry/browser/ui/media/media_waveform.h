@@ -29,9 +29,11 @@ namespace starry {
 //
 // 刷新率按样式区分：
 // - 频谱、实时波形只在展开的播放器、画中画的画面上显示：跟随屏幕刷新以 60 fps
-//   补间（120 Hz 屏幕上隔帧绘制），在约 30 Hz 的电平采样间按时间平滑插值；频谱静音无变化
+//   补间（120 Hz 屏幕上隔帧绘制），在约 30 Hz
+//   的电平采样间按时间平滑插值；频谱静音无变化
 //   时跳过重绘，实时波形在放的时候一直往左走。
-// - 滚动响度、进度与电平条作为常驻小型指示器：按 30 fps 刷新（与电平采样频率匹配，
+// - 滚动响度、进度与电平条作为常驻小型指示器：按 30 fps
+// 刷新（与电平采样频率匹配，
 //   避免常驻组件持续高频提交帧带来不必要的合成开销）。
 class MediaWaveform : public views::View,
                       public ui::CompositorAnimationObserver {
@@ -46,9 +48,10 @@ class MediaWaveform : public views::View,
     kLive,
     // 滚动响度：最近几秒的电平，新的在右边（岛上的胶囊）。
     kRoll,
-    // 边播边画的进度：放过的部分画出当时的响度，没放到的是一排点（侧栏的坞）。不知道总长
-    // （直播）时换成滚动响度。
-    kRecorded,
+    // 音频驱动的波浪进度条：已播段为流动柔波（振幅随实时电平呼吸，暂停时平滑拉直），
+    // 未播段为细直线，中间以竖胶囊分界（侧栏的坞）。不知道总长（直播）时左端显示直播点、
+    // 整条为流动柔波。
+    kProgress,
     // 电平条：三、四条跟着声音跳（标签行的胶囊）。
     kMeter,
   };
@@ -58,8 +61,9 @@ class MediaWaveform : public views::View,
   MediaWaveform& operator=(const MediaWaveform&) = delete;
   ~MediaWaveform() override;
 
-  // 画哪个媒体、用什么颜色。color2 是频谱两边（高频）的颜色；rest
-  // 是没放到的点。
+  // 画哪个媒体、用什么颜色。color2
+  // 是频谱两边（高频）的颜色，或在进度波里是直播点的颜色； rest
+  // 是没放到的轨道。
   void Set(const MediaEntry& entry,
            SkColor color,
            SkColor color2,
@@ -100,7 +104,7 @@ class MediaWaveform : public views::View,
   // 实时波形一行摆得下几条（加上从右边进来、左边出去的各一条）。
   int LiveColumns() const;
   void PaintRoll(gfx::Canvas* canvas, const MediaLevels* levels);
-  void PaintRecorded(gfx::Canvas* canvas);
+  void PaintProgress(gfx::Canvas* canvas);
   void PaintMeter(gfx::Canvas* canvas, const MediaLevels* levels);
 
   const raw_ptr<MediaHub> hub_;
@@ -123,6 +127,11 @@ class MediaWaveform : public views::View,
   base::TimeDelta live_interval_ = base::Milliseconds(33);
   // 实时波形按它放大：看得见的那一段里最响的（涨得快、落得慢，响的移出去时不会一下跳）。
   float live_peak_ = 0;
+  // 波浪进度条：相位（0…4π）、平滑后的振幅（pt）、近期响度峰值、播放态颜色混合（0…1）。
+  float wave_phase_ = 0;
+  float wave_amp_ = 0;
+  float wave_peak_ = 0;
+  float play_blend_ = 0;
   std::unique_ptr<MediaLevelWatch> watch_;
   bool had_levels_ = false;
   base::RepeatingTimer ticker_;

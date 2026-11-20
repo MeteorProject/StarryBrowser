@@ -150,10 +150,6 @@ class MediaHub : public media_session::mojom::AudioFocusObserver,
       const base::UnguessableToken& id);
   // 现在的声音；没开着时为空。
   const MediaLevels* Levels(const base::UnguessableToken& id) const;
-  // 按播放位置记下的电平（每 0.25 秒一格，0…1；没记到的格是负数）。只在有人看着
-  // 时记，换了一首清空。给「边播边画」的进度波形。
-  static constexpr int kRecordedPerSecond = 4;
-  const std::vector<float>* Recorded(const base::UnguessableToken& id) const;
 
   // media_session::mojom::AudioFocusObserver:
   void OnFocusGained(

@@ -4,12 +4,15 @@
 
 #include <algorithm>
 #include <cmath>
-#include <vector>
+#include <numbers>
 
 #include "base/functional/bind.h"
 #include "cc/paint/paint_flags.h"
 #include "starry/browser/ui/design/theme.h"
 #include "starry/browser/ui/motion/layer_loop.h"
+#include "starry/browser/ui/motion/motion.h"
+#include "third_party/skia/include/core/SkPath.h"
+#include "third_party/skia/include/core/SkPathBuilder.h"
 #include "ui/base/metadata/metadata_impl_macros.h"
 #include "ui/compositor/compositor.h"
 #include "ui/compositor/layer.h"
@@ -33,17 +36,45 @@ constexpr float kStill = 0.0005f;
 constexpr base::TimeDelta kMinStep = base::Milliseconds(12);
 // 中间卡了一下之后按这么久算，不一下跳到位。
 constexpr base::TimeDelta kMaxStep = base::Milliseconds(100);
-// 实时波形按最近的峰值放大：峰值往下这么多（60 dB 的刻度上是 18 dB）画成一个点。
-// 压得很满的流行乐鼓点和鼓点之间只差几 dB，不放大是一整块。
+// 实时波形按最近的峰值放大：峰值往下这么多（60 dB 的刻度上是 18
+// dB）画成一个点。 压得很满的流行乐鼓点和鼓点之间只差几 dB，不放大是一整块。
 constexpr float kLiveRange = 0.3f;
 // 比这还小（约 -52 dBFS）当作没声音，画成点。
 constexpr float kLiveSilence = 0.13f;
-// 峰值涨上去、落下来的快慢（每 1/30 秒还差、留下这么多）：响的那一段移出去时整条慢慢
-// 变大，不一下跳。
+// 峰值涨上去、落下来的快慢（每 1/30
+// 秒还差、留下这么多）：响的那一段移出去时整条慢慢 变大，不一下跳。
 constexpr float kLivePeakRise = 0.4f;
 constexpr float kLivePeakFall = 0.97f;
 // 左边淡出去的那一段占整条的多少。
 constexpr float kLiveFade = 0.22f;
+// 波浪进度条（kProgress）：线宽、波长、流动速度（周/秒）、振幅范围（pt）与游标尺寸。
+constexpr float kWaveStroke = 2.0f;
+constexpr float kWaveLength = 15.0f;
+constexpr float kWaveSpeed = 1.4f;
+constexpr float kWaveIdleAmp = 0.75f;
+constexpr float kWaveMinPlayAmp = 1.05f;
+constexpr float kWaveMaxAmp = 2.85f;
+constexpr float kWaveSilence = 0.10f;
+constexpr float kWaveRange = 0.28f;
+constexpr float kWavePeakRise = 0.35f;
+constexpr float kWavePeakFall = 0.985f;
+constexpr float kWaveAmpRise = 0.40f;
+constexpr float kWaveAmpFall = 0.82f;
+constexpr float kWavePauseFall = 0.62f;
+constexpr float kWavePlayBlendRise = 0.55f;
+constexpr float kWavePlayBlendFall = 0.70f;
+constexpr float kWaveStill = 0.02f;
+constexpr float kWaveTaperLeft = 6.0f;
+constexpr float kWaveTaperRight = 7.0f;
+constexpr float kThumbWidth = 2.5f;
+constexpr float kThumbHeight = 8.0f;
+constexpr float kThumbGap = 2.5f;
+constexpr float kLiveDotRadius = 2.5f;
+
+float SmoothStep(float t) {
+  t = std::clamp(t, 0.0f, 1.0f);
+  return t * t * (3.0f - 2.0f * t);
+}
 
 SkColor WithAlpha(SkColor color, float alpha) {
   return SkColorSetA(
@@ -62,6 +93,45 @@ void Bar(gfx::Canvas* canvas,
   flags.setColor(color);
   canvas->DrawRoundRect(gfx::RectF(x, center_y - height / 2, width, height),
                         width / 2, flags);
+}
+
+void PaintWaveSegment(gfx::Canvas* canvas,
+                      float start,
+                      float end,
+                      float center_y,
+                      float amp,
+                      float phase,
+                      SkColor color) {
+  if (end <= start) {
+    return;
+  }
+  cc::PaintFlags flags;
+  flags.setAntiAlias(true);
+  flags.setStyle(cc::PaintFlags::kStroke_Style);
+  flags.setStrokeWidth(kWaveStroke);
+  flags.setStrokeCap(cc::PaintFlags::kRound_Cap);
+  flags.setStrokeJoin(cc::PaintFlags::kRound_Join);
+  flags.setColor(color);
+
+  SkPathBuilder path;
+  if (amp <= kWaveStill) {
+    path.moveTo(start, center_y);
+    path.lineTo(end, center_y);
+    canvas->DrawPath(path.detach(), flags);
+    return;
+  }
+
+  constexpr float kStep = 1.0f;
+  const float freq = 2.0f * std::numbers::pi_v<float> / kWaveLength;
+  path.moveTo(start, center_y);
+  for (float x = start + kStep; x < end; x += kStep) {
+    const float env = SmoothStep((x - start) / kWaveTaperLeft) *
+                      SmoothStep((end - x) / kWaveTaperRight);
+    const float y = center_y + amp * env * std::sin(x * freq - phase);
+    path.lineTo(x, y);
+  }
+  path.lineTo(end, center_y);
+  canvas->DrawPath(path.detach(), flags);
 }
 
 }  // namespace
@@ -86,6 +156,12 @@ void MediaWaveform::Set(const MediaEntry& entry,
     shown_.fill(0);
     live_arrival_ = base::TimeTicks();
     live_peak_ = 0;
+    wave_peak_ = 0;
+    if (style_ == Style::kProgress) {
+      play_blend_ = entry.playing ? 1.0f : 0.0f;
+      wave_amp_ =
+          (entry.playing && !motion::ReduceMotion()) ? kWaveIdleAmp : 0.0f;
+    }
   }
   id_ = entry.id;
   playing_ = entry.playing;
@@ -133,20 +209,36 @@ void MediaWaveform::AddedToWidget() {
 void MediaWaveform::RemovedFromWidget() {
   watch_.reset();
   Stop();
+  wave_amp_ = 0;
+  play_blend_ = 0;
 }
 
 void MediaWaveform::Update() {
-  const bool wants = id_ && playing_ && GetWidget() && IsDrawn();
-  if (wants && !watch_) {
+  const bool visible = id_ && GetWidget() && IsDrawn();
+  const bool reduced = style_ == Style::kProgress && motion::ReduceMotion();
+  const bool wants_audio = visible && playing_ && !reduced;
+  if (wants_audio && !watch_) {
     watch_ = hub_->WatchLevels(*id_);
-  } else if (!wants) {
+  } else if (!wants_audio) {
     watch_.reset();
   }
-  if (wants && !Running()) {
+  if (!visible && !playing_) {
+    wave_amp_ = 0;
+    play_blend_ = 0;
+  }
+  const bool settling = visible && style_ == Style::kProgress && !playing_ &&
+                        !reduced &&
+                        (wave_amp_ > kWaveStill || play_blend_ > kWaveStill);
+  const bool wants_run = visible && (playing_ || settling);
+  if (wants_run && !Running()) {
     Start();
-  } else if (!wants && Running()) {
+  } else if (!wants_run && Running()) {
     Stop();
     shown_.fill(0);
+    if (!playing_) {
+      wave_amp_ = 0;
+      play_blend_ = 0;
+    }
     SchedulePaint();
   }
 }
@@ -160,8 +252,12 @@ void MediaWaveform::Start() {
     compositor_->AddAnimationObserver(this);
     return;
   }
+  const base::TimeDelta interval =
+      (style_ == Style::kProgress && motion::ReduceMotion())
+          ? base::Seconds(1)
+          : base::Seconds(1.0 / LayerLoop::kLoopFps);
   ticker_.Start(
-      FROM_HERE, base::Seconds(1.0 / LayerLoop::kLoopFps),
+      FROM_HERE, interval,
       base::BindRepeating(&MediaWaveform::Tick, base::Unretained(this)));
 }
 
@@ -206,15 +302,73 @@ const MediaLevels* MediaWaveform::Levels() const {
 }
 
 void MediaWaveform::Tick() {
-  Advance(base::Seconds(1.0 / LayerLoop::kLoopFps));
+  Advance(ticker_.GetCurrentDelay());
 }
 
 void MediaWaveform::Advance(base::TimeDelta elapsed) {
-  if (!watch_ && id_) {
+  const bool reduced = style_ == Style::kProgress && motion::ReduceMotion();
+  if (id_ && playing_ && !reduced && !watch_) {
     // 会话（音频焦点）比标签的「有声音」晚到一点。
     watch_ = hub_->WatchLevels(*id_);
   }
-  const MediaLevels* levels = Levels();
+  const MediaLevels* levels = playing_ && !reduced ? Levels() : nullptr;
+
+  if (style_ == Style::kProgress) {
+    if (id_) {
+      if (const MediaEntry* entry = hub_->Find(*id_)) {
+        progress_ = entry->Progress();
+        duration_seconds_ =
+            entry->position ? entry->position->duration().InSecondsF() : 0;
+      }
+    }
+    const float frames =
+        static_cast<float>(elapsed.InSecondsF() * LayerLoop::kLoopFps);
+    if (playing_ && !reduced) {
+      // 相位按 4π 绕回：sin(kx - phase) 与直播点呼吸 sin(phase / 2)
+      // 均无缝连续。
+      const float wrap = 4.0f * std::numbers::pi_v<float>;
+      wave_phase_ = std::fmod(
+          wave_phase_ + static_cast<float>(elapsed.InSecondsF()) * kWaveSpeed *
+                            2.0f * std::numbers::pi_v<float>,
+          wrap);
+      float target_amp = kWaveIdleAmp;
+      if (levels) {
+        const float level = levels->frame().level;
+        const float peak_keep = std::pow(
+            level > wave_peak_ ? kWavePeakRise : kWavePeakFall, frames);
+        wave_peak_ = level + (wave_peak_ - level) * peak_keep;
+        if (level >= kWaveSilence) {
+          const float abs_level = std::clamp(
+              (level - kWaveSilence) / (1.0f - kWaveSilence), 0.0f, 1.0f);
+          const float floor = std::max(kWaveSilence, wave_peak_ - kWaveRange);
+          const float rel =
+              std::clamp((level - floor) / kWaveRange, 0.0f, 1.0f);
+          const float drive = abs_level * (0.4f + 0.6f * rel);
+          target_amp =
+              kWaveMinPlayAmp + (kWaveMaxAmp - kWaveMinPlayAmp) * drive;
+        }
+      }
+      const float amp_keep = std::pow(
+          target_amp > wave_amp_ ? kWaveAmpRise : kWaveAmpFall, frames);
+      wave_amp_ = target_amp + (wave_amp_ - target_amp) * amp_keep;
+      const float blend_keep = std::pow(kWavePlayBlendRise, frames);
+      play_blend_ = 1.0f + (play_blend_ - 1.0f) * blend_keep;
+    } else if (!playing_ && !reduced) {
+      wave_amp_ *= std::pow(kWavePauseFall, frames);
+      play_blend_ *= std::pow(kWavePlayBlendFall, frames);
+      if (wave_amp_ <= kWaveStill && play_blend_ <= kWaveStill) {
+        wave_amp_ = 0;
+        play_blend_ = 0;
+        Stop();
+      }
+    } else {
+      wave_amp_ = 0;
+      play_blend_ = playing_ ? 1.0f : 0.0f;
+    }
+    SchedulePaint();
+    return;
+  }
+
   bool changed = (levels != nullptr) != had_levels_;
   had_levels_ = levels != nullptr;
   if (levels) {
@@ -256,12 +410,6 @@ void MediaWaveform::Advance(base::TimeDelta elapsed) {
       changed = true;
     }
   }
-  // 进度按时间往后走（MediaHub 只在跳转、暂停时通知）。
-  if (id_ && style_ == Style::kRecorded) {
-    if (const MediaEntry* entry = hub_->Find(*id_)) {
-      progress_ = entry->Progress();
-    }
-  }
   if (changed || !Smooth()) {
     SchedulePaint();
   }
@@ -286,12 +434,8 @@ void MediaWaveform::OnPaint(gfx::Canvas* canvas) {
     case Style::kRoll:
       PaintRoll(canvas, levels);
       break;
-    case Style::kRecorded:
-      if (duration_seconds_ > 0 && progress_) {
-        PaintRecorded(canvas);
-      } else {
-        PaintRoll(canvas, levels);
-      }
+    case Style::kProgress:
+      PaintProgress(canvas);
       break;
     case Style::kMeter:
       PaintMeter(canvas, levels);
@@ -393,39 +537,66 @@ void MediaWaveform::PaintRoll(gfx::Canvas* canvas, const MediaLevels* levels) {
   }
 }
 
-void MediaWaveform::PaintRecorded(gfx::Canvas* canvas) {
-  const int n = std::max(1, static_cast<int>((width() + gap_) / (bar_ + gap_)));
-  const float offset = (width() - (n * bar_ + (n - 1) * gap_)) / 2;
+void MediaWaveform::PaintProgress(gfx::Canvas* canvas) {
+  const float w = width();
   const float h = height();
-  const std::vector<float>* recorded = hub_->Recorded(*id_);
-  const double progress = progress_.value_or(0);
-  const double per_column = duration_seconds_ / n;
-  for (int j = 0; j < n; ++j) {
-    const float x = offset + j * (bar_ + gap_);
-    const bool played = (j + 0.5) / n <= progress;
-    if (!played) {
-      Bar(canvas, x, h / 2, bar_, bar_, rest_);
-      continue;
+  const float cy = h / 2.0f;
+  const SkColor wave_color = WithAlpha(color_, 0.62f + 0.38f * play_blend_);
+  const SkColor thumb_color = WithAlpha(color_, 0.72f + 0.28f * play_blend_);
+
+  if (duration_seconds_ <= 0 || !progress_) {
+    // 直播 / 未知总长：左端直播圆点（播放中带柔和呼吸光环）+ 全宽柔波。
+    const float dot_x = kLiveDotRadius + 1.5f;
+    if (play_blend_ > kWaveStill && !motion::ReduceMotion()) {
+      const float pulse = 0.5f + 0.5f * std::sin(wave_phase_ * 0.5f);
+      cc::PaintFlags halo;
+      halo.setAntiAlias(true);
+      halo.setColor(WithAlpha(color2_, play_blend_ * (0.14f + 0.16f * pulse)));
+      canvas->DrawCircle(gfx::PointF(dot_x, cy), kLiveDotRadius + 1.5f, halo);
     }
-    float value = -1;
-    if (recorded) {
-      const size_t from =
-          static_cast<size_t>(j * per_column * MediaHub::kRecordedPerSecond);
-      const size_t to =
-          std::max(from + 1, static_cast<size_t>((j + 1) * per_column *
-                                                 MediaHub::kRecordedPerSecond));
-      for (size_t b = from; b < to && b < recorded->size(); ++b) {
-        value = std::max(value, (*recorded)[b]);
-      }
+    cc::PaintFlags dot;
+    dot.setAntiAlias(true);
+    dot.setColor(WithAlpha(color2_, 0.55f + 0.45f * play_blend_));
+    canvas->DrawCircle(gfx::PointF(dot_x, cy), kLiveDotRadius, dot);
+
+    const float wave_start = dot_x + kLiveDotRadius + 5.0f;
+    const float wave_end = w - kWaveStroke / 2.0f;
+    if (wave_end > wave_start) {
+      PaintWaveSegment(canvas, wave_start, wave_end, cy, wave_amp_, wave_phase_,
+                       wave_color);
     }
-    if (value < 0) {
-      // 放过了但没记到（跳过去的、刚打开时已经放过的）：同色的点。
-      Bar(canvas, x, h / 2, bar_, bar_, WithAlpha(color_, 0.55f));
-    } else {
-      Bar(canvas, x, h / 2, bar_, std::max(bar_, std::pow(value, 1.2f) * h),
-          color_);
-    }
+    return;
   }
+
+  const float progress = static_cast<float>(std::clamp(*progress_, 0.0, 1.0));
+  const float thumb_x =
+      kThumbWidth / 2.0f + progress * std::max(0.0f, w - kThumbWidth);
+  const float wave_start = kWaveStroke / 2.0f;
+  const float wave_end =
+      thumb_x - kThumbWidth / 2.0f - kThumbGap - kWaveStroke / 2.0f;
+  const float track_start =
+      thumb_x + kThumbWidth / 2.0f + kThumbGap + kWaveStroke / 2.0f;
+  const float track_end = w - kWaveStroke / 2.0f;
+
+  if (track_end > track_start) {
+    const float alpha =
+        std::clamp((track_end - track_start) / 3.0f, 0.0f, 1.0f);
+    PaintWaveSegment(canvas, track_start, track_end, cy, /*amp=*/0.0f,
+                     /*phase=*/0.0f, WithAlpha(rest_, alpha));
+  }
+  if (wave_end > wave_start) {
+    const float alpha = std::clamp((wave_end - wave_start) / 3.0f, 0.0f, 1.0f);
+    PaintWaveSegment(canvas, wave_start, wave_end, cy, wave_amp_, wave_phase_,
+                     WithAlpha(wave_color, alpha));
+  }
+
+  cc::PaintFlags thumb;
+  thumb.setAntiAlias(true);
+  thumb.setColor(thumb_color);
+  const float thumb_h = std::min(kThumbHeight, h);
+  canvas->DrawRoundRect(gfx::RectF(thumb_x - kThumbWidth / 2.0f,
+                                   cy - thumb_h / 2.0f, kThumbWidth, thumb_h),
+                        kThumbWidth / 2.0f, thumb);
 }
 
 void MediaWaveform::PaintMeter(gfx::Canvas* canvas, const MediaLevels* levels) {
