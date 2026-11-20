@@ -33,6 +33,17 @@ constexpr float kStill = 0.0005f;
 constexpr base::TimeDelta kMinStep = base::Milliseconds(12);
 // 中间卡了一下之后按这么久算，不一下跳到位。
 constexpr base::TimeDelta kMaxStep = base::Milliseconds(100);
+// 实时波形按最近的峰值放大：峰值往下这么多（60 dB 的刻度上是 18 dB）画成一个点。
+// 压得很满的流行乐鼓点和鼓点之间只差几 dB，不放大是一整块。
+constexpr float kLiveRange = 0.3f;
+// 比这还小（约 -52 dBFS）当作没声音，画成点。
+constexpr float kLiveSilence = 0.13f;
+// 峰值涨上去、落下来的快慢（每 1/30 秒还差、留下这么多）：响的那一段移出去时整条慢慢
+// 变大，不一下跳。
+constexpr float kLivePeakRise = 0.4f;
+constexpr float kLivePeakFall = 0.97f;
+// 左边淡出去的那一段占整条的多少。
+constexpr float kLiveFade = 0.22f;
 
 SkColor WithAlpha(SkColor color, float alpha) {
   return SkColorSetA(
@@ -73,6 +84,8 @@ void MediaWaveform::Set(const MediaEntry& entry,
   if (!id_ || *id_ != entry.id) {
     watch_.reset();
     shown_.fill(0);
+    live_arrival_ = base::TimeTicks();
+    live_peak_ = 0;
   }
   id_ = entry.id;
   playing_ = entry.playing;
@@ -218,6 +231,30 @@ void MediaWaveform::Advance(base::TimeDelta elapsed) {
       changed = changed || std::abs(value - shown_[i]) > kStill;
       shown_[i] = value;
     }
+    if (style_ == Style::kLive) {
+      // 来了新的一帧：记下什么时候到的，量一量两帧之间隔多久。
+      const base::TimeTicks now = base::TimeTicks::Now();
+      if (levels->frame().time != live_frame_time_) {
+        if (!live_arrival_.is_null()) {
+          live_interval_ =
+              std::clamp(live_interval_ * 0.8 + (now - live_arrival_) * 0.2,
+                         base::Milliseconds(20), base::Milliseconds(80));
+        }
+        live_frame_time_ = levels->frame().time;
+        live_arrival_ = now;
+      }
+      const base::circular_deque<float>& history = levels->history();
+      const size_t columns = std::min<size_t>(LiveColumns(), history.size());
+      float peak = 0;
+      for (size_t i = history.size() - columns; i < history.size(); ++i) {
+        peak = std::max(peak, history[i]);
+      }
+      const float keep =
+          std::pow(peak > live_peak_ ? kLivePeakRise : kLivePeakFall, frames);
+      live_peak_ = peak + (live_peak_ - peak) * keep;
+      // 在放的时候一直往左走。
+      changed = true;
+    }
   }
   // 进度按时间往后走（MediaHub 只在跳转、暂停时通知）。
   if (id_ && style_ == Style::kRecorded) {
@@ -242,6 +279,9 @@ void MediaWaveform::OnPaint(gfx::Canvas* canvas) {
   switch (style_) {
     case Style::kSpectrum:
       PaintSpectrum(canvas, levels);
+      break;
+    case Style::kLive:
+      PaintLive(canvas, levels);
       break;
     case Style::kRoll:
       PaintRoll(canvas, levels);
@@ -280,6 +320,57 @@ void MediaWaveform::PaintSpectrum(gfx::Canvas* canvas,
     const SkColor color = Theme::LerpColor(color_, color2_, d);
     Bar(canvas, offset + j * (bar_ + gap_), h / 2, bar_, bar_height,
         levels ? color : WithAlpha(color, 0.5f));
+  }
+}
+
+int MediaWaveform::LiveColumns() const {
+  return static_cast<int>(width() / (bar_ + gap_)) + 2;
+}
+
+void MediaWaveform::PaintLive(gfx::Canvas* canvas, const MediaLevels* levels) {
+  const float pitch = bar_ + gap_;
+  const float w = width();
+  const float h = height();
+  if (!levels) {
+    // 暂停着、还没有声音：一排点。
+    const int n = std::max(1, static_cast<int>((w + gap_) / pitch));
+    const float offset = (w - (n * bar_ + (n - 1) * gap_)) / 2;
+    for (int j = 0; j < n; ++j) {
+      Bar(canvas, offset + j * pitch, h / 2, bar_, bar_,
+          WithAlpha(color_, 0.5f));
+    }
+    return;
+  }
+  // 两帧之间往左挪了多少格：最新的一条从右边外面滑进来，下一帧到时刚好挪满一格，
+  // 所以来了新的一帧时每一条都还在原处。晚到时停一下，不往回跳。
+  float phase = 1;
+  if (!live_arrival_.is_null()) {
+    phase =
+        std::clamp(static_cast<float>((base::TimeTicks::Now() - live_arrival_) /
+                                      live_interval_),
+                   0.0f, 1.0f);
+  }
+  const base::circular_deque<float>& history = levels->history();
+  const float floor = live_peak_ - kLiveRange;
+  const int n = LiveColumns();
+  for (int age = 0; age < n; ++age) {
+    const float x = w - bar_ - pitch * (age - 1 + phase);
+    if (x <= -bar_) {
+      break;
+    }
+    float value = 0;
+    if (static_cast<size_t>(age) < history.size()) {
+      value = history[history.size() - 1 - age];
+    }
+    float t = value < kLiveSilence
+                  ? 0
+                  : std::clamp((value - floor) / kLiveRange, 0.0f, 1.0f);
+    t = std::pow(t, 1.4f);
+    // 响的地方偏浅色、更亮；左边那一段慢慢淡出去。
+    const float fade = std::clamp(x / (w * kLiveFade), 0.0f, 1.0f);
+    const SkColor color = Theme::LerpColor(color_, color2_, 0.5f * t * t);
+    Bar(canvas, x, h / 2, bar_, std::max(bar_, t * h),
+        WithAlpha(color, 0.2f + 0.8f * fade));
   }
 }
 
