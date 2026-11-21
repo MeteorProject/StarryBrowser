@@ -40,6 +40,8 @@ constexpr float kHorizonRadius = 1200.0f;
 constexpr float kGlowRadius = kHorizonRadius + 140.0f;
 constexpr UINT kInstallFinishedMessage = WM_APP + 1;
 constexpr UINT_PTR kFinishTimer = 1;
+// The bar fills in 0.3 s; the next screen follows a moment after.
+constexpr double kFinishDelay = 0.32;
 constexpr ULONGLONG kRequiredSpace = 1024ull * 1024 * 1024;
 
 // setup.exe's exit codes (InstallStatus in chrome/installer/util/
@@ -557,6 +559,14 @@ LRESULT SetupWindow::OnMessage(UINT message, WPARAM wparam, LPARAM lparam) {
       BeginPaint(hwnd_, &paint);
       Render();
       EndPaint(hwnd_, &paint);
+      // WM_TIMER is only delivered while no WM_PAINT is pending, and this
+      // loop keeps one pending for the whole install, so the finish timer
+      // never fires on its own. Finish from here; the timer only covers a
+      // minimized window, which gets no WM_PAINT.
+      if (finishing_ && Now() - finish_since_ >= kFinishDelay) {
+        KillTimer(hwnd_, kFinishTimer);
+        Finish();
+      }
       // Render target presents are vsync-paced, so this runs once a frame.
       if (Animating(Now())) {
         Invalidate();
@@ -586,7 +596,9 @@ LRESULT SetupWindow::OnMessage(UINT message, WPARAM wparam, LPARAM lparam) {
     case WM_TIMER:
       if (wparam == kFinishTimer) {
         KillTimer(hwnd_, kFinishTimer);
-        Finish();
+        if (finishing_) {
+          Finish();
+        }
       }
       return 0;
     case kInstallFinishedMessage: {
@@ -826,7 +838,8 @@ void SetupWindow::OnInstallFinished(const InstallResult& result) {
   finish_from_ = Progress(now);
   finishing_ = true;
   finish_since_ = now;
-  SetTimer(hwnd_, kFinishTimer, 320, nullptr);
+  SetTimer(hwnd_, kFinishTimer, static_cast<UINT>(kFinishDelay * 1000),
+           nullptr);
   Invalidate();
 }
 
