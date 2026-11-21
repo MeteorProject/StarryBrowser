@@ -160,6 +160,8 @@ END_METADATA
 
 SidebarEdgeTrigger::SidebarEdgeTrigger(base::RepeatingClosure entered)
     : entered_(std::move(entered)) {
+  // Aura 用命中视图的图层判断悬停是否交给下面的网页。
+  SetPaintToLayer(ui::LAYER_NOT_DRAWN);
   SetWindowDraggable(this, false);
 }
 

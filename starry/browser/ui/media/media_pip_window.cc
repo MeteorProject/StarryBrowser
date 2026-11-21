@@ -121,6 +121,15 @@ class MediaPipWindow::PipWidget : public views::Widget {
           event->type() == ui::EventType::kMouseMoved) {
         video->SetHovered(true);
       } else if (event->type() == ui::EventType::kMouseExited) {
+#if !BUILDFLAG(IS_MAC)
+        // 从视频移到控件时可能收到退出事件。小窗被遮挡时，退出坐标也可能在窗内。
+        if (GetRootView() &&
+            GetRootView()->GetLocalBounds().Contains(event->location()) &&
+            display::Screen::Get()->IsWindowUnderCursor(GetNativeWindow())) {
+          views::Widget::OnMouseEvent(event);
+          return;
+        }
+#endif
         video->SetHovered(false);
       }
     }

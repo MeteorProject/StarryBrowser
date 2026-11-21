@@ -347,6 +347,8 @@ BEGIN_METADATA(DialogCard)
 END_METADATA
 
 DialogHostView::DialogHostView() {
+  // 遮罩把鼠标交给本视图。Aura 用命中视图的图层判断点击是否该发给下面的网页。
+  SetPaintToLayer(ui::LAYER_NOT_DRAWN);
   SetVisible(false);
   SetFocusBehavior(FocusBehavior::ALWAYS);
   backdrop_ = AddChildView(std::make_unique<views::View>());

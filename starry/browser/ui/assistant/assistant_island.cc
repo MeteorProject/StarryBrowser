@@ -195,7 +195,15 @@ class AssistantIsland::EventWatcher : public ui::EventObserver {
     if (!event.IsLocatedEvent()) {
       return;
     }
-    const gfx::Point point = event.AsLocatedEvent()->root_location();
+    gfx::Point point = event.AsLocatedEvent()->root_location();
+#if !BUILDFLAG(IS_MAC)
+    // Aura 的 EventMonitor 会把 root_location 转成屏幕坐标（macOS 上是窗口
+    // 坐标）；这里转回 Widget 坐标，和 OnWindowMouseMove / Press 的约定一致。
+    if (views::Widget* widget = island_->GetWidget();
+        widget && widget->GetRootView()) {
+      views::View::ConvertPointFromScreen(widget->GetRootView(), &point);
+    }
+#endif
     if (event.type() == ui::EventType::kMousePressed) {
       island_->OnWindowMousePress(point);
     } else {

@@ -253,6 +253,8 @@ class Divider : public views::View, public views::AnimationDelegateViews {
  public:
   Divider(SplitOverlay* overlay, int index)
       : views::AnimationDelegateViews(this), overlay_(overlay), index_(index) {
+    SetPaintToLayer();
+    layer()->SetFillsBoundsOpaquely(false);
     hover_.SetSlideDuration(base::Milliseconds(180));
     arm_.SetSlideDuration(base::Milliseconds(200));
     SetWindowDraggable(this, false);
@@ -1164,6 +1166,9 @@ SplitOverlay::ResizeState::~ResizeState() = default;
 
 SplitOverlay::SplitOverlay(StarryBrowserView* browser_view)
     : browser_view_(browser_view) {
+  // Aura 用命中视图的图层判断鼠标事件是否要交给下面的网页；把手自己不画内容，
+  // 给覆盖层建不绘制图层以免悬停和点击穿透到网页。
+  SetPaintToLayer(ui::LAYER_NOT_DRAWN);
   SetEventTargeter(std::make_unique<views::ViewTargeter>(this));
   ring_ = AddChildView(std::make_unique<split_ui::FocusRing>());
   for (size_t i = 0; i < dividers_.size(); ++i) {

@@ -13,6 +13,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/task/sequenced_task_runner.h"
+#include "build/build_config.h"
 #include "cc/paint/paint_flags.h"
 #include "cc/paint/paint_shader.h"
 #include "chrome/browser/picture_in_picture/picture_in_picture_window_manager.h"
@@ -181,11 +182,21 @@ class MediaIsland::EventWatcher : public ui::EventObserver {
     if (!event.IsLocatedEvent()) {
       return;
     }
-    const gfx::Point point = event.AsLocatedEvent()->root_location();
+    if (event.type() == ui::EventType::kMouseExited) {
+      island_->OnWindowMouseMove(gfx::Point(-10000, -10000));
+      return;
+    }
+    gfx::Point point = event.AsLocatedEvent()->root_location();
+#if !BUILDFLAG(IS_MAC)
+    // Aura 的 EventMonitor 会把 root_location 转成屏幕坐标（macOS 上是窗口
+    // 坐标）；这里转回 Widget 坐标，和 OnWindowMouseMove / Press 的约定一致。
+    if (views::Widget* widget = island_->GetWidget();
+        widget && widget->GetRootView()) {
+      views::View::ConvertPointFromScreen(widget->GetRootView(), &point);
+    }
+#endif
     if (event.type() == ui::EventType::kMousePressed) {
       island_->OnWindowMousePress(point);
-    } else if (event.type() == ui::EventType::kMouseExited) {
-      island_->OnWindowMouseMove(gfx::Point(-10000, -10000));
     } else {
       island_->OnWindowMouseMove(point);
     }
