@@ -63,6 +63,7 @@ cd "$CHROMIUM_ROOT"
 starry_log "gclient sync 到 $CHROMIUM_VERSION"
 gclient sync --nohooks --no-history -D --force
 if [ "$hooks" = 1 ]; then
+    starry_map_win_toolchain
     starry_log "gclient runhooks"
     gclient runhooks
 fi

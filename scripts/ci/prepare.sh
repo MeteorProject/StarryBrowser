@@ -21,7 +21,14 @@ fi
 case " ${STARRY_EXTRA_TARGET_OS:-} " in
     *" win "*)
         [ -n "${DEPOT_TOOLS_WIN_TOOLCHAIN_BASE_URL:-}" ] ||
-            starry_die "交叉编译 Windows 要 VS 工具链：设好 DEPOT_TOOLS_WIN_TOOLCHAIN_BASE_URL 和 GYP_MSVS_HASH_*（见 docs/development.md「发版」）"
+            starry_die "交叉编译 Windows 要 VS 工具链：把打包好的 zip 放进一个目录，用 DEPOT_TOOLS_WIN_TOOLCHAIN_BASE_URL 指过去（见 docs/development.md「发版」）"
+        # Windows SDK 要放在不区分大小写的目录里。Chromium 用的是 src 里自带的 depot_tools，
+        # 这个目录不是挂载点时会去挂 ciopfs，没有 FUSE（比如容器里）就挂不上
+        vs_files="$CHROMIUM_SRC/third_party/depot_tools/win_toolchain/vs_files"
+        if [ "$(uname -s)" = Linux ] && [ ! -e /dev/fuse ] && [ -d "$CHROMIUM_SRC/.git" ] &&
+            ! python3 -c 'import os, sys; sys.exit(not os.path.ismount(sys.argv[1]))' "$vs_files"; then
+            starry_die "$vs_files 不是挂载点，又没有 FUSE：把一个开了 casefold 的目录挂到这里（见 docs/development.md「发版」）"
+        fi
         ;;
 esac
 

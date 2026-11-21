@@ -12,7 +12,8 @@
 #     --notary-profile <名字>
 #                          公证：xcrun notarytool store-credentials 存的钥匙串配置名。
 #                          要配合 Developer ID 证书，会等 Apple 的结果并把票据钉进 DMG
-# Windows：Chromium 的安装程序 mini_installer.exe（还没有签名）。在 Linux 上交叉编译用 --config Release-Win。
+# Windows：Chromium 的安装程序 mini_installer.exe（还没有签名）和免安装的 zip。在 Linux 上交叉编译用
+#     --config Release-Win。
 # Linux：Chromium 的 .deb 和 .rpm（装 rpmbuild 才有 .rpm）。
 #   平台标识从 starry/app/theme/BRANDING 生成。
 # 打哪个平台的包看构建目录的 target_os / target_cpu，没写就是编译机自己的平台。
@@ -189,6 +190,26 @@ package_win() {
     [ -f "$installer" ] || starry_die "没有 ${installer}"
     cp "$installer" "$dist/$name-$version-win-$arch-installer.exe"
     starry_log "完成：$dist/$name-$version-win-$arch-installer.exe（没有签名）"
+
+    # 免安装版：mini_installer 打包前的暂存目录，和安装后的 Application 目录是同一套文件，
+    # 解压就能运行。用户数据还是在 %LOCALAPPDATA% 下，和安装版共用。
+    local bin="$out/gen/chrome/installer/mini_installer/mini_installer/temp_installer_archive/Chrome-bin"
+    [ -f "$bin/$STARRY_PRODUCT_ID.exe" ] ||
+        starry_die "没有 $bin/$STARRY_PRODUCT_ID.exe（mini_installer 的暂存目录变了？）"
+    local zip="$dist/$name-$version-win-$arch-portable.zip"
+    rm -f "$zip"
+    python3 - "$bin" "$zip" "$name" <<'EOF'
+import os, sys, zipfile
+
+src, dst, top = sys.argv[1:]
+with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for root, dirs, files in os.walk(src):
+        dirs.sort()
+        for f in sorted(files):
+            path = os.path.join(root, f)
+            z.write(path, os.path.join(top, os.path.relpath(path, src)))
+EOF
+    starry_log "完成：$zip"
 }
 
 package_linux() {

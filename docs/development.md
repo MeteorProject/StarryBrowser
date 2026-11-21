@@ -121,8 +121,8 @@ scripts/release.sh            # 需要先 gh auth login；Release 不存在时�
 
 - runner 标签为 `starry-linux`，x86-64 Linux，已安装 Chromium 的系统依赖（`build/install-build-deps.py`）、`gh` 和 `rpm`。依赖不全时，`scripts/ci/prepare.sh` 会列出缺少的包并停止。
 - `STARRY_CHROMIUM_ROOT`、`STARRY_DEPOT_TOOLS` 指向 runner 工作区以外的持久目录（`actions/checkout` 每次都会清空工作区）。runner 的工作目录本身也需要持久保存，`starry/` 中未改动的文件才能保持原有时间戳。
-- Windows 工具链：在 Windows 上运行 `depot_tools/win_toolchain/package_from_installed.py <VS 版本> -w <SDK 版本>` 打包（版本见 `build/vs_toolchain.py` 中的 `MSVS_VERSIONS`、`SDK_VERSION`），把 zip 放进 `DEPOT_TOOLS_WIN_TOOLCHAIN_BASE_URL` 指向的目录，并设置 `GYP_MSVS_HASH_<TOOLCHAIN_HASH>=<zip 的 hash>`。Chromium 升级后若要求的版本变化，需要重新打包。
-- Windows SDK 必须放在不区分大小写的文件系统上：将一个启用了 casefold 的 ext4 目录挂载到 `depot_tools/win_toolchain/vs_files`，否则 Chromium 会尝试用 ciopfs 挂载 FUSE。
+- Windows 工具链：在 Windows 上运行 `depot_tools/win_toolchain/package_from_installed.py <VS 版本> -w <SDK 版本>` 打包（版本见 `build/vs_toolchain.py` 中的 `MSVS_VERSIONS`、`SDK_VERSION`），把 zip 放进 `DEPOT_TOOLS_WIN_TOOLCHAIN_BASE_URL` 指向的目录。目录里只有一个 zip 时，`scripts/sync.sh` 会自动设置 Chromium 需要的 `GYP_MSVS_HASH_<TOOLCHAIN_HASH>=<zip 的 hash>`；有多个 zip 时需要手动设置。Chromium 升级后若要求的版本变化，需要重新打包。
+- Windows SDK 必须放在不区分大小写的文件系统上。Chromium 使用源码自带的 depot_tools（不是 `STARRY_DEPOT_TOOLS`），因此要将一个启用了 casefold 的 ext4 目录挂载到 `<STARRY_CHROMIUM_ROOT>/src/third_party/depot_tools/win_toolchain/vs_files`，否则 Chromium 会尝试用 ciopfs 挂载 FUSE。该挂载点位于 `src` 内部，需在第一次 `gclient sync` 完成后再加上。
 - 交叉编译的 Windows 版没有 Crashpad 崩溃上报（上游限制，见 `chromium/src/docs/win_cross.md`）。
 
 为保留增量编译，`scripts/ci/prepare.sh` 只在 `chromium.version` 变化时执行 `gclient sync`，其余时候通过 `scripts/patches.sh sync` 仅更新与 `patches/` 不一致的文件。

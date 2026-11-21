@@ -47,6 +47,27 @@ starry_browser_binary() {
     esac
 }
 
+# 交叉编译 Windows 用自己打包的 VS 工具链（DEPOT_TOOLS_WIN_TOOLCHAIN_BASE_URL 指向放 zip 的目录）时，
+# Chromium 要 GYP_MSVS_HASH_<它要的哈希>=<zip 的哈希> 把两者对上。没设而目录里只有一个 zip 时自动对上，
+# 免得 Chromium 换工具链版本（TOOLCHAIN_HASH 变了）就要改编译机的环境变量。要在 gclient sync 之后调用。
+starry_map_win_toolchain() {
+    local dir="${DEPOT_TOOLS_WIN_TOOLCHAIN_BASE_URL:-}" want var zips got
+    [ -n "$dir" ] && [ -d "$dir" ] || return 0
+    want="$(sed -n "s/^TOOLCHAIN_HASH = '\([0-9a-f]*\)'.*/\1/p" "$CHROMIUM_SRC/build/vs_toolchain.py" 2>/dev/null)"
+    [ -n "$want" ] || return 0
+    var="GYP_MSVS_HASH_$want"
+    [ -z "${!var:-}" ] || return 0
+    [ ! -f "$dir/$want.zip" ] || return 0
+    zips=("$dir"/*.zip)
+    if [ ${#zips[@]} -eq 1 ] && [ -f "${zips[0]}" ]; then
+        got="$(basename "${zips[0]}" .zip)"
+        export "$var=$got"
+        starry_log "Windows 工具链：$var=$got"
+    else
+        starry_die "$dir 里要正好有一个工具链 zip（或者设 $var=<zip 的哈希>），现在有：$(ls "$dir" | tr '\n' ' ')"
+    fi
+}
+
 starry_log() { printf '[starry] %s\n' "$*" >&2; }
 starry_die() { printf '[starry] 错误：%s\n' "$*" >&2; exit 1; }
 
