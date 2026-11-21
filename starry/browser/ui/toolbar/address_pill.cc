@@ -24,6 +24,7 @@
 #include "starry/browser/l10n/l10n.h"
 #include "starry/browser/prefs/starry_prefs.h"
 #include "starry/browser/privacy/fingerprint_protection.h"
+#include "starry/browser/privacy/location_simulation.h"
 #include "starry/browser/ui/design/controls.h"
 #include "starry/browser/ui/design/icons.h"
 #include "starry/browser/ui/design/metrics.h"
@@ -173,6 +174,8 @@ AddressPill::AddressPill(BrowserWindowInterface* browser, Style style)
   fingerprint_prefs_.Add(prefs::kFingerprintProtection, fingerprint_changed);
   fingerprint_prefs_.Add(prefs::kFingerprintProtectionExceptions,
                          fingerprint_changed);
+  location_subscription_ = AddLocationSimulationObserver(
+      base::BindRepeating(&AddressPill::UpdateShield, base::Unretained(this)));
 
   bookmarks_ =
       BookmarkModelFactory::GetForBrowserContext(browser_->GetProfile());
@@ -248,10 +251,11 @@ void AddressPill::Refresh() {
 void AddressPill::UpdateShield() {
   content_blocking::ContentBlockingService* service =
       content_blocking::ContentBlockingService::Get();
-  const bool visible = summary_.url.is_valid() &&
-                       summary_.url.SchemeIsHTTPOrHTTPS() &&
-                       (service->enabled() ||
-                        FingerprintProtectionEnabled(browser_->GetProfile()));
+  const bool visible =
+      summary_.url.is_valid() && summary_.url.SchemeIsHTTPOrHTTPS() &&
+      (service->enabled() ||
+       FingerprintProtectionEnabled(browser_->GetProfile()) ||
+       ResolveLocation(browser_->GetProfile(), summary_.url).simulated);
   if (visible != shield_->GetVisible()) {
     shield_->SetVisible(visible);
     PreferredSizeChanged();

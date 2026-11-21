@@ -61,6 +61,8 @@ const ICONS = {
   'info.circle': '<circle cx="8" cy="8" r="6.1" stroke-width="1.4"/><path d="M8 7.2v4" stroke-width="1.5"/><circle cx="8" cy="5" r=".9" fill="currentColor" stroke="none"/>',
   'pin': '<path d="M5.6 2.4h4.8M6.6 2.4 6.2 6.6 4.4 9.4h7.2L9.8 6.6 9.4 2.4M8 9.4V14" stroke-width="1.35" stroke-linejoin="round"/>',
   'pin.fill': '<path d="M5.6 1.7h4.8a.7.7 0 0 1 0 1.4h-.35l.37 3.3 1.8 2.6a.7.7 0 0 1-.58 1.1H8.7v3.9a.7.7 0 0 1-1.4 0v-3.9H4.36a.7.7 0 0 1-.58-1.1l1.8-2.6.37-3.3H5.6a.7.7 0 0 1 0-1.4Z" fill="currentColor" stroke="none"/>',
+  'mappin': '<path d="M8 14.2s4.7-4.3 4.7-7.9a4.7 4.7 0 0 0-9.4 0c0 3.6 4.7 7.9 4.7 7.9Z" stroke-width="1.3" stroke-linejoin="round"/><circle cx="8" cy="6.3" r="1.75" stroke-width="1.3"/>',
+  'mappin.slash': '<path d="M5.1 2.6A4.7 4.7 0 0 1 12.7 6.3c0 1.3-.6 2.7-1.4 3.9M9.8 12.3c-.9 1-1.8 1.9-1.8 1.9S3.3 9.9 3.3 6.3c0-.6.1-1.2.3-1.7" stroke-width="1.3" stroke-linejoin="round"/><path d="M2.4 2.4 13.6 13.6" stroke-width="1.35"/>',
   'doc.text': '<path d="M4.6 2h4.6L12 4.8v7.6A1.6 1.6 0 0 1 10.4 14H4.6A1.6 1.6 0 0 1 3 12.4V3.6A1.6 1.6 0 0 1 4.6 2Z" stroke-width="1.3" stroke-linejoin="round"/><path d="M9 2v3h3M5.6 8.2h4.8M5.6 10.8h3.4" stroke-width="1.3"/>',
   'doc.on.doc': '<rect x="5.4" y="4.8" width="7.6" height="9.2" rx="1.6" stroke-width="1.3"/><path d="M3 10.8V3.6A1.6 1.6 0 0 1 4.6 2h5.8" stroke-width="1.3"/>',
   'shield.lefthalf.filled': '<path d="M8 1.9 13 3.6v4c0 3.1-2 5.3-5 6.6-3-1.3-5-3.5-5-6.6v-4Z" stroke-width="1.35" stroke-linejoin="round"/><path d="M8 2.9v10.2c-2.3-1.1-4.1-3-4.1-5.5V4.2Z" fill="currentColor" stroke="none"/>',

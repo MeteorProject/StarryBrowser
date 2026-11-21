@@ -1,0 +1,273 @@
+/* Copyright 2026 The Starry Browser Authors */
+
+/* 选点页：整页是地图，上面浮着玻璃的搜索框、缩放按钮和底部的位置卡片。 */
+
+/* 地图载出来之前透出对话框卡片的玻璃。 */
+html,
+body {
+  background: transparent;
+  height: 100%;
+  overflow: hidden;
+}
+
+starry-location-picker {
+  display: block;
+  height: 100%;
+  position: relative;
+}
+
+.map {
+  inset: 0;
+  position: absolute;
+}
+
+.maplibregl-canvas:focus {
+  outline: none;
+}
+
+.glass {
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+  background: color-mix(in srgb, var(--surface-panel) calc(76% + var(--is-dark) * 6%), transparent);
+  box-shadow:
+      0 0 0 0.5px color-mix(in srgb, var(--on-surface) calc(10% + var(--is-dark) * 6%), transparent),
+      0 6px 24px rgb(0 0 0 / calc(12% + var(--is-dark) * 18%));
+}
+
+/* 图钉：尖端对准地图正中。拖动时抬起来，影子变小变淡。 */
+.pin {
+  height: 40px;
+  left: 50%;
+  margin: -40px 0 0 -15px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  width: 30px;
+}
+
+.pin svg {
+  display: block;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.28));
+  position: relative;
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1.25);
+  z-index: 1;
+}
+
+/* 同界面的主色：浅色是深色的钉，深色是浅色的钉。 */
+.pin-head {
+  fill: var(--primary);
+  stroke: color-mix(in srgb, var(--on-primary) 70%, transparent);
+  stroke-width: 1.2;
+}
+
+.pin-dot {
+  fill: var(--on-primary);
+}
+
+.pin-shadow {
+  background: radial-gradient(closest-side, rgb(0 0 0 / 0.35), transparent);
+  border-radius: 50%;
+  bottom: -4px;
+  height: 8px;
+  left: 7px;
+  position: absolute;
+  transition: transform 220ms ease, opacity 220ms ease;
+  width: 16px;
+}
+
+.pin.moving svg {
+  transform: translateY(-9px);
+}
+
+.pin.moving .pin-shadow {
+  opacity: 0.55;
+  transform: scale(0.7);
+}
+
+.top {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  left: 14px;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+}
+
+.top .search {
+  width: 300px;
+}
+
+.top .search:focus-within {
+  width: 320px;
+}
+
+.top .search,
+.top .search:hover,
+.top .search:focus-within {
+  background: color-mix(in srgb, var(--surface-panel) calc(76% + var(--is-dark) * 6%), transparent);
+}
+
+.chip {
+  border-radius: 14px;
+  color: var(--on-surface-variant);
+  font-size: 12px;
+  line-height: 28px;
+  padding: 0 12px;
+}
+
+.zoom {
+  border-radius: 18px;
+  display: flex;
+  overflow: hidden;
+}
+
+.zoom-button {
+  align-items: center;
+  appearance: none;
+  background: none;
+  border: 0;
+  color: var(--on-surface);
+  display: flex;
+  height: 36px;
+  justify-content: center;
+  transition: background-color var(--hover);
+  width: 40px;
+}
+
+.zoom-button + .zoom-button {
+  box-shadow: inset 0.5px 0 color-mix(in srgb, var(--on-surface) 14%, transparent);
+}
+
+.zoom-button:hover {
+  background: color-mix(in srgb, var(--on-surface) 7%, transparent);
+}
+
+.results {
+  border-radius: 14px;
+  left: 14px;
+  max-height: calc(100% - 200px);
+  overflow-y: auto;
+  padding: 5px;
+  position: absolute;
+  top: 58px;
+  width: 320px;
+}
+
+.result {
+  align-items: baseline;
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  display: flex;
+  gap: 8px;
+  padding: 7px 10px;
+  text-align: start;
+  width: 100%;
+}
+
+.result.selected {
+  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+}
+
+.result-title {
+  font-weight: 500;
+}
+
+.result-detail,
+.no-results {
+  color: var(--on-surface-variant);
+  font-size: 12px;
+}
+
+.no-results {
+  padding: 8px 10px;
+}
+
+.card {
+  align-items: center;
+  border-radius: 18px;
+  bottom: 14px;
+  display: flex;
+  gap: 16px;
+  left: 14px;
+  padding: 14px 14px 14px 18px;
+  position: absolute;
+  right: 14px;
+}
+
+.place {
+  flex: 1;
+  min-width: 0;
+}
+
+.place .eyebrow {
+  letter-spacing: 0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place-detail {
+  align-items: center;
+  color: var(--on-surface-variant);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  margin-top: 4px;
+  min-width: 0;
+}
+
+.coordinates {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.zone {
+  align-items: center;
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  color: inherit;
+  display: inline-flex;
+  gap: 4px;
+  margin: -2px -4px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 4px;
+  text-overflow: ellipsis;
+  transition: background-color var(--hover), color var(--hover);
+  white-space: nowrap;
+}
+
+.zone:hover {
+  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+  color: var(--on-surface);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.attribution {
+  bottom: 100px;
+  color: color-mix(in srgb, var(--on-surface) 55%, transparent);
+  font-size: 10px;
+  pointer-events: none;
+  position: absolute;
+  right: 20px;
+  text-shadow: 0 0 3px var(--surface-panel), 0 0 2px var(--surface-panel);
+}

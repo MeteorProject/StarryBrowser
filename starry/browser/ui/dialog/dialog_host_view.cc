@@ -59,6 +59,10 @@ DialogSpec::DialogSpec(const DialogSpec&) = default;
 DialogSpec& DialogSpec::operator=(const DialogSpec&) = default;
 DialogSpec::~DialogSpec() = default;
 
+std::unique_ptr<views::View> DialogRequest::CreateContentView() {
+  return nullptr;
+}
+
 namespace {
 
 class CallbackDialogRequest : public DialogRequest {
@@ -219,7 +223,8 @@ class DialogCard : public GlassView {
  public:
   DialogCard(const DialogSpec& spec,
              const Theme& theme,
-             DialogHostView* host)
+             DialogHostView* host,
+             std::unique_ptr<views::View> content)
       : spec_(spec) {
     SetCornerRadius(radius::kLarge, true);
     GlassStyle style;
@@ -229,6 +234,18 @@ class DialogCard : public GlassView {
 
     panel_ = AddChildView(std::make_unique<DialogCardPanel>());
     panel_->Set(spec, theme);
+
+    if (content) {
+      // 圆角裁掉内容（网页也是图层，裁得到）。
+      content_ = panel_->AddChildView(std::move(content));
+      content_->SetPaintToLayer();
+      content_->layer()->SetFillsBoundsOpaquely(false);
+      content_->layer()->SetRoundedCornerRadius(
+          gfx::RoundedCornersF(radius::kLarge));
+      content_->layer()->SetIsFastRoundedCorner(true);
+      GetViewAccessibility().SetRole(ax::mojom::Role::kDialog);
+      return;
+    }
 
     if (!spec.message.empty()) {
       scroll_ = panel_->AddChildView(std::make_unique<views::ScrollView>(
@@ -269,6 +286,7 @@ class DialogCard : public GlassView {
   }
 
   views::Textfield* field() { return field_; }
+  views::View* content() { return content_; }
   const std::vector<raw_ptr<PillButton, VectorExperimental>>& buttons() const {
     return buttons_;
   }
@@ -276,6 +294,12 @@ class DialogCard : public GlassView {
 
   // 给定最大宽高，卡片多大；同时排好里面的东西。
   gfx::Size Arrange(int width, int max_height) {
+    if (content_) {
+      const gfx::Size size(width,
+                           std::min(spec_.content_size.height(), max_height));
+      content_->SetBoundsRect(gfx::Rect(size));
+      return size;
+    }
     const bool has_body = message_ || field_;
     int y = kTopPadding + panel_->TitleHeight(width) +
             (has_body ? 14 : kBottomPadding);
@@ -339,6 +363,7 @@ class DialogCard : public GlassView {
   raw_ptr<views::ScrollView> scroll_ = nullptr;
   raw_ptr<views::Label> message_ = nullptr;
   raw_ptr<views::Textfield> field_ = nullptr;
+  raw_ptr<views::View> content_ = nullptr;
   std::vector<raw_ptr<PillButton, VectorExperimental>> buttons_;
   LayerMotion motion_;
 };
@@ -421,10 +446,13 @@ void DialogHostView::Layout(PassKey) {
   if (!card_) {
     return;
   }
-  const int width = std::min(metrics::kDialogWidth,
-                             std::max(0, this->width() - 2 * metrics::kDialogMargin));
+  const DialogSpec& spec = current_ ? current_->spec() : DialogSpec();
+  const bool content = card_->content();
+  const int width =
+      std::min(content ? spec.content_size.width() : metrics::kDialogWidth,
+               std::max(0, this->width() - 2 * metrics::kDialogMargin));
   const int max_height =
-      std::min(metrics::kDialogMaxHeight,
+      std::min(content ? spec.content_size.height() : metrics::kDialogMaxHeight,
                std::max(0, height() - 2 * metrics::kDialogMargin));
   const gfx::Size size = card_->Arrange(width, max_height);
   card_->PlaceAt(gfx::Rect((this->width() - size.width()) / 2,
@@ -517,25 +545,29 @@ void DialogHostView::ShowNext() {
                                     motion::DialogBackdrop());
   }
 
-  card_ = AddChildView(
-      std::make_unique<DialogCard>(current_->spec(), theme_, this));
+  card_ = AddChildView(std::make_unique<DialogCard>(
+      current_->spec(), theme_, this, current_->CreateContentView()));
   InvalidateLayout();
   DeprecatedLayoutImmediately();
 
-  // 从 0.95 放大、上移 10 并淡入（motion::kDialogIn）。
+  // 从 0.95 放大、上移 10 并淡入（motion::kDialogIn）。自己画内容的只淡入。
   const gfx::Rect rect = card_->glass_rect();
-  LayerPose from;
-  if (!motion::ReduceMotion()) {
-    from.scale = 0.95f;
-    from.offset = gfx::Vector2dF(0, 10);
-  }
   const MotionCurve curve = MotionCurve::Of(motion::kDialogIn);
-  card_->motion().AnimateTransformFrom(
-      card_->layer(), from, LayerPose(), curve,
-      gfx::PointF(rect.CenterPoint()));
+  if (!card_->content()) {
+    LayerPose from;
+    if (!motion::ReduceMotion()) {
+      from.scale = 0.95f;
+      from.offset = gfx::Vector2dF(0, 10);
+    }
+    card_->motion().AnimateTransformFrom(card_->layer(), from, LayerPose(),
+                                         curve,
+                                         gfx::PointF(rect.CenterPoint()));
+  }
   card_->motion().AnimateOpacityFrom(card_->layer(), 0, 1, curve);
 
-  if (card_->field()) {
+  if (card_->content()) {
+    card_->content()->RequestFocus();
+  } else if (card_->field()) {
     card_->field()->RequestFocus();
     card_->field()->SelectAll(false);
     card_->UpdateFieldFocus();
@@ -577,6 +609,15 @@ void DialogHostView::RespondCancel() {
   if (!current_) {
     return;
   }
+  // 自己画内容的（焦点不在内容里时才到这里）：Esc 当作没回答就关掉。
+  if (card_ && card_->content()) {
+    std::unique_ptr<DialogRequest> request = std::move(current_);
+    HideCard(/*then_next=*/true);
+    request->Dismissed();
+    base::SequencedTaskRunner::GetCurrentDefault()->DeleteSoon(
+        FROM_HERE, std::move(request));
+    return;
+  }
   const auto& buttons = current_->spec().buttons;
   for (size_t i = 0; i < buttons.size(); ++i) {
     if (buttons[i].cancel) {
@@ -610,14 +651,16 @@ void DialogHostView::HideCard(bool then_next) {
   const bool more = then_next && !queue_.empty();
   if (card) {
     card->SetCanProcessEventsWithinSubtree(false);
-    // 缩到 0.98 淡出（motion::DialogOut()）。
-    LayerPose to;
-    if (!motion::ReduceMotion()) {
-      to.scale = 0.98f;
+    // 缩到 0.98 淡出（motion::DialogOut()）。自己画内容的只淡出。
+    if (!card->content()) {
+      LayerPose to;
+      if (!motion::ReduceMotion()) {
+        to.scale = 0.98f;
+      }
+      const gfx::Rect rect = card->glass_rect();
+      card->motion().AnimateTransform(card->layer(), to, motion::DialogOut(),
+                                      gfx::PointF(rect.CenterPoint()));
     }
-    const gfx::Rect rect = card->glass_rect();
-    card->motion().AnimateTransform(card->layer(), to, motion::DialogOut(),
-                                    gfx::PointF(rect.CenterPoint()));
     card->motion().AnimateOpacity(
         card->layer(), 0, motion::DialogOut(),
         base::BindOnce(
@@ -658,7 +701,8 @@ void DialogHostView::HideCard(bool then_next) {
 }
 
 void DialogHostView::Nudge() {
-  if (!card_ || motion::ReduceMotion()) {
+  // 网页内容不能缩放（见 CreateContentView）。
+  if (!card_ || card_->content() || motion::ReduceMotion()) {
     return;
   }
   const gfx::Rect rect = card_->glass_rect();

@@ -26,6 +26,13 @@ class StarryContentBrowserClient : public ChromeContentBrowserClient {
   void BrowserURLHandlerCreated(content::BrowserURLHandler* handler) override;
   void AppendExtraCommandLineSwitches(base::CommandLine* command_line,
                                       int child_process_id) override;
+  void SiteInstanceGotProcessAndSite(
+      content::SiteInstance* site_instance) override;
+  bool ShouldUseSpareRenderProcessHost(
+      content::BrowserContext* browser_context,
+      const GURL& site_url,
+      std::optional<SpareProcessRefusedByEmbedderReason>& refused_reason)
+      override;
   void ExposeInterfacesToRenderer(
       service_manager::BinderRegistry* registry,
       blink::AssociatedInterfaceRegistry* associated_registry,

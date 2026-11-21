@@ -1814,6 +1814,25 @@ starry-extensions .empty-state {
   user-select: text;
 }
 
+/* 位置模拟的网站：站点名右边是模拟到哪里。 */
+.location-row .site-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-row .site-location {
+  flex: 1;
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-align: end;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .custom-rules {
   display: flex;
   flex-direction: column;

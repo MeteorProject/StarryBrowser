@@ -1,0 +1,13 @@
+// Copyright 2026 The Starry Browser Authors
+
+module starry.mojom;
+
+// Browser → renderer, channel-associated: a call sent before CommitNavigation
+// on the same channel is handled first, so the first script of a document that
+// commits afterwards already sees the new zone. A renderer process belongs to
+// one site (site isolation), so the zone follows that site's simulated location.
+interface WebTimeZone {
+  // An IANA name accepted by ICU. Applied like a system time zone change: it
+  // becomes the process's host zone (a DevTools override still wins).
+  SetTimeZone(string id);
+};

@@ -1,0 +1,25 @@
+diff --git a/components/permissions/contexts/geolocation_permission_context_system.cc b/components/permissions/contexts/geolocation_permission_context_system.cc
+index 870024d865..82c18a863b 100644
+--- a/components/permissions/contexts/geolocation_permission_context_system.cc
++++ b/components/permissions/contexts/geolocation_permission_context_system.cc
+@@ -10,6 +10,7 @@
+ #include "components/content_settings/core/common/features.h"
+ #include "content/public/browser/browser_thread.h"
+ #include "services/device/public/cpp/geolocation/location_system_permission_status.h"
++#include "starry/browser/privacy/simulated_geolocation.h"
+ 
+ namespace permissions {
+ GeolocationPermissionContextSystem::GeolocationPermissionContextSystem(
+@@ -58,6 +59,12 @@ GeolocationPermissionContextSystem::GetPermissionStatusInternal(
+     }
+   }
+ 
++  // Starry: a simulated location never reads the system location, so it does
++  // not depend on the system permission either.
++  if (starry::IsGeolocationSimulated(browser_context(), embedding_origin)) {
++    return site_permission;
++  }
++
+   switch (system_permission_) {
+     case LocationSystemPermissionStatus::kNotDetermined:
+       return is_permission_content_setting

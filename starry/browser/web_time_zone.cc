@@ -19,9 +19,6 @@
 #include "base/time/time.h"
 #include "chrome/browser/profiles/profile.h"
 #include "components/prefs/pref_service.h"
-#include "mojo/public/cpp/bindings/remote.h"
-#include "mojo/public/cpp/bindings/self_owned_receiver.h"
-#include "services/device/public/mojom/time_zone_monitor.mojom.h"
 #include "starry/browser/l10n/l10n.h"
 #include "starry/browser/prefs/starry_prefs.h"
 #include "starry/common/web_time_zone.h"
@@ -37,22 +34,6 @@ class EffectiveTimeZone : public base::SupportsUserData::Data {
  public:
   explicit EffectiveTimeZone(std::string id) : id(std::move(id)) {}
   const std::string id;
-};
-
-// 固定时区只通知一次。跟随系统时不接管接口，继续由 Chromium 的设备服务通知。
-class FixedTimeZoneMonitor : public device::mojom::TimeZoneMonitor {
- public:
-  explicit FixedTimeZoneMonitor(std::string id) : id_(std::move(id)) {}
-
-  void AddClient(mojo::PendingRemote<device::mojom::TimeZoneMonitorClient>
-                     client) override {
-    mojo::Remote<device::mojom::TimeZoneMonitorClient> remote(
-        std::move(client));
-    remote->OnTimeZoneChange(id_);
-  }
-
- private:
-  const std::string id_;
 };
 
 struct CommonZone {
@@ -173,11 +154,20 @@ const std::string& EffectiveWebTimeZone(Profile* profile) {
   return data->id;
 }
 
-void BindWebTimeZoneMonitor(
-    const std::string& zone,
-    mojo::PendingReceiver<device::mojom::TimeZoneMonitor> receiver) {
-  mojo::MakeSelfOwnedReceiver(std::make_unique<FixedTimeZoneMonitor>(zone),
-                              std::move(receiver));
+std::string SystemTimeZoneId() {
+  std::unique_ptr<icu::TimeZone> zone(icu::TimeZone::detectHostTimeZone());
+  icu::UnicodeString id;
+  zone->getID(id);
+  std::string result;
+  id.toUTF8String(result);
+  return result;
+}
+
+std::u16string WebTimeZoneOffset(std::string_view id) {
+  auto zone = CreateWebTimeZone(id);
+  return base::UTF8ToUTF16(
+      zone ? Offset(*zone, base::Time::Now().InMillisecondsFSinceUnixEpoch())
+           : std::string("GMT"));
 }
 
 void AddWebTimeZoneSettings(Profile* profile, base::DictValue& state) {

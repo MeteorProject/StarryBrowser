@@ -17,6 +17,7 @@
 #include "starry/browser/ui/design/theme.h"
 #include "starry/browser/ui/motion/layer_motion.h"
 #include "ui/base/metadata/metadata_header_macros.h"
+#include "ui/gfx/geometry/size.h"
 #include "ui/views/controls/textfield/textfield_controller.h"
 #include "ui/views/view.h"
 #include "ui/views/view_tracker.h"
@@ -59,6 +60,8 @@ struct DialogSpec {
   // 刚弹出来的这一会儿不接受点按钮（Esc 和取消除外），防止网页趁用户点别处时弹出来骗到
   // 一下点击（同 Chrome 权限气泡的 input protection）。
   base::TimeDelta input_protection;
+  // 自己画内容的对话框（DialogRequest::CreateContentView）想要的大小，窗口小时缩小。
+  gfx::Size content_size;
 };
 
 // 一个排队等着显示、或者正显示着的对话框。DialogHostView 拥有它。
@@ -70,6 +73,10 @@ class DialogRequest {
   virtual void Answer(size_t button, const std::u16string& input) = 0;
   // 没有回答就被拿掉了（标签关了、窗口关了）。
   virtual void Dismissed() = 0;
+  // 不是空的：卡片里只放这个视图（铺满、圆角裁掉），没有标题、正文和按钮，大小是
+  // spec().content_size。内容自己关掉对话框（DialogHostView::Remove）。里面可以是网页：
+  // 卡片只淡入淡出，不缩放（macOS 上缩放 WebView 的祖先会把网页改成缩放后的大小）。
+  virtual std::unique_ptr<views::View> CreateContentView();
 };
 
 // 按了哪个按钮（没回答就被拿掉时是 nullopt）和输入框里的文字。

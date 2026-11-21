@@ -22,6 +22,7 @@
 #include "content/public/browser/navigation_throttle_registry.h"
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/render_process_host.h"
+#include "content/public/browser/site_instance.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/common/content_switches.h"
 #include "content/public/common/url_constants.h"
@@ -34,14 +35,14 @@
 #include "starry/browser/content_blocking/content_filter_tab_helper.h"
 #include "starry/browser/new_tab/new_tab.h"
 #include "starry/browser/privacy/fingerprint_protection.h"
+#include "starry/browser/privacy/location_simulation.h"
+#include "starry/browser/privacy/process_time_zone.h"
 #include "starry/browser/sessions/session_titles.h"
 #include "starry/browser/starry_browser_main_extra_parts.h"
 #include "starry/browser/ui/media/media_pip.h"
 #include "starry/browser/ui/tabs/pinned_peek.h"
-#include "starry/browser/web_time_zone.h"
 #include "starry/common/fingerprint_protection.h"
 #include "starry/common/internal_urls.h"
-#include "starry/common/web_time_zone.h"
 #include "starry/components/privacy/mojom/fingerprint_protection.mojom.h"
 #include "url/gurl.h"
 #include "url/url_constants.h"
@@ -161,6 +162,7 @@ bool ReverseInternalURL(GURL* url, content::BrowserContext* browser_context) {
 
 StarryContentBrowserClient::StarryContentBrowserClient() {
   RegisterFingerprintClientHints();
+  RegisterLocationSimulation();
   // ChromeMainDelegate 在建 FeatureList 之前建浏览器进程的 ContentBrowserClient
   // （ContentMainRunnerImpl::Initialize → PostEarlyInitialization），
   // 所以这里改命令行还来得及。
@@ -185,12 +187,32 @@ void StarryContentBrowserClient::AppendExtraCommandLineSwitches(
   }
   command_line->AppendSwitch(kFingerprintServiceSwitch);
   if (auto* process = content::RenderProcessHost::FromID(child_process_id)) {
-    const std::string& zone = EffectiveWebTimeZone(
-        Profile::FromBrowserContext(process->GetBrowserContext()));
-    if (!zone.empty()) {
-      command_line->AppendSwitchASCII(kWebTimeZoneSwitch, zone);
-    }
+    AppendProcessWebTimeZone(process, *command_line);
   }
+}
+
+void StarryContentBrowserClient::SiteInstanceGotProcessAndSite(
+    content::SiteInstance* site_instance) {
+  ChromeContentBrowserClient::SiteInstanceGotProcessAndSite(site_instance);
+  // 进程分到网站：时区换成这个网站的，赶在它的导航提交之前。
+  NoteSiteInstanceProcess(site_instance);
+}
+
+bool StarryContentBrowserClient::ShouldUseSpareRenderProcessHost(
+    content::BrowserContext* browser_context,
+    const GURL& site_url,
+    std::optional<SpareProcessRefusedByEmbedderReason>& refused_reason) {
+  if (!ChromeContentBrowserClient::ShouldUseSpareRenderProcessHost(
+          browser_context, site_url, refused_reason)) {
+    return false;
+  }
+  // 空闲进程是按全局的时区启动的：时区不同的网站新开一个，启动参数就是对的
+  // （Service Worker 也一样）。
+  if (!CanUseSpareProcessForSite(browser_context, site_url)) {
+    refused_reason = SpareProcessRefusedByEmbedderReason::DefaultDisabled;
+    return false;
+  }
+  return true;
 }
 
 void StarryContentBrowserClient::ExposeInterfacesToRenderer(
@@ -202,12 +224,9 @@ void StarryContentBrowserClient::ExposeInterfacesToRenderer(
   registry->AddInterface(base::BindRepeating(&BindFingerprintProtection,
                                              render_process_host->GetID()),
                          content::GetUIThreadTaskRunner({}));
-  const std::string& zone = EffectiveWebTimeZone(
-      Profile::FromBrowserContext(render_process_host->GetBrowserContext()));
-  if (!zone.empty()) {
-    registry->AddInterface(base::BindRepeating(&BindWebTimeZoneMonitor, zone),
-                           content::GetUIThreadTaskRunner({}));
-  }
+  // 时区由 process_time_zone.h 经 channel-associated 接口推送（含系统时区的变化）。
+  registry->AddInterface(base::BindRepeating(&BindProcessTimeZoneMonitor),
+                         content::GetUIThreadTaskRunner({}));
 }
 
 void StarryContentBrowserClient::WillCreateURLLoaderFactory(

@@ -44,6 +44,9 @@ class StarryPrefsFactory : public ProfileKeyedServiceFactory {
     registry->RegisterStringPref(kWebTimeZone, std::string());
     registry->RegisterStringPref(kFingerprintProtection, "privateBrowsing");
     registry->RegisterListPref(kFingerprintProtectionExceptions);
+    registry->RegisterStringPref(kLocationSimulation, "off");
+    registry->RegisterDictionaryPref(kSimulatedLocation);
+    registry->RegisterDictionaryPref(kSimulatedLocationSites);
     registry->RegisterStringPref(kExternalLinks, kExternalLinksMiniWindow);
     registry->RegisterIntegerPref(kMiniWindowWidth, 0);
     registry->RegisterIntegerPref(kMiniWindowHeight, 0);

@@ -22,6 +22,7 @@
 #include "starry/browser/ui/design/icons.h"
 #include "starry/browser/ui/dialog/dialog_host_view.h"
 #include "starry/browser/ui/frame/starry_browser_view.h"
+#include "starry/browser/ui/location/location_picker.h"
 #include "starry/browser/ui/menu/menu_host_view.h"
 #include "third_party/blink/public/common/page/page_zoom.h"
 #include "ui/base/clipboard/scoped_clipboard_writer.h"
@@ -87,6 +88,11 @@ StarryBrowserView* BrowserViewFor(content::WebContents* contents) {
   // AI 助手的岛里的网页不是标签页。
   if (StarryBrowserView* view = AssistantController::ViewForPage(contents)) {
     return view;
+  }
+  // 位置模拟的选点页在窗口的对话框里。
+  if (LocationPickerOwner* owner =
+          LocationPickerOwner::FromWebContents(contents)) {
+    return owner->browser_view();
   }
   tabs::TabInterface* tab = tabs::TabInterface::MaybeGetFromContents(contents);
   if (!tab || !tab->GetBrowserWindowInterface()) {

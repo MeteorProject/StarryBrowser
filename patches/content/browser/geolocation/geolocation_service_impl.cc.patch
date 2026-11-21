@@ -1,0 +1,51 @@
+diff --git a/content/browser/geolocation/geolocation_service_impl.cc b/content/browser/geolocation/geolocation_service_impl.cc
+index 0901f2dd45..6822e1e2a2 100644
+--- a/content/browser/geolocation/geolocation_service_impl.cc
++++ b/content/browser/geolocation/geolocation_service_impl.cc
+@@ -22,6 +22,7 @@
+ #include "mojo/public/cpp/bindings/callback_helpers.h"
+ #include "services/device/public/mojom/geoposition.mojom.h"
+ #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom.h"
++#include "starry/browser/privacy/simulated_geolocation.h"
+ #include "third_party/blink/public/common/permissions/permission_utils.h"
+ 
+ #if BUILDFLAG(IS_IOS)
+@@ -229,11 +230,16 @@ void GeolocationServiceImpl::CreateGeolocationWithPermissionResult(
+ 
+   if (base::FeatureList::IsEnabled(features::kGeolocationProxy)) {
+     mojo::PendingRemote<device::mojom::Geolocation> geolocation_impl_remote;
+-    geolocation_context->BindGeolocation(
+-        geolocation_impl_remote.InitWithNewPipeAndPassReceiver(),
+-        requesting_origin_,
+-        device::mojom::GeolocationClientId::kGeolocationServiceImpl,
+-        has_precise_permission);
++    auto geolocation_impl_receiver =
++        geolocation_impl_remote.InitWithNewPipeAndPassReceiver();
++    // Starry: sites with a simulated location never reach the device service.
++    if (!starry::MaybeBindSimulatedGeolocation(render_frame_host_,
++                                               geolocation_impl_receiver)) {
++      geolocation_context->BindGeolocation(
++          std::move(geolocation_impl_receiver), requesting_origin_,
++          device::mojom::GeolocationClientId::kGeolocationServiceImpl,
++          has_precise_permission);
++    }
+ 
+     if (active_proxies_.empty()) {
+       IncrementActivityCount();
+@@ -248,10 +254,12 @@ void GeolocationServiceImpl::CreateGeolocationWithPermissionResult(
+     // connections are created. Kept as-is for compatibility.
+     IncrementActivityCount();
+ 
+-    geolocation_context->BindGeolocation(
+-        std::move(receiver), requesting_origin_,
+-        device::mojom::GeolocationClientId::kGeolocationServiceImpl,
+-        has_precise_permission);
++    if (!starry::MaybeBindSimulatedGeolocation(render_frame_host_, receiver)) {
++      geolocation_context->BindGeolocation(
++          std::move(receiver), requesting_origin_,
++          device::mojom::GeolocationClientId::kGeolocationServiceImpl,
++          has_precise_permission);
++    }
+   }
+   permission_subscription_ =
+       PermissionControllerImpl::FromBrowserContext(

@@ -36,6 +36,8 @@ enum class StarryPage {
   kArchive,
   kWelcome,
   kNewTab,
+  // 位置模拟的选点页（窗口对话框里的网页，ui/location/location_picker.h）。
+  kLocationPicker,
 };
 
 inline constexpr char kStarrySettingsHost[] = "starry-settings";
@@ -44,6 +46,8 @@ inline constexpr char kStarryWelcomeHost[] = "starry-welcome";
 // Chrome 没有这个页面，公开地址就是 starry://archive。
 inline constexpr char kStarryArchiveHost[] = "archive";
 inline constexpr char kStarryAssistantHost[] = "starry-assistant";
+// Chrome 没有这个页面，公开地址就是 starry://location-picker。
+inline constexpr char kStarryLocationPickerHost[] = "location-picker";
 
 // 设置页的地址；pane 是分类（general、appearance、performance、downloads、privacy、
 // extensions、developer），空的是上次看的那个。

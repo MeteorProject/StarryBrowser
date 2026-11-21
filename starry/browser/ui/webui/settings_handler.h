@@ -71,6 +71,8 @@ class SettingsHandler : public content::WebUIMessageHandler,
   void HandleGetSettings(const base::ListValue& args);
   void HandleSetSetting(const base::ListValue& args);
   void HandleSetFingerprintException(const base::ListValue& args);
+  void HandleSetSiteLocation(const base::ListValue& args);
+  void HandlePickLocation(const base::ListValue& args);
   void HandleSetOrganizerException(const base::ListValue& args);
   void HandleSetOrganizerRule(const base::ListValue& args);
   void HandleForgetOrganizerMemory(const base::ListValue& args);

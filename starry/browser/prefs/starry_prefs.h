@@ -25,6 +25,16 @@ inline constexpr char kFingerprintProtection[] =
 inline constexpr char kFingerprintProtectionExceptions[] =
     "starry.privacy.fingerprint_exceptions";
 
+// 位置模拟（starry/browser/privacy/location_simulation.h）：off（默认）/
+// privateBrowsing / allBrowsing；全局位置 {latitude, longitude, accuracy, timeZone,
+// label}；网站单独设置按主站点：{mode: "real"} 或 {mode: "simulated", 位置…}。
+inline constexpr char kLocationSimulation[] =
+    "starry.privacy.location_simulation";
+inline constexpr char kSimulatedLocation[] =
+    "starry.privacy.simulated_location";
+inline constexpr char kSimulatedLocationSites[] =
+    "starry.privacy.simulated_location_sites";
+
 // 其他应用里点击的链接在哪里打开（设置 › 通用 › 外部链接）：
 // "miniWindow"（默认，小窗口）或 "browserWindow"（当前浏览器窗口的新标签页）。见
 // starry/browser/ui/mini_window/mini_window.h。

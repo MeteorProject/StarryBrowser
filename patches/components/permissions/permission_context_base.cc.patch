@@ -1,0 +1,47 @@
+diff --git a/components/permissions/permission_context_base.cc b/components/permissions/permission_context_base.cc
+index 1d66869835..3956e960a9 100644
+--- a/components/permissions/permission_context_base.cc
++++ b/components/permissions/permission_context_base.cc
+@@ -63,6 +63,7 @@
+ #include "content/public/common/content_features.h"
+ #include "services/network/public/cpp/is_potentially_trustworthy.h"
+ #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom.h"
++#include "starry/browser/privacy/simulated_geolocation.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/mojom/permissions/permission.mojom.h"
+ #include "url/gurl.h"
+@@ -609,6 +610,18 @@ PermissionSetting PermissionContextBase::GetPermissionStatusInternal(
+     content::RenderFrameHost* render_frame_host,
+     const GURL& requesting_origin,
+     const GURL& embedding_origin) const {
++  // Starry: a top-level site with a simulated location is allowed without a
++  // prompt; it only ever receives the simulated position.
++  if (content_settings_type_ ==
++          content_settings::GeolocationContentSettingsType() &&
++      starry::IsGeolocationSimulated(browser_context_, embedding_origin)) {
++    if (base::FeatureList::IsEnabled(
++            content_settings::features::kApproximateGeolocationPermission)) {
++      return GeolocationSetting{.approximate = PermissionOption::kAllowed,
++                                .precise = PermissionOption::kAllowed};
++    }
++    return CONTENT_SETTING_ALLOW;
++  }
+   return PermissionsClient::Get()
+       ->GetSettingsMap(browser_context())
+       ->GetPermissionSetting(requesting_origin, embedding_origin,
+@@ -686,6 +699,15 @@ void PermissionContextBase::PermissionDecided(
+   }
+ 
+   bool persist = decision.overall_decision != PermissionDecision::kNone;
++  // Starry: a simulated grant applies only while the location rule is active.
++  if (content_settings_type_ ==
++          content_settings::GeolocationContentSettingsType() &&
++      (decision.overall_decision == PermissionDecision::kAllow ||
++       decision.overall_decision == PermissionDecision::kAllowThisTime) &&
++      starry::IsGeolocationSimulated(browser_context_,
++                                     request_data.embedding_origin)) {
++    persist = false;
++  }
+ 
+   auto request = pending_requests_.find(request_data.id.ToString());
+   CHECK(request != pending_requests_.end());

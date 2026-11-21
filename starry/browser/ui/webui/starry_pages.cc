@@ -11,6 +11,7 @@
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/functional/bind.h"
+#include "base/json/json_writer.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/no_destructor.h"
 #include "base/strings/escape.h"
@@ -40,6 +41,7 @@
 #include "starry/browser/assistant/assistant_images.h"
 #include "starry/browser/l10n/l10n.h"
 #include "starry/browser/new_tab/new_tab.h"
+#include "starry/browser/resources/starry_location_resources.h"
 #include "starry/browser/resources/starry_page_resources.h"
 #include "starry/browser/tab_organizer/tab_archive.h"
 #include "starry/browser/ui/design/theme.h"
@@ -52,12 +54,14 @@
 #include "starry/browser/ui/webui/extensions_handler.h"
 #include "starry/browser/ui/webui/history_handler.h"
 #include "starry/browser/ui/webui/import_handler.h"
+#include "starry/browser/ui/webui/location_picker_handler.h"
 #include "starry/browser/ui/webui/new_tab_handler.h"
 #include "starry/browser/ui/webui/page_handler.h"
 #include "starry/browser/ui/webui/settings_handler.h"
 #include "starry/browser/ui/webui/update_handler.h"
 #include "starry/browser/ui/webui/welcome_handler.h"
 #include "starry/common/internal_urls.h"
+#include "third_party/zlib/google/compression_utils.h"
 #include "url/gurl.h"
 
 namespace starry {
@@ -80,6 +84,7 @@ constexpr PageInfo kPages[] = {
     {StarryPage::kArchive, kStarryArchiveHost, "archive"},
     {StarryPage::kWelcome, kStarryWelcomeHost, "welcome"},
     {StarryPage::kNewTab, new_tab::kHost, "newtab"},
+    {StarryPage::kLocationPicker, kStarryLocationPickerHost, "location"},
 };
 
 const PageInfo& InfoFor(StarryPage page) {
@@ -103,6 +108,31 @@ const PageResource* FindResource(std::string_view path) {
 std::string_view StripQuery(std::string_view path) {
   const size_t end = path.find_first_of("?#");
   return end == std::string_view::npos ? path : path.substr(0, end);
+}
+
+// 选点页的地图库和离线数据：单独一组、gzip 压缩（resources/BUILD.gn 的
+// location_resources），取用时解压。WebUI 的网页不能 fetch chrome:// 的地址，
+// 数据文件加上 .js 就当作模块来取（cities.tsv.js、countries.json.js，export default）。
+const LocationResource* FindLocationResource(const char* dir,
+                                             std::string_view raw_path,
+                                             bool* as_module = nullptr) {
+  if (std::string_view(dir) != "location") {
+    return nullptr;
+  }
+  std::string_view path = StripQuery(raw_path);
+  const bool module = (path.ends_with(".tsv.js") || path.ends_with(".json.js"));
+  if (module) {
+    path.remove_suffix(3);
+  }
+  if (as_module) {
+    *as_module = module;
+  }
+  for (const LocationResource& resource : GetLocationResources()) {
+    if (resource.path == path) {
+      return &resource;
+    }
+  }
+  return nullptr;
 }
 
 // 新标签页自己选的背景图（background?v=…）。
@@ -234,8 +264,8 @@ bool ShouldHandle(const char* dir, const std::string& path) {
   if (!ArchiveThumbnailId(dir, path).empty() || IsNewTabBackground(dir, path)) {
     return true;
   }
-  return StripQuery(path) == "theme.css" ||
-         StripQuery(path) == "strings.js" || ResolveResource(dir, path);
+  return StripQuery(path) == "theme.css" || StripQuery(path) == "strings.js" ||
+         ResolveResource(dir, path) || FindLocationResource(dir, path);
 }
 
 void HandleRequest(const char* dir,
@@ -271,6 +301,27 @@ void HandleRequest(const char* dir,
   if (StripQuery(path) == "strings.js") {
     std::move(callback).Run(base::MakeRefCounted<base::RefCountedString>(
         base::StrCat({"export default ", l10n::PageStringsJson(), ";\n"})));
+    return;
+  }
+  bool as_module = false;
+  if (const LocationResource* resource =
+          FindLocationResource(dir, path, &as_module)) {
+    std::string data;
+    if (!compression::GzipUncompress(resource->data, &data)) {
+      std::move(callback).Run(nullptr);
+      return;
+    }
+    if (as_module) {
+      // JSON 本来就是 JS 的表达式；其余当作字符串。
+      data = base::StrCat(
+          {"export default ",
+           resource->path.ends_with(".json")
+               ? data
+               : base::WriteJson(base::Value(std::move(data))).value_or("''"),
+           ";\n"});
+    }
+    std::move(callback).Run(
+        base::MakeRefCounted<base::RefCountedString>(std::move(data)));
     return;
   }
   const PageResource* resource = ResolveResource(dir, path);
@@ -372,6 +423,12 @@ StarryPageUI::StarryPageUI(content::WebUI* web_ui, StarryPage page)
       break;
     case StarryPage::kNewTab:
       web_ui->AddMessageHandler(std::make_unique<NewTabHandler>(profile));
+      break;
+    case StarryPage::kLocationPicker:
+      source->OverrideContentSecurityPolicy(
+          network::mojom::CSPDirectiveName::WorkerSrc, "worker-src 'self';");
+      web_ui->AddMessageHandler(
+          std::make_unique<LocationPickerHandler>(profile));
       break;
   }
 }

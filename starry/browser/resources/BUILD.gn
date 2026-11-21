@@ -28,6 +28,10 @@ page_files = [
   "pages/history/history.css",
   "pages/history/history.js",
   "pages/history/index.html",
+  "pages/location/index.html",
+  "pages/location/location.css",
+  "pages/location/location.js",
+  "pages/location/map_style.js",
   "pages/newtab/index.html",
   "pages/newtab/newtab.css",
   "pages/newtab/newtab.js",
@@ -121,13 +125,52 @@ action("agent_resources") {
          ] + rebase_path(agent_files, root_build_dir)
 }
 
+# 位置模拟的选点页（pages/location/）用的大文件：地图库和离线数据。单独一组，
+# gzip 压缩，取用时解压（starry/browser/ui/webui/starry_pages.cc）；改别的页面文件时不用
+# 重编这个大的 .cc。数据由 scripts/location-data.py 生成，地图库见
+# starry/third_party/maplibre-gl/README.md。
+location_files = [
+  "//starry/third_party/maplibre-gl/maplibre-gl-worker.js",
+  "//starry/third_party/maplibre-gl/maplibre-gl.css",
+  "//starry/third_party/maplibre-gl/maplibre-gl.js",
+  "location/cities.tsv",
+  "location/countries.json",
+]
+
+action("location_resources") {
+  script = "embed_resources.py"
+  inputs = location_files
+  outputs = [
+    "$target_gen_dir/starry_location_resources.cc",
+    "$target_gen_dir/starry_location_resources.h",
+  ]
+  args = [
+           "--root",
+           rebase_path("location", root_build_dir),
+           "--out-cc",
+           rebase_path(outputs[0], root_build_dir),
+           "--out-h",
+           rebase_path(outputs[1], root_build_dir),
+           "--header-include",
+           "starry/browser/resources/starry_location_resources.h",
+           "--name",
+           "Location",
+           "--comment",
+           "Location picker files (map library, offline data), gzip-compressed.",
+           "--gzip",
+           "--flat",
+         ] + rebase_path(location_files, root_build_dir)
+}
+
 source_set("resources") {
   sources = get_target_outputs(":page_resources") +
             get_target_outputs(":l10n_resources") +
-            get_target_outputs(":agent_resources")
+            get_target_outputs(":agent_resources") +
+            get_target_outputs(":location_resources")
   deps = [
     ":agent_resources",
     ":l10n_resources",
+    ":location_resources",
     ":page_resources",
     "//base",
   ]

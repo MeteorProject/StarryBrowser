@@ -5,31 +5,44 @@
 #include <algorithm>
 #include <utility>
 
+#include "base/feature_list.h"
 #include "base/functional/bind.h"
+#include "base/functional/callback_helpers.h"
 #include "base/strings/utf_string_conversions.h"
 #include "cc/paint/paint_flags.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+#include "components/content_settings/core/common/features.h"
 #include "components/url_formatter/url_formatter.h"
+#include "content/public/browser/browser_context.h"
 #include "content/public/browser/navigation_controller.h"
+#include "content/public/browser/permission_descriptor_util.h"
 #include "content/public/browser/reload_type.h"
+#include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/web_contents.h"
 #include "starry/browser/l10n/l10n.h"
 #include "starry/browser/prefs/starry_prefs.h"
 #include "starry/browser/privacy/fingerprint_protection.h"
+#include "starry/browser/privacy/location_simulation.h"
 #include "starry/browser/ui/design/controls.h"
 #include "starry/browser/ui/design/icons.h"
 #include "starry/browser/ui/design/metrics.h"
 #include "starry/browser/ui/design/typography.h"
+#include "starry/browser/ui/frame/starry_browser_view.h"
+#include "starry/browser/ui/location/location_picker.h"
+#include "starry/browser/ui/menu/menu_host_view.h"
 #include "starry/browser/ui/motion/motion.h"
 #include "starry/browser/ui/webui/starry_pages.h"
+#include "third_party/blink/public/common/permissions/permission_utils.h"
 #include "ui/base/metadata/metadata_impl_macros.h"
 #include "ui/gfx/canvas.h"
 #include "ui/gfx/geometry/rect_f.h"
 #include "ui/gfx/paint_vector_icon.h"
+#include "ui/gfx/text_elider.h"
 #include "ui/gfx/text_utils.h"
 #include "ui/views/accessibility/view_accessibility.h"
 #include "ui/views/controls/label.h"
+#include "url/origin.h"
 
 namespace starry {
 
@@ -47,6 +60,9 @@ constexpr int kStatusHeight = 16;
 constexpr int kToggleHeight = 22;
 constexpr int kReloadHeight = 28;
 constexpr int kRowHeight = 28;
+constexpr int kDividerHeight = 1;
+constexpr int kLocationRowPadding = 3;
+constexpr int kSettingsRowTopPadding = 6;
 
 }  // namespace
 
@@ -93,6 +109,94 @@ class PrivacySettingsRow : public views::Button {
 BEGIN_METADATA(PrivacySettingsRow)
 END_METADATA
 
+// 「位置」：左边是名字，右边是定位权限或位置和上下箭头，点开是菜单。
+class LocationRow : public views::Button {
+  METADATA_HEADER(LocationRow, views::Button)
+
+ public:
+  explicit LocationRow(PressedCallback callback)
+      : views::Button(std::move(callback)) {
+    SetAnimationDuration(base::Milliseconds(motion::kHoverDuration * 1000));
+    GetViewAccessibility().SetName(L("toolbar.privacy.location"));
+  }
+
+  void SetValue(std::u16string value) {
+    value_ = std::move(value);
+    GetViewAccessibility().SetDescription(value_);
+    SchedulePaint();
+  }
+
+  void SetTheme(const Theme& theme) {
+    theme_ = theme;
+    SchedulePaint();
+  }
+
+  void PaintButtonContents(gfx::Canvas* canvas) override {
+    const float hover = static_cast<float>(hover_animation().GetCurrentValue());
+    if (hover > 0) {
+      cc::PaintFlags flags;
+      flags.setAntiAlias(true);
+      flags.setColor(theme_.OnSurface(0.07f * hover));
+      canvas->DrawRoundRect(gfx::RectF(GetLocalBounds()), radius::kButton,
+                            flags);
+    }
+    const std::u16string title = L("toolbar.privacy.location");
+    const gfx::FontList& title_font = UiFont(13);
+    const int title_width = gfx::GetStringWidth(title, title_font);
+    canvas->DrawStringRectWithFlags(title, title_font, theme_.on_surface,
+                                    gfx::Rect(6, 0, title_width, height()),
+                                    gfx::Canvas::NO_SUBPIXEL_RENDERING);
+    constexpr int kChevron = 9;
+    const int chevron_x = width() - 6 - kChevron;
+    canvas->Save();
+    canvas->Translate(gfx::Vector2d(chevron_x, (height() - kChevron) / 2));
+    gfx::PaintVectorIcon(canvas, icons::kChevronUpChevronDown, kChevron,
+                         theme_.on_surface_variant);
+    canvas->Restore();
+    const int value_x = 6 + title_width + 12;
+    const int value_width = std::max(0, chevron_x - 5 - value_x);
+    canvas->DrawStringRectWithFlags(
+        gfx::ElideText(value_, UiFont(12), value_width, gfx::ELIDE_TAIL),
+        UiFont(12), theme_.on_surface_variant,
+        gfx::Rect(value_x, 0, value_width, height()),
+        gfx::Canvas::TEXT_ALIGN_RIGHT | gfx::Canvas::NO_SUBPIXEL_RENDERING);
+  }
+
+ private:
+  Theme theme_ = Theme::DarkBase();
+  std::u16string value_;
+};
+
+BEGIN_METADATA(LocationRow)
+END_METADATA
+
+namespace {
+
+// 「位置」菜单的项。
+enum LocationCommand {
+  kLocationFollow = 1,
+  kLocationSimulated,
+  kLocationPick,
+  kLocationReal,
+};
+
+std::u16string DescribeSimulatedLocation(const LocationDecision& decision) {
+  return decision.location ? base::UTF8ToUTF16(decision.location->label)
+                           : L("toolbar.privacy.locationNotChosen");
+}
+
+blink::mojom::PermissionDescriptorPtr LocationPermissionDescriptor() {
+  // 位置行显示网站能否读取位置，包含只能读取大致位置的情况。
+  return content::PermissionDescriptorUtil::
+      CreatePermissionDescriptorForPermissionType(
+          base::FeatureList::IsEnabled(
+              content_settings::features::kApproximateGeolocationPermission)
+              ? blink::PermissionType::GEOLOCATION_APPROXIMATE
+              : blink::PermissionType::GEOLOCATION);
+}
+
+}  // namespace
+
 ContentBlockingPopover::ContentBlockingPopover(BrowserWindowInterface* browser,
                                                PopoverHost* host,
                                                content::WebContents* contents)
@@ -130,6 +234,11 @@ ContentBlockingPopover::ContentBlockingPopover(BrowserWindowInterface* browser,
                           base::Unretained(this)),
       L("toolbar.privacy.reloadToApply"), ButtonVariant::kFilled));
   reload_->SetVisible(false);
+  location_ = AddChildView(std::make_unique<LocationRow>(base::BindRepeating(
+      &ContentBlockingPopover::ShowLocationMenu, base::Unretained(this))));
+  location_subscription_ = AddLocationSimulationObserver(
+      base::BindRepeating(&ContentBlockingPopover::OnLocationSimulationChanged,
+                          base::Unretained(this)));
   settings_ = AddChildView(std::make_unique<PrivacySettingsRow>(base::BindRepeating(
       &ContentBlockingPopover::OpenSettings, base::Unretained(this))));
   ContentBlockingService::Get()->AddObserver(this);
@@ -144,6 +253,7 @@ ContentBlockingPopover::ContentBlockingPopover(BrowserWindowInterface* browser,
   switch_->SetOn(!Allowlisted(), /*animate=*/false);
   fingerprint_switch_->SetOn(
       FingerprintProtectionEnabledForSite(browser_->GetProfile(), url_), false);
+  ObserveLocationPermission();
   Update();
 }
 
@@ -174,6 +284,8 @@ void ContentBlockingPopover::Update() {
       url_.SchemeIsHTTPOrHTTPS();
   fingerprint_label_->SetVisible(fingerprint);
   fingerprint_switch_->SetVisible(fingerprint);
+  location_->SetVisible(url_.SchemeIsHTTPOrHTTPS());
+  UpdateLocationValue();
   reload_->SetVisible(changed_);
   InvalidateLayout();
   SchedulePaint();
@@ -224,6 +336,145 @@ void ContentBlockingPopover::OpenSettings() {
   OpenStarrySettings(browser_, "privacy");
 }
 
+content::RenderFrameHost* ContentBlockingPopover::LocationFrame() const {
+  if (!contents_ || !url_.SchemeIsHTTPOrHTTPS()) {
+    return nullptr;
+  }
+  auto* frame = contents_->GetPrimaryMainFrame();
+  if (!frame || !url::Origin::Create(url_).IsSameOriginWith(
+                    url::Origin::Create(frame->GetLastCommittedURL()))) {
+    return nullptr;
+  }
+  return frame;
+}
+
+std::u16string ContentBlockingPopover::LocationValue() const {
+  auto* frame = LocationFrame();
+  if (!frame) {
+    return L("toolbar.privacy.locationNotAuthorized");
+  }
+  const auto status = frame->GetBrowserContext()
+                          ->GetPermissionController()
+                          ->GetPermissionStatusForCurrentDocument(
+                              LocationPermissionDescriptor(), frame);
+  switch (status) {
+    case content::PermissionStatus::ASK:
+      return L("toolbar.privacy.locationNotAuthorized");
+    case content::PermissionStatus::DENIED:
+      return L("toolbar.privacy.locationBlocked");
+    case content::PermissionStatus::GRANTED: {
+      const LocationDecision decision =
+          ResolveLocation(browser_->GetProfile(), url_);
+      return decision.simulated ? DescribeSimulatedLocation(decision)
+                                : L("toolbar.privacy.locationReal");
+    }
+  }
+}
+
+void ContentBlockingPopover::ObserveLocationPermission() {
+  location_permission_subscription_.reset();
+  if (auto* frame = LocationFrame();
+      frame && !frame->GetLastCommittedOrigin().opaque()) {
+    location_permission_subscription_ =
+        frame->GetBrowserContext()
+            ->GetPermissionController()
+            ->SubscribeToPermissionResultChange(
+                LocationPermissionDescriptor(), /*render_process_host=*/nullptr,
+                frame, frame->GetLastCommittedOrigin().GetURL(),
+                /*should_include_device_status=*/false,
+                base::IgnoreArgs<content::PermissionResult>(base::BindRepeating(
+                    &ContentBlockingPopover::UpdateLocationValue,
+                    base::Unretained(this))));
+  }
+}
+
+void ContentBlockingPopover::UpdateLocationValue() {
+  if (location_->GetVisible()) {
+    location_->SetValue(LocationValue());
+  }
+}
+
+void ContentBlockingPopover::OnLocationSimulationChanged() {
+  // 模拟设置也会改变 Chromium 返回的权限状态，重新记录订阅的初始值。
+  ObserveLocationPermission();
+  UpdateLocationValue();
+}
+
+void ContentBlockingPopover::ShowLocationMenu() {
+  StarryBrowserView* view = StarryBrowserView::From(browser_);
+  if (!view) {
+    return;
+  }
+  Profile* profile = browser_->GetProfile();
+  const std::string site = NormalizeFingerprintSite(url_.spec());
+  const SiteLocationRule rule = GetSiteLocationRule(profile, site);
+  const LocationDecision default_location = ResolveDefaultLocation(profile);
+  std::u16string default_value;
+  if (default_location.simulated) {
+    default_value = DescribeSimulatedLocation(default_location);
+  } else if (rule.mode == SiteLocationMode::kSimulated) {
+    default_value = L("toolbar.privacy.locationRealRequiresPermission");
+  } else {
+    default_value = LocationValue();
+  }
+  location_menu_ = std::make_unique<ui::SimpleMenuModel>(this);
+  location_menu_->AddCheckItem(
+      kLocationFollow,
+      L("toolbar.privacy.locationFollow", {{"value", default_value}}));
+  if (rule.mode == SiteLocationMode::kSimulated) {
+    location_menu_->AddCheckItem(
+        kLocationSimulated,
+        L("toolbar.privacy.locationSimulated",
+          {{"place", base::UTF8ToUTF16(rule.location.label)}}));
+  }
+  location_menu_->AddItem(kLocationPick, L("toolbar.privacy.locationPick"));
+  location_menu_->AddCheckItem(kLocationReal,
+                               L("toolbar.privacy.locationUseReal"));
+  const gfx::Rect rect = views::View::ConvertRectToTarget(
+      location_, view, location_->GetLocalBounds());
+  MenuOptions options;
+  options.anchor = rect;
+  view->ShowMenu(location_menu_.get(), rect.bottom_left(), base::DoNothing(),
+                 std::move(options));
+}
+
+bool ContentBlockingPopover::IsCommandIdChecked(int command_id) const {
+  const SiteLocationRule rule = GetSiteLocationRule(
+      browser_->GetProfile(), NormalizeFingerprintSite(url_.spec()));
+  switch (command_id) {
+    case kLocationFollow:
+      return rule.mode == SiteLocationMode::kDefault;
+    case kLocationSimulated:
+      return rule.mode == SiteLocationMode::kSimulated;
+    case kLocationReal:
+      return rule.mode == SiteLocationMode::kReal;
+    default:
+      return false;
+  }
+}
+
+void ContentBlockingPopover::ExecuteCommand(int command_id, int event_flags) {
+  Profile* profile = browser_->GetProfile();
+  const std::string site = NormalizeFingerprintSite(url_.spec());
+  switch (command_id) {
+    case kLocationFollow:
+      SetSiteLocationRule(profile, site, {.mode = SiteLocationMode::kDefault});
+      break;
+    case kLocationReal:
+      SetSiteLocationRule(profile, site, {.mode = SiteLocationMode::kReal});
+      break;
+    case kLocationPick: {
+      // 卡片先收起来，选点页在窗口的对话框里。
+      BrowserWindowInterface* browser = browser_;
+      host_->Close();
+      ShowLocationPicker(browser, site);
+      break;
+    }
+    default:
+      break;
+  }
+}
+
 std::u16string ContentBlockingPopover::DescribeForTesting() const {
   return std::u16string(title_->GetText()) + u" · " +
          std::u16string(site_->GetText()) + u" · " +
@@ -244,7 +495,10 @@ gfx::Size ContentBlockingPopover::ContentSize() const {
   if (reload_->GetVisible()) {
     height += kReloadHeight + kSpacing;
   }
-  height += 1 + 6 + kRowHeight + 8;
+  if (location_->GetVisible()) {
+    height += kDividerHeight + 2 * kLocationRowPadding + kRowHeight;
+  }
+  height += kDividerHeight + kSettingsRowTopPadding + kRowHeight + 8;
   return gfx::Size(kWidth, height);
 }
 
@@ -258,6 +512,7 @@ void ContentBlockingPopover::SetTheme(const Theme& theme) {
   fingerprint_label_->SetEnabledColor(theme.on_surface);
   fingerprint_switch_->SetTheme(theme);
   reload_->SetTheme(theme);
+  location_->SetTheme(theme);
   settings_->SetTheme(theme);
   SchedulePaint();
 }
@@ -292,8 +547,13 @@ void ContentBlockingPopover::Layout(PassKey) {
     reload_->SetBounds(kPadding, y, inner, kReloadHeight);
     y += kReloadHeight + kSpacing;
   }
-  // 分隔线在 y，下面是「隐私设置…」。
-  y += 1 + 6;
+  // 「位置」在两条分隔线之间，上下留同样的距离。
+  if (location_->GetVisible()) {
+    y += kDividerHeight + kLocationRowPadding;
+    location_->SetBounds(kPadding - 6, y, inner + 12, kRowHeight);
+    y += kRowHeight + kLocationRowPadding;
+  }
+  y += kDividerHeight + kSettingsRowTopPadding;
   settings_->SetBounds(kPadding - 6, y, inner + 12, kRowHeight);
 }
 
@@ -313,10 +573,16 @@ void ContentBlockingPopover::OnPaint(gfx::Canvas* canvas) {
       canvas, allowlisted ? icons::kShieldSlash : icons::kShieldLefthalfFilled,
       kTileGlyph, allowlisted ? theme_.on_surface_variant : theme_.accent);
   canvas->Restore();
-  // 「隐私设置…」上面的分隔线。
-  const int divider = settings_->y() - 7;
-  canvas->FillRect(gfx::Rect(kPadding, divider, width() - 2 * kPadding, 1),
-                   theme_.OnSurface(0.1f));
+  const auto paint_divider = [&](int row_y, int top_padding) {
+    const int divider_y = row_y - top_padding - kDividerHeight;
+    canvas->FillRect(gfx::Rect(kPadding, divider_y, width() - 2 * kPadding,
+                               kDividerHeight),
+                     theme_.OnSurface(0.1f));
+  };
+  if (location_->GetVisible()) {
+    paint_divider(location_->y(), kLocationRowPadding);
+  }
+  paint_divider(settings_->y(), kSettingsRowTopPadding);
 }
 
 void ContentBlockingPopover::OnContentBlockingChanged() {

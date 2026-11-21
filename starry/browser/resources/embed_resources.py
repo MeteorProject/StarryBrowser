@@ -6,9 +6,11 @@
 用法：embed_resources.py --root <目录> --out-cc <文件> --out-h <文件> 文件…
 路径是相对 --root 的，用 / 分隔。--name 是生成的函数和结构体的名字（默认 Page：
 GetPageResources()、PageResource），同一个程序里嵌好几组文件时各用各的名字。
+--gzip：存 gzip 压缩后的字节（取用的代码自己解压）；--flat：路径只留文件名。
 """
 
 import argparse
+import gzip
 import os
 
 
@@ -29,14 +31,22 @@ def main():
     parser.add_argument('--header-include', required=True)
     parser.add_argument('--name', default='Page')
     parser.add_argument('--comment', default='整页界面的所有文件，按路径排好。')
+    parser.add_argument('--gzip', action='store_true')
+    parser.add_argument('--flat', action='store_true')
     parser.add_argument('files', nargs='+')
     args = parser.parse_args()
 
     entries = []
-    for path in sorted(args.files):
-        rel = os.path.relpath(path, args.root).replace(os.sep, '/')
+    for path in args.files:
+        rel = (os.path.basename(path) if args.flat else
+               os.path.relpath(path, args.root).replace(os.sep, '/'))
         with open(path, 'rb') as f:
-            entries.append((rel, f.read()))
+            data = f.read()
+        if args.gzip:
+            # mtime=0：同样的输入生成同样的字节。
+            data = gzip.compress(data, compresslevel=9, mtime=0)
+        entries.append((rel, data))
+    entries.sort()
 
     guard = args.header_include.upper().replace('/', '_').replace('.', '_') + '_'
     struct = '%sResource' % args.name

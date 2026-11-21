@@ -11,10 +11,13 @@
 #include <variant>
 #include <vector>
 
+#include "base/functional/bind.h"
+#include "base/location.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/strings/strcat.h"
 #include "base/strings/string_util.h"
+#include "base/task/sequenced_task_runner.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
@@ -27,10 +30,12 @@
 #include "components/url_formatter/elide_url.h"
 #include "content/public/browser/web_contents.h"
 #include "starry/browser/l10n/l10n.h"
+#include "starry/browser/privacy/simulated_geolocation.h"
 #include "starry/browser/starry_hooks.h"
 #include "starry/browser/ui/design/icons.h"
 #include "starry/browser/ui/dialog/dialog_host_view.h"
 #include "starry/browser/ui/frame/starry_browser_view.h"
+#include "starry/browser/ui/location/location_picker.h"
 #include "url/gurl.h"
 #include "url/origin.h"
 
@@ -122,7 +127,36 @@ bool CanAllowOnce(const PermissionPrompt::Delegate& delegate) {
   return true;
 }
 
-DialogSpec SpecFor(PermissionPrompt::Delegate& delegate, bool allow_once) {
+// 只要位置的请求可以「模拟位置…」：选一个位置，这个网站以后只拿到它。
+bool IsLocationOnly(const PermissionPrompt::Delegate& delegate) {
+  const auto& requests = delegate.Requests();
+  return requests.size() == 1 &&
+         requests.front()->request_type() == RequestType::kGeolocation;
+}
+
+// 按钮的顺序：不允许、[模拟位置…、][仅这一次、]允许。
+struct PromptButtons {
+  std::optional<size_t> simulate;
+  std::optional<size_t> allow_once;
+  size_t allow = 1;
+};
+
+PromptButtons ButtonsFor(bool simulate, bool allow_once) {
+  PromptButtons buttons;
+  size_t next = 1;
+  if (simulate) {
+    buttons.simulate = next++;
+  }
+  if (allow_once) {
+    buttons.allow_once = next++;
+  }
+  buttons.allow = next;
+  return buttons;
+}
+
+DialogSpec SpecFor(PermissionPrompt::Delegate& delegate,
+                   bool allow_once,
+                   bool simulate) {
   const auto& requests = delegate.Requests();
   // 摄像头和麦克风一起要时合成一句。
   bool camera = false;
@@ -166,6 +200,10 @@ DialogSpec SpecFor(PermissionPrompt::Delegate& delegate, bool allow_once) {
   spec.buttons.push_back(
       {L("window.mediaCapture.deny"), ButtonVariant::kTertiary,
        /*cancel=*/true});
+  if (simulate) {
+    spec.buttons.push_back(
+        {L("permissions.prompt.simulateLocation"), ButtonVariant::kSecondary});
+  }
   if (allow_once) {
     spec.buttons.push_back(
         {L("permissions.prompt.allowOnce"), ButtonVariant::kSecondary});
@@ -200,11 +238,22 @@ class StarryPermissionPrompt : public PermissionPrompt {
   StarryPermissionPrompt(StarryBrowserView* view, Delegate* delegate)
       : view_(view),
         delegate_(delegate),
-        allow_once_(CanAllowOnce(*delegate)) {
-    auto request = std::make_unique<PermissionDialogRequest>(
-        SpecFor(*delegate, allow_once_), weak_factory_.GetWeakPtr());
-    request_ = request.get();
-    view->dialog_host()->Present(std::move(request));
+        allow_once_(CanAllowOnce(*delegate)),
+        simulate_(IsLocationOnly(*delegate) &&
+                  delegate->GetEmbeddingOrigin().SchemeIsHTTPOrHTTPS()),
+        buttons_(ButtonsFor(simulate_, allow_once_)) {
+    content::WebContents* contents = delegate->GetAssociatedWebContents();
+    if (simulate_ && contents &&
+        IsGeolocationSimulated(contents->GetBrowserContext(),
+                               delegate->GetEmbeddingOrigin())) {
+      // 等着的时候这个网站有了模拟位置（例如在盾牌卡片里选的，或者选点时切走了标签）：
+      // 不用再问。等 Chrome 显示完提示以后再回答。
+      base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+          FROM_HERE, base::BindOnce(&StarryPermissionPrompt::AcceptSimulated,
+                                    weak_factory_.GetWeakPtr()));
+      return;
+    }
+    Present();
   }
 
   StarryPermissionPrompt(const StarryPermissionPrompt&) = delete;
@@ -219,15 +268,14 @@ class StarryPermissionPrompt : public PermissionPrompt {
 
   void OnAnswer(size_t button) {
     request_ = nullptr;
-    // 按钮：不允许、[仅这一次、]允许。
-    const size_t allow = allow_once_ ? 2 : 1;
-    const ::PromptOptions options = std::monostate();
-    if (button == allow) {
-      delegate_->Accept(options);
-    } else if (allow_once_ && button == 1) {
-      delegate_->AcceptThisTime(options);
+    if (button == buttons_.allow) {
+      delegate_->Accept(GrantOptions());
+    } else if (button == buttons_.allow_once) {
+      delegate_->AcceptThisTime(GrantOptions());
+    } else if (button == buttons_.simulate) {
+      SimulateLocation();
     } else {
-      delegate_->Deny(options);
+      delegate_->Deny(std::monostate());
     }
   }
 
@@ -266,9 +314,59 @@ class StarryPermissionPrompt : public PermissionPrompt {
   }
 
  private:
+  void Present() {
+    auto request = std::make_unique<PermissionDialogRequest>(
+        SpecFor(*delegate_, allow_once_, simulate_),
+        weak_factory_.GetWeakPtr());
+    request_ = request.get();
+    view_->dialog_host()->Present(std::move(request));
+  }
+
+  // 请求还等着：在同一个对话框层里打开选点页。选好了就按允许回答（网站只拿到模拟
+  // 位置），取消了就再问一遍。
+  void SimulateLocation() {
+    ShowLocationPicker(view_->browser(), delegate_->GetEmbeddingOrigin().spec(),
+                       base::BindOnce(&StarryPermissionPrompt::OnLocationPicked,
+                                      weak_factory_.GetWeakPtr()));
+  }
+
+  // 提示已经没了（切走了标签）时不会到这里：切回来时 Chrome 重新建提示，那时已经
+  // 是模拟的了（构造函数里直接回答）。
+  void OnLocationPicked(bool saved) {
+    if (saved) {
+      AcceptSimulated();
+    } else {
+      Present();
+    }
+  }
+
+  PromptOptions GrantOptions() const {
+    if (IsLocationOnly(*delegate_) &&
+        delegate_->GetGeolocationPromptType() ==
+            permissions::GeolocationPromptType::kApproximateOrPrecise) {
+      return GeolocationPromptOptions{
+          .selected_accuracy =
+              delegate_->GetInitialGeolocationAccuracySelection()};
+    }
+    return std::monostate();
+  }
+
+  void AcceptSimulated() {
+    // 提示可能是异步恢复的，回答前再确认模拟规则仍然生效。
+    content::WebContents* contents = delegate_->GetAssociatedWebContents();
+    if (contents && IsGeolocationSimulated(contents->GetBrowserContext(),
+                                           delegate_->GetEmbeddingOrigin())) {
+      delegate_->Accept(GrantOptions());
+    } else {
+      Present();
+    }
+  }
+
   raw_ptr<StarryBrowserView> view_;
   raw_ptr<Delegate> delegate_;
   const bool allow_once_;
+  const bool simulate_;
+  const PromptButtons buttons_;
   raw_ptr<PermissionDialogRequest> request_ = nullptr;
   base::WeakPtrFactory<StarryPermissionPrompt> weak_factory_{this};
 };

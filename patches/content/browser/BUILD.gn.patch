@@ -1,8 +1,8 @@
 diff --git a/content/browser/BUILD.gn b/content/browser/BUILD.gn
-index bee9872ba3..0893f76a26 100644
+index bee9872ba3..1d9b827b07 100644
 --- a/content/browser/BUILD.gn
 +++ b/content/browser/BUILD.gn
-@@ -404,6 +404,13 @@ source_set("browser") {
+@@ -404,6 +404,15 @@ source_set("browser") {
  
    sources = [
      "$target_gen_dir/devtools/protocol/audits.cc",
@@ -10,6 +10,8 @@ index bee9872ba3..0893f76a26 100644
 +    "//starry/browser/privacy/fingerprint_client_hints.h",
 +    "//starry/browser/privacy/fingerprint_worker_site.cc",
 +    "//starry/browser/privacy/fingerprint_worker_site.h",
++    "//starry/browser/privacy/simulated_geolocation.cc",
++    "//starry/browser/privacy/simulated_geolocation.h",
 +    "//starry/browser/ui/swipe/overscroll_delegate.cc",
 +    "//starry/browser/ui/swipe/overscroll_delegate.h",
 +    "//starry/common/fingerprint_values.h",

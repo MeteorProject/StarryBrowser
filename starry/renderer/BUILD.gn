@@ -39,6 +39,8 @@ source_set("renderer") {
     "media/youtube_media_session.h",
     "starry_content_renderer_client.cc",
     "starry_content_renderer_client.h",
+    "web_time_zone_agent.cc",
+    "web_time_zone_agent.h",
   ]
   sources += get_target_outputs(":youtube_media_session_script_gen")
   deps = [
@@ -50,6 +52,7 @@ source_set("renderer") {
     "//mojo/public/cpp/bindings",
     "//starry/components/content_filter:procedural_script",
     "//starry/components/content_filter/mojom",
+    "//starry/components/privacy/mojom",
     "//third_party/blink/public:blink",
     "//third_party/blink/public/common",
     "//url",

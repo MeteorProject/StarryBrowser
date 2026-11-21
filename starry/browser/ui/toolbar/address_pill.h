@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 
+#include "base/callback_list.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "base/scoped_observation.h"
@@ -154,6 +155,8 @@ class AddressPill : public views::Button,
   // 盾牌的卡片开着（盾牌一直显示）。
   bool shield_popover_open_ = false;
   PrefChangeRegistrar fingerprint_prefs_;
+  // 位置模拟的设置：模拟位置的网站也显示盾牌。
+  base::CallbackListSubscription location_subscription_;
   LayerMotion star_motion_;
   // 自己点了星号：模型变了的通知里播替换的动画。
   bool star_toggled_ = false;

@@ -45,12 +45,14 @@
 #include "starry/browser/new_tab/new_tab.h"
 #include "starry/browser/prefs/starry_prefs.h"
 #include "starry/browser/privacy/fingerprint_protection.h"
+#include "starry/browser/privacy/location_simulation.h"
 #include "starry/browser/tab_organizer/organizer_memory.h"
 #include "starry/browser/tab_organizer/tab_archive.h"
 #include "starry/browser/ui/design/metrics.h"
 #include "starry/browser/ui/frame/chrome_layout.h"
 #include "starry/browser/ui/frame/starry_browser_view.h"
 #include "starry/browser/ui/frame/window_controls.h"
+#include "starry/browser/ui/location/location_picker.h"
 #include "starry/browser/ui/sidebar/utility_buttons.h"
 #include "starry/browser/ui/tabs/pin_folders.h"
 #include "starry/browser/ui/webui/starry_pages.h"
@@ -154,6 +156,8 @@ void SettingsHandler::RegisterMessages() {
   add("setSetting", &SettingsHandler::HandleSetSetting);
   add("setFingerprintException",
       &SettingsHandler::HandleSetFingerprintException);
+  add("setSiteLocation", &SettingsHandler::HandleSetSiteLocation);
+  add("pickLocation", &SettingsHandler::HandlePickLocation);
   add("setOrganizerException", &SettingsHandler::HandleSetOrganizerException);
   add("clearArchive", &SettingsHandler::HandleClearArchive);
   add("openArchive", &SettingsHandler::HandleOpenArchive);
@@ -188,6 +192,9 @@ void SettingsHandler::OnJavascriptAllowed() {
            starry::prefs::kSleepRestoredTabs,
            starry::prefs::kFingerprintProtection,
            starry::prefs::kFingerprintProtectionExceptions,
+           starry::prefs::kLocationSimulation,
+           starry::prefs::kSimulatedLocation,
+           starry::prefs::kSimulatedLocationSites,
            starry::prefs::kSidebarLayout,
            starry::prefs::kSidebarAutoHide,
            starry::prefs::kSidebarWidth,
@@ -575,6 +582,7 @@ base::DictValue SettingsHandler::State() {
   state.Set(
       "fingerprintExceptions",
       prefs->GetList(starry::prefs::kFingerprintProtectionExceptions).Clone());
+  AddLocationSimulationSettings(profile_, state);
   state.Set("cookies", prefs->GetInteger(::prefs::kCookieControlsMode));
   state.Set("doNotTrack", prefs->GetBoolean(::prefs::kEnableDoNotTrack));
   return state;
@@ -816,6 +824,9 @@ void SettingsHandler::HandleSetSetting(const base::ListValue& args) {
   } else if (key == "fingerprintProtection" && value.is_string() &&
              IsFingerprintProtectionMode(value.GetString())) {
     prefs->SetString(starry::prefs::kFingerprintProtection, value.GetString());
+  } else if (key == "locationSimulation" && value.is_string() &&
+             IsLocationSimulationMode(value.GetString())) {
+    prefs->SetString(starry::prefs::kLocationSimulation, value.GetString());
   } else if (key == "cookies" && value.is_int()) {
     prefs->SetInteger(::prefs::kCookieControlsMode, value.GetInt());
   } else if (key == "doNotTrack" && value.is_bool()) {
@@ -830,6 +841,46 @@ void SettingsHandler::HandleSetFingerprintException(
   }
   SetFingerprintProtectionException(profile_, args[0].GetString(),
                                     args[1].GetBool());
+}
+
+void SettingsHandler::HandleSetSiteLocation(const base::ListValue& args) {
+  if (args.size() != 2 || !args[0].is_string()) {
+    return;
+  }
+  SiteLocationRule rule;
+  if (args[1].is_dict()) {
+    const std::string* mode = args[1].GetDict().FindString("mode");
+    if (!mode || *mode != "real") {
+      return;
+    }
+    rule.mode = SiteLocationMode::kReal;
+  } else if (!args[1].is_none()) {
+    return;
+  }
+  SetSiteLocationRule(profile_, args[0].GetString(), rule);
+}
+
+void SettingsHandler::HandlePickLocation(const base::ListValue& args) {
+  AllowJavascript();
+  if (args.size() != 2 || !args[0].is_string() || !args[1].is_string()) {
+    return;
+  }
+  const std::string callback_id = args[0].GetString();
+  tabs::TabInterface* tab =
+      tabs::TabInterface::MaybeGetFromContents(web_ui()->GetWebContents());
+  const std::string& site = args[1].GetString();
+  ShowLocationPicker(
+      tab ? tab->GetBrowserWindowInterface() : nullptr,
+      site.empty() ? std::nullopt : std::optional(site),
+      base::BindOnce(
+          [](base::WeakPtr<SettingsHandler> handler, std::string callback_id,
+             bool saved) {
+            if (handler && handler->IsJavascriptAllowed()) {
+              handler->ResolveJavascriptCallback(
+                  base::Value(callback_id), base::Value(saved));
+            }
+          },
+          weak_factory_.GetWeakPtr(), callback_id));
 }
 
 // setOrganizerException(site, add)：加上、拿掉一个不整理的网站（写成网址的取主机名，

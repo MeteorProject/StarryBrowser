@@ -2,14 +2,23 @@
 
 #include "starry/renderer/starry_content_renderer_client.h"
 
+#include "content/public/renderer/render_thread.h"
 #include "starry/renderer/content_filter/content_filter_agent.h"
 #include "starry/renderer/media/youtube_media_session.h"
+#include "starry/renderer/web_time_zone_agent.h"
 
 namespace starry {
 
 StarryContentRendererClient::StarryContentRendererClient() = default;
 
 StarryContentRendererClient::~StarryContentRendererClient() = default;
+
+void StarryContentRendererClient::RenderThreadStarted() {
+  ChromeContentRendererClient::RenderThreadStarted();
+  // 模拟位置的网站用那个位置的时区：浏览器在导航提交前推过来。
+  web_time_zone_agent_ = std::make_unique<WebTimeZoneAgent>();
+  content::RenderThread::Get()->AddObserver(web_time_zone_agent_.get());
+}
 
 void StarryContentRendererClient::RenderFrameCreated(
     content::RenderFrame* render_frame) {

@@ -252,6 +252,7 @@ class StarrySettings extends LitElement {
     customDraft_: {state: true},
     allowDraft_: {state: true},
     fingerprintDraft_: {state: true},
+    locationDraft_: {state: true},
     organizerDraft_: {state: true},
     ruleSiteDraft_: {state: true},
     ruleFolderDraft_: {state: true},
@@ -277,6 +278,7 @@ class StarrySettings extends LitElement {
     this.customDraft_ = null;
     this.allowDraft_ = '';
     this.fingerprintDraft_ = '';
+    this.locationDraft_ = '';
     this.organizerDraft_ = '';
     this.ruleSiteDraft_ = '';
     this.ruleFolderDraft_ = '';
@@ -1873,6 +1875,65 @@ class StarrySettings extends LitElement {
       </div>`;
   }
 
+  // 选点页在这个窗口的对话框里打开（site 为空是全局的位置）。选好了回 true。
+  pickLocation_(site) {
+    return sendWithPromise('pickLocation', site);
+  }
+
+  async setLocationMode_(mode) {
+    // 还没有全局的位置：先选一个，取消就保持关闭。
+    if (mode !== 'off' && !this.settings_.simulatedLocation && !await this.pickLocation_('')) {
+      return;
+    }
+    this.set_('locationSimulation', mode);
+  }
+
+  // 「东京 · 日本 · GMT+9」（选点页里才写时区的全名）。
+  locationText_(location) {
+    return location.timeZoneOffset ?
+        L('settings.privacy.location.summary', {place: location.label, zone: location.timeZoneOffset}) :
+        location.label;
+  }
+
+  siteLocations_(s) {
+    const draft = this.locationDraft_.trim();
+    const add = async (mode) => {
+      if (!draft) {
+        return;
+      }
+      if (mode === 'real') {
+        chrome.send('setSiteLocation', [draft, {mode: 'real'}]);
+        this.locationDraft_ = '';
+      } else if (await this.pickLocation_(draft)) {
+        this.locationDraft_ = '';
+      }
+    };
+    return html`
+      <div class="site-list">
+        ${repeat(s.siteLocations || [], (item) => item.site, (item) => html`
+          <div class="site-row location-row">
+            ${icon(item.mode === 'real' ? 'mappin.slash' : 'mappin', 11)}
+            <span class="site-name">${item.site}</span>
+            <span class="site-location">${item.mode === 'real' ?
+                L('settings.privacy.siteLocations.real') : this.locationText_(item.location)}</span>
+            ${item.mode === 'simulated' ? html`
+              <button class="icon-action" title=${L('settings.privacy.siteLocations.editHelp')}
+                  @click=${() => this.pickLocation_(item.site)}>${icon('pencil', 11)}</button>` : nothing}
+            <button class="icon-action" title=${L('settings.privacy.siteLocations.removeHelp')}
+                @click=${() => chrome.send('setSiteLocation', [item.site, null])}>${icon('xmark.circle.fill', 12)}</button>
+          </div>`)}
+        <div class="inline-controls">
+          <input class="text-input" type="text" placeholder="example.com" spellcheck="false" autocomplete="off"
+              aria-label=${L('settings.privacy.siteLocations.title')}
+              .value=${this.locationDraft_}
+              @input=${(event) => this.locationDraft_ = event.target.value}
+              @keydown=${(event) => event.key === 'Enter' && add('simulated')}>
+          ${detailButton(L('settings.privacy.siteLocations.simulate'), 'mappin', () => add('simulated'), {disabled: !draft})}
+          ${detailButton(L('settings.privacy.siteLocations.useReal'), '', () => add('real'), {disabled: !draft})}
+        </div>
+      </div>`;
+  }
+
   privacy_(s) {
     const count = this.historyCount_;
     const b = this.blocking_;
@@ -1892,6 +1953,24 @@ class StarrySettings extends LitElement {
               {layout: 'block', detail: L('settings.privacy.fingerprintExceptions.detail'),
                keywords: L('settings.privacy.fingerprintExceptions.keywords')}),
       ], {footer: L('settings.privacy.fingerprint.footer')}),
+      group('location', L('settings.privacy.location.title'), [
+        entry('locationSimulation', L('settings.privacy.locationSimulation.title'),
+              menuControl(s.locationSimulation, [
+                {value: 'off', title: L('privacy.fingerprint.off')},
+                {value: 'privateBrowsing', title: L('privacy.fingerprint.privateBrowsing')},
+                {value: 'allBrowsing', title: L('privacy.fingerprint.allBrowsing')},
+              ], (value) => this.setLocationMode_(value)),
+              {detail: L('settings.privacy.locationSimulation.detail'),
+               keywords: L('settings.privacy.locationSimulation.keywords')}),
+        entry('simulatedLocation', L('settings.privacy.simulatedLocation.title'),
+              detailButton(L('common.chooseEllipsis'), 'mappin', () => this.pickLocation_('')),
+              {detail: s.simulatedLocation ? this.locationText_(s.simulatedLocation) :
+                                             L('settings.privacy.simulatedLocation.none'),
+               keywords: L('settings.privacy.simulatedLocation.keywords')}),
+        entry('siteLocations', L('settings.privacy.siteLocations.title'), this.siteLocations_(s),
+              {layout: 'block', detail: L('settings.privacy.siteLocations.detail'),
+               keywords: L('settings.privacy.siteLocations.keywords')}),
+      ], {footer: L('settings.privacy.location.footer')}),
       group('tracking', L('settings.privacy.tracking.title'), [
         ...(b ? [entry('stripTrackingParameters', L('settings.privacy.stripTrackingParameters.title'),
                        switchControl(b.stripTrackingParameters, (value) => {
