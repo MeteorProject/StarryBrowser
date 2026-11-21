@@ -51,8 +51,13 @@ else
     printf '%s\n' "$want" > "$stamp"
 fi
 
-if [ "$(uname -s)" = Linux ] &&
-    ! python3 "$CHROMIUM_SRC/build/install-build-deps.py" --quick-check; then
-    starry_die "编译机缺 Chromium $CHROMIUM_VERSION 要的系统包（见上面的列表）：重建编译机的镜像后重跑"
+if [ "$(uname -s)" = Linux ]; then
+    # install-build-deps.py 靠 apt 的软件包列表判断该用哪个包名（libpng16-16t64 还是 libpng12-0），
+    # 列表被删掉（镜像里常见）时会全部报成缺包，只好跳过
+    if ! ls /var/lib/apt/lists/ 2>/dev/null | grep -q '_Packages'; then
+        starry_log "没有 apt 软件包列表，跳过系统依赖检查"
+    elif ! python3 "$CHROMIUM_SRC/build/install-build-deps.py" --quick-check; then
+        starry_die "编译机缺 Chromium $CHROMIUM_VERSION 要的系统包（见上面的列表）：重建编译机的镜像后重跑"
+    fi
 fi
 starry_log "源码就绪：$CHROMIUM_SRC"
