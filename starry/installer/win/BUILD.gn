@@ -1,0 +1,82 @@
+# Copyright 2026 The Starry Browser Authors
+
+# Windows installer UI wrapping //chrome/installer/mini_installer as an
+# embedded resource.
+
+import("//chrome/process_version_rc_template.gni")
+
+assert(is_win)
+
+_l10n_dir = "//starry/browser/resources/l10n"
+
+action("strings") {
+  script = "generate_strings.py"
+  inputs = [
+    "$_l10n_dir/en.json",
+    "$_l10n_dir/ja.json",
+    "$_l10n_dir/ko.json",
+    "$_l10n_dir/zh-Hans.json",
+    "$_l10n_dir/zh-Hant.json",
+  ]
+  outputs = [ "$target_gen_dir/installer_strings.h" ]
+  args = [
+    "--l10n-dir",
+    rebase_path(_l10n_dir, root_build_dir),
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+process_version_rc_template("version") {
+  template_file = "starry_setup_exe_version.rc.version"
+  output = "$target_gen_dir/starry_setup_exe_version.rc"
+}
+
+source_set("resources") {
+  sources = [
+    "resource.h",
+    "starry_setup.rc",
+  ]
+
+  # rc only tracks #includes; list the embedded files so that changes to them
+  # rebuild the resources.
+  inputs = [
+    "$root_out_dir/mini_installer.exe",
+    "//chrome/app/theme/chromium/product_logo_256.png",
+    "//chrome/app/theme/chromium/win/chromium.ico",
+  ]
+  deps = [ "//chrome/installer/mini_installer" ]
+}
+
+executable("starry_setup") {
+  sources = [
+    "install.cc",
+    "install.h",
+    "setup_main.cc",
+    "setup_window.cc",
+    "setup_window.h",
+    "strings.cc",
+    "strings.h",
+  ]
+  sources += get_target_outputs(":strings")
+
+  configs -= [ "//build/config/win:console" ]
+  configs += [ "//build/config/win:windowed" ]
+
+  deps = [
+    ":resources",
+    ":strings",
+    ":version",
+    "//build/win:default_exe_manifest",
+    "//starry/common:platform_branding",
+    "//starry/common:version",
+  ]
+  libs = [
+    "d2d1.lib",
+    "dwmapi.lib",
+    "dwrite.lib",
+    "ole32.lib",
+    "shell32.lib",
+    "windowscodecs.lib",
+  ]
+}

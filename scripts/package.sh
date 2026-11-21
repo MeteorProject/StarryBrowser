@@ -12,8 +12,8 @@
 #     --notary-profile <名字>
 #                          公证：xcrun notarytool store-credentials 存的钥匙串配置名。
 #                          要配合 Developer ID 证书，会等 Apple 的结果并把票据钉进 DMG
-# Windows：Chromium 的安装程序 mini_installer.exe（还没有签名）和免安装的 zip。在 Linux 上交叉编译用
-#     --config Release-Win。
+# Windows：安装程序 setup.exe（starry/installer/win，外面一层窗口，里面是 Chromium 的
+#     mini_installer.exe；还没有签名）和免安装的 zip。在 Linux 上交叉编译用 --config Release-Win。
 # Linux：Chromium 的 .deb 和 .rpm（装 rpmbuild 才有 .rpm）。
 #   平台标识从 starry/app/theme/BRANDING 生成。
 # 打哪个平台的包看构建目录的 target_os / target_cpu，没写就是编译机自己的平台。
@@ -185,11 +185,12 @@ package_mac() {
 }
 
 package_win() {
-    build_targets chrome mini_installer
-    local installer="$out/mini_installer.exe"
-    [ -f "$installer" ] || starry_die "没有 ${installer}"
-    cp "$installer" "$dist/$name-$version-win-$arch-installer.exe"
-    starry_log "完成：$dist/$name-$version-win-$arch-installer.exe（没有签名）"
+    build_targets chrome mini_installer starry/installer/win:starry_setup
+    # 安装程序：mini_installer.exe 嵌在里面，不再单独发布（批量部署用 setup.exe --silent）。
+    local setup="$out/starry_setup.exe"
+    [ -f "$setup" ] || starry_die "没有 ${setup}"
+    cp "$setup" "$dist/$name-$version-win-$arch-setup.exe"
+    starry_log "完成：$dist/$name-$version-win-$arch-setup.exe（没有签名）"
 
     # 免安装版：mini_installer 打包前的暂存目录，和安装后的 Application 目录是同一套文件，
     # 解压就能运行。用户数据还是在 %LOCALAPPDATA% 下，和安装版共用。

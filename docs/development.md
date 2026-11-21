@@ -106,6 +106,8 @@ scripts/package.sh --identity "Developer ID Application: …" --notary-profile <
 scripts/package.sh --config Release-Win             # 在 Linux 上交叉编译 Windows 版（见下文「发版」）
 ```
 
+- Windows 版产出 `-setup.exe` 和 `-portable.zip`。`-setup.exe` 是 [`starry/installer/win`](../starry/installer/win) 的安装程序：一个星空窗口，里面嵌着 Chromium 的 `mini_installer.exe`，安装、注册和卸载项仍由它完成；文字取自 l10n 里的 `installer.*` 键。批量部署可用 `--silent`（可加 `--system-level`、`--no-desktop-shortcut`），返回安装器的退出码。`-portable.zip` 解压即用，用户数据与安装版共用 `%LOCALAPPDATA%\Starry Browser\User Data`。
+
 ## 发版
 
 推送 `v<版本>` tag（须与 `starry/VERSION` 一致）后，[`.github/workflows/release.yml`](../.github/workflows/release.yml) 在自托管的 Linux 编译机上打包 Linux 版（`Release`）和 Windows 版（`Release-Win`，交叉编译），并上传到 GitHub Release `v<版本>`。手动运行该 workflow 只编译打包、不发版，可用于预热编译缓存。macOS 版在 Mac 上打包后手动上传到同一个 Release：

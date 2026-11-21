@@ -1,0 +1,8 @@
+// Copyright 2026 The Starry Browser Authors
+
+#include "starry/installer/win/resource.h"
+
+// Resolved via rc's search order (source root for themes, build dir for payload).
+IDI_STARRY_SETUP ICON "chrome/app/theme/chromium/win/chromium.ico"
+IDR_STARRY_LOGO RCDATA "chrome/app/theme/chromium/product_logo_256.png"
+IDR_STARRY_PAYLOAD RCDATA "mini_installer.exe"

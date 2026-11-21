@@ -1,5 +1,5 @@
 diff --git a/chrome/installer/mini_installer/BUILD.gn b/chrome/installer/mini_installer/BUILD.gn
-index df9408bb16..dbb37550aa 100644
+index df9408bb16..fe547494e9 100644
 --- a/chrome/installer/mini_installer/BUILD.gn
 +++ b/chrome/installer/mini_installer/BUILD.gn
 @@ -7,6 +7,8 @@ import("//build/config/python.gni")
@@ -51,3 +51,13 @@ index df9408bb16..dbb37550aa 100644
      "//third_party/icu:icudata",
    ]
  
+@@ -387,3 +399,9 @@ if (!(is_component_build && is_debug && target_cpu == "x86") &&
+     ]
+   }
+ }
++
++# Starry's installer window around mini_installer.exe. Listed here so that GN
++# loads //starry/installer/win.
++group("starry_setup") {
++  deps = [ "//starry/installer/win:starry_setup" ]
++}
