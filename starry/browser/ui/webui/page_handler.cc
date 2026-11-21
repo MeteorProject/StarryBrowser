@@ -131,15 +131,15 @@ ButtonVariant VariantByName(std::string_view name) {
 
 WindowOpenDisposition DispositionByName(std::string_view target) {
   if (target == "foreground") {
-    return WindowOpenDisposition::NEW_FOREGROUND_TAB;
+    return WindowOpenDisposition::kNewForegroundTab;
   }
   if (target == "background") {
-    return WindowOpenDisposition::NEW_BACKGROUND_TAB;
+    return WindowOpenDisposition::kNewBackgroundTab;
   }
   if (target == "window") {
-    return WindowOpenDisposition::NEW_WINDOW;
+    return WindowOpenDisposition::kNewWindow;
   }
-  return WindowOpenDisposition::CURRENT_TAB;
+  return WindowOpenDisposition::kCurrentTab;
 }
 
 }  // namespace

@@ -1,5 +1,5 @@
 diff --git a/content/browser/client_hints/client_hints.cc b/content/browser/client_hints/client_hints.cc
-index 1eae0a9aa9..ce8387aae1 100644
+index 73ed90c580..cc672fa140 100644
 --- a/content/browser/client_hints/client_hints.cc
 +++ b/content/browser/client_hints/client_hints.cc
 @@ -51,6 +51,7 @@
@@ -18,7 +18,7 @@ index 1eae0a9aa9..ce8387aae1 100644
      ClientHintsControllerDelegate* delegate,
      bool is_ua_override_on,
      FrameTreeNode* ftn_for_web_contents_override,
-@@ -711,6 +713,8 @@ void UpdateNavigationRequestClientUaHeadersImpl(
+@@ -712,6 +714,8 @@ void UpdateNavigationRequestClientUaHeadersImpl(
    if (!disable_due_to_custom_ua) {
      if (!ua_metadata.has_value())
        ua_metadata = delegate->GetUserAgentMetadata();
@@ -27,7 +27,7 @@ index 1eae0a9aa9..ce8387aae1 100644
  
      // The `Sec-CH-UA` client hint is attached to all outgoing requests. This is
      // (intentionally) different than other client hints.
-@@ -845,8 +849,9 @@ void UpdateNavigationRequestClientUaHeaders(
+@@ -846,8 +850,9 @@ void UpdateNavigationRequestClientUaHeaders(
    // the DevTools UA override logic.
    ClientHintsExtendedData data(origin, frame_tree_node, delegate);
    UpdateNavigationRequestClientUaHeadersImpl(
@@ -39,7 +39,7 @@ index 1eae0a9aa9..ce8387aae1 100644
        /*ftn_for_devtools_override=*/frame_tree_node);
  }
  namespace {
-@@ -910,9 +915,10 @@ void AddRequestClientHintsHeaders(
+@@ -911,9 +916,10 @@ void AddRequestClientHintsHeaders(
    if (ShouldAddClientHint(data, WebClientHintsType::kEct_DEPRECATED)) {
      AddEctHeader(headers, network_quality_tracker, url);
    }

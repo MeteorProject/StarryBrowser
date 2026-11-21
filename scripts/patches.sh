@@ -16,6 +16,10 @@ source "$(dirname "$0")/env.sh"
 starry_require_src
 
 PATCHES="$STARRY_ROOT/patches"
+# sync.sh can verify and revert the previously recorded patch set on upgrades.
+case "${1:-}" in
+    check|revert) PATCHES="${2:-$PATCHES}" ;;
+esac
 mkdir -p "$PATCHES"
 
 git_src() { git -C "$CHROMIUM_SRC" -c core.quotepath=off "$@"; }
@@ -67,12 +71,16 @@ write_patches() {
 
 cmd_apply() {
     link_overlay
-    local p n=0
+    local p
+    local -a files=()
     while IFS= read -r p; do
-        git_src apply --whitespace=nowarn "$p" || starry_die "Patch does not apply: ${p#"$PATCHES"/} (upstream changed; update it by hand)"
-        n=$((n + 1))
+        files+=("$p")
     done < <(patch_files)
-    starry_log "Applied $n patches"
+    if [ "${#files[@]}" -gt 0 ]; then
+        # Read one diff so Git checks every file before writing any changes.
+        cat "${files[@]}" | git_src apply --whitespace=nowarn -
+    fi
+    starry_log "Applied ${#files[@]} patches"
 }
 
 cmd_revert() {

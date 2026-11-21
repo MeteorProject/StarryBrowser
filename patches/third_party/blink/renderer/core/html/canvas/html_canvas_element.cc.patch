@@ -1,5 +1,5 @@
 diff --git a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
-index 3da40c38fa..125e7b6f9a 100644
+index 5d9d963d79..2ef5ffe504 100644
 --- a/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
 +++ b/third_party/blink/renderer/core/html/canvas/html_canvas_element.cc
 @@ -48,6 +48,7 @@
@@ -10,7 +10,7 @@ index 3da40c38fa..125e7b6f9a 100644
  #include "third_party/blink/public/common/features.h"
  #include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
  #include "third_party/blink/public/mojom/gpu/gpu.mojom-blink.h"
-@@ -1434,6 +1435,8 @@ String HTMLCanvasElement::ToDataURLInternal(
+@@ -1437,6 +1438,8 @@ String HTMLCanvasElement::ToDataURLInternal(
        ImageEncoderUtils::ToEncodingMimeType(mime_type);
  
    scoped_refptr<StaticBitmapImage> image_bitmap = Snapshot(source_buffer);

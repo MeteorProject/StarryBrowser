@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/browser_actions.cc b/chrome/browser/ui/browser_actions.cc
-index 3c89142611..502223b67b 100644
+index d716fe0590..8fd6b97c02 100644
 --- a/chrome/browser/ui/browser_actions.cc
 +++ b/chrome/browser/ui/browser_actions.cc
 @@ -4,6 +4,8 @@
@@ -11,7 +11,7 @@ index 3c89142611..502223b67b 100644
  #include <memory>
  #include <optional>
  #include <string>
-@@ -1261,6 +1263,9 @@ void BrowserActions::InitializeChromeMenuActions() {
+@@ -1356,6 +1358,9 @@ void BrowserActions::InitializeChromeMenuActions() {
            base::BindRepeating(
                [](BrowserWindowInterface* bwi, actions::ActionItem* item,
                   actions::ActionInvocationContext context) {
@@ -21,7 +21,7 @@ index 3c89142611..502223b67b 100644
                  chrome::NewTab(bwi, NewTabTypes::kNewTabCommand);
                },
                bwi))
-@@ -1788,6 +1793,9 @@ void BrowserActions::InitializeChromeMenuActions() {
+@@ -1876,6 +1881,9 @@ void BrowserActions::InitializeChromeMenuActions() {
            base::BindRepeating(
                [](BrowserWindowInterface* bwi, actions::ActionItem* item,
                   actions::ActionInvocationContext context) {
@@ -31,7 +31,7 @@ index 3c89142611..502223b67b 100644
                  BrowserSelectFileDialogController::From(bwi)->OpenFile();
                },
                bwi))
-@@ -3048,6 +3056,9 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
+@@ -3104,6 +3112,9 @@ void BrowserActions::InitializeToolbarAndMiscActions() {
                [](BrowserWindowInterface* bwi, actions::ActionItem* item,
                   actions::ActionInvocationContext context) {
                  base::RecordAction(base::UserMetricsAction("CloseTabByKey"));

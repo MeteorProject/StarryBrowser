@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/thumbnails/thumbnail_scheduler_impl.cc b/chrome/browser/ui/thumbnails/thumbnail_scheduler_impl.cc
-index 4d2a624390..219aa641df 100644
+index 516d52261c..f04a61e06e 100644
 --- a/chrome/browser/ui/thumbnails/thumbnail_scheduler_impl.cc
 +++ b/chrome/browser/ui/thumbnails/thumbnail_scheduler_impl.cc
 @@ -10,6 +10,7 @@
@@ -14,8 +14,8 @@ index 4d2a624390..219aa641df 100644
    TabCapturePriority priority = TabCapturePriority::kNone;
  };
  
--struct ThumbnailSchedulerImpl::TabNode : public base::LinkNode<TabNode> {
-+struct ThumbnailSchedulerImpl::TabNode : public base::LinkNode<TabNode>,
+-struct ThumbnailSchedulerImpl::TabNode : public base::SafeLinkNode<TabNode> {
++struct ThumbnailSchedulerImpl::TabNode : public base::SafeLinkNode<TabNode>,
 +                                         public starry::ThumbnailCaptureState {
    raw_ptr<TabCapturer> capturer = nullptr;
    TabSchedulingData data;
@@ -23,7 +23,7 @@ index 4d2a624390..219aa641df 100644
  };
  
  ThumbnailSchedulerImpl::ThumbnailSchedulerImpl(int max_total_captures,
-@@ -173,15 +174,7 @@ void ThumbnailSchedulerImpl::Schedule(TabNode* tab_node,
+@@ -183,15 +184,7 @@ void ThumbnailSchedulerImpl::Schedule(TabNode* tab_node,
      lo_prio_capture_count_ += 1;
    }
  

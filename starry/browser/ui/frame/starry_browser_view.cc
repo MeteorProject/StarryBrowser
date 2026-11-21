@@ -1301,7 +1301,7 @@ void StarryBrowserView::NewTab() {
   }
   NavigateParams params(browser(), GURL(chrome::kChromeUINewTabURL),
                         ui::PAGE_TRANSITION_TYPED);
-  params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+  params.disposition = WindowOpenDisposition::kNewForegroundTab;
   Navigate(&params);
   tabs::TabInterface* tab = browser()->GetActiveTabInterface();
   if (tab) {
@@ -1424,7 +1424,7 @@ void StarryBrowserView::StartOnboarding() {
   if (index == TabStripModel::kNoTab) {
     NavigateParams params(browser(), onboarding::WelcomeURL(),
                           ui::PAGE_TRANSITION_AUTO_TOPLEVEL);
-    params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+    params.disposition = WindowOpenDisposition::kNewForegroundTab;
     params.tabstrip_index = 0;
     params.tabstrip_add_types =
         AddTabTypes::ADD_ACTIVE | AddTabTypes::ADD_FORCE_INDEX;

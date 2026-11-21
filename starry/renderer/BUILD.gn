@@ -39,6 +39,7 @@ source_set("renderer") {
     "media/youtube_media_session.h",
     "starry_content_renderer_client.cc",
     "starry_content_renderer_client.h",
+    "web_time_zone.h",
     "web_time_zone_agent.cc",
     "web_time_zone_agent.h",
   ]

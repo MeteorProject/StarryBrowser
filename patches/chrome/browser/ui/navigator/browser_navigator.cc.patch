@@ -1,17 +1,17 @@
 diff --git a/chrome/browser/ui/navigator/browser_navigator.cc b/chrome/browser/ui/navigator/browser_navigator.cc
-index 1e98a3d7cb..373ec3beed 100644
+index d5d5691f0b..ef482fcbe0 100644
 --- a/chrome/browser/ui/navigator/browser_navigator.cc
 +++ b/chrome/browser/ui/navigator/browser_navigator.cc
-@@ -75,6 +75,8 @@
+@@ -77,6 +77,8 @@
  #include "content/public/browser/site_isolation_policy.h"
  #include "content/public/browser/web_contents.h"
  #include "extensions/buildflags/buildflags.h"
 +#include "starry/browser/starry_hooks.h"  // nogncheck
 +#include "starry/common/internal_urls.h"  // nogncheck
- #include "ui/base/page_transition_types.h"
- #include "ui/base/window_open_disposition.h"
- #include "ui/display/display.h"
-@@ -253,6 +255,10 @@ BrowserWindowCreateParams::ValueSpecified GetOriginSpecified(
+ #include "third_party/blink/public/common/features_generated.h"
+ #include "third_party/blink/public/common/permissions/permission_utils.h"
+ #include "third_party/blink/public/mojom/window_features/window_features.mojom.h"
+@@ -306,6 +308,10 @@ split_tabs::SplitTabVisualData GetWindowOpenSplitTabVisualData(
  std::tuple<BrowserWindowInterface*, int> GetBrowserAndTabForDisposition(
      const NavigateParams& params,
      const AdditionalParams& additional_params) {
@@ -22,7 +22,7 @@ index 1e98a3d7cb..373ec3beed 100644
    Profile* profile = params.initiating_profile;
    const bool should_trigger_session_restore =
        params.should_trigger_session_restore;
-@@ -1017,6 +1023,8 @@ base::WeakPtr<content::NavigationHandle> NavigateImpl(
+@@ -1092,6 +1098,8 @@ base::WeakPtr<content::NavigationHandle> NavigateImpl(
        }
      }
      // The navigation should insert a new tab into the target Browser.
@@ -31,7 +31,7 @@ index 1e98a3d7cb..373ec3beed 100644
      params->browser->GetTabStripModel()->AddTab(
          std::move(tab_to_insert), params->tabstrip_index, params->transition,
          params->tabstrip_add_types, group);
-@@ -1144,6 +1152,7 @@ base::WeakPtr<content::NavigationHandle> ShowTabModalPopup(
+@@ -1239,6 +1247,7 @@ base::WeakPtr<content::NavigationHandle> ShowTabModalPopup(
  }  // namespace internal
  
  base::WeakPtr<content::NavigationHandle> Navigate(NavigateParams* params) {

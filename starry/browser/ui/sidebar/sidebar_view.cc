@@ -676,7 +676,7 @@ void SidebarView::CommitAddress(const std::u16string& text) {
       browser_, match.destination_url,
       ui::PageTransitionFromInt(match.transition |
                                 ui::PAGE_TRANSITION_FROM_ADDRESS_BAR));
-  params.disposition = WindowOpenDisposition::CURRENT_TAB;
+  params.disposition = WindowOpenDisposition::kCurrentTab;
   Navigate(&params);
   FocusActiveTab();
 }

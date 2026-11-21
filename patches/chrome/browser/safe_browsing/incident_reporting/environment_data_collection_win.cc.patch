@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/safe_browsing/incident_reporting/environment_data_collection_win.cc b/chrome/browser/safe_browsing/incident_reporting/environment_data_collection_win.cc
-index a9efe9238d..eba959bd13 100644
+index 50726a8b2c..87d714fed6 100644
 --- a/chrome/browser/safe_browsing/incident_reporting/environment_data_collection_win.cc
 +++ b/chrome/browser/safe_browsing/incident_reporting/environment_data_collection_win.cc
 @@ -24,6 +24,7 @@

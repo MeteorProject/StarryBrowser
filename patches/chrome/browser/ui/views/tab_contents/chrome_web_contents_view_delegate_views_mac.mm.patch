@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
-index 564c8c000c..61a23bac3d 100644
+index c9e1734658..7c0a728c33 100644
 --- a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
 +++ b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
 @@ -29,6 +29,7 @@

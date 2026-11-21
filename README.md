@@ -3,7 +3,7 @@
   <h1>Starry Browser</h1>
   <p>兼顾清爽体验与高效工作流的现代桌面浏览器。</p>
   <p>
-    <a href="chromium.version"><img src="https://img.shields.io/badge/Chromium-157.0.8103.51-4285F4?logo=googlechrome&logoColor=white" alt="Chromium 157.0.8103.51"></a>
+    <a href="chromium.version"><img src="https://img.shields.io/badge/Chromium-158.0.8127.37-4285F4?logo=googlechrome&logoColor=white" alt="Chromium 158.0.8127.37"></a>
     <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-475569" alt="Platform: macOS | Windows">
     <img src="https://img.shields.io/badge/Native%20UI-C%2B%2B-00599C?logo=cplusplus&logoColor=white" alt="Native UI: C++">
     <img src="https://img.shields.io/badge/MCP-Supported-0D9488" alt="MCP Supported">

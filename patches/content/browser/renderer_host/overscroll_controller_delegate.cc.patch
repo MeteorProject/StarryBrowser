@@ -1,11 +1,17 @@
 diff --git a/content/browser/renderer_host/overscroll_controller_delegate.cc b/content/browser/renderer_host/overscroll_controller_delegate.cc
-index 62625a5695..528fffac9e 100644
+index 62625a5695..f817c60040 100644
 --- a/content/browser/renderer_host/overscroll_controller_delegate.cc
 +++ b/content/browser/renderer_host/overscroll_controller_delegate.cc
-@@ -9,6 +9,13 @@ namespace content {
+@@ -9,6 +9,19 @@ namespace content {
  OverscrollControllerDelegate::OverscrollControllerDelegate() = default;
  OverscrollControllerDelegate::~OverscrollControllerDelegate() = default;
  
++bool OverscrollControllerDelegate::OnOverscrollUpdateWithVerticalDelta(
++    float delta_x,
++    float delta_y) {
++  return OnOverscrollUpdate(delta_x);
++}
++
 +bool OverscrollControllerDelegate::KeepsOverscrollMode() const {
 +  return false;
 +}

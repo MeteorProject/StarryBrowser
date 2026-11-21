@@ -446,7 +446,7 @@ BrowserWindowInterface* Open(Profile* profile, const GURL& url) {
     return nullptr;
   }
   NavigateParams params(mini, url, ui::PAGE_TRANSITION_AUTO_TOPLEVEL);
-  params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+  params.disposition = WindowOpenDisposition::kNewForegroundTab;
   params.window_action = NavigateParams::WindowAction::kShowWindow;
   Navigate(&params);
   return mini;
@@ -672,9 +672,9 @@ BrowserWindowInterface* MiniWindowForNavigation(const NavigateParams& params) {
     return nullptr;
   }
   switch (params.disposition) {
-    case WindowOpenDisposition::NEW_FOREGROUND_TAB:
-    case WindowOpenDisposition::NEW_POPUP:
-    case WindowOpenDisposition::NEW_WINDOW:
+    case WindowOpenDisposition::kNewForegroundTab:
+    case WindowOpenDisposition::kNewPopup:
+    case WindowOpenDisposition::kNewWindow:
       break;
     default:
       return nullptr;

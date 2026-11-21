@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/ui/tabs/tab_strip_model.h b/chrome/browser/ui/tabs/tab_strip_model.h
-index 479fe42eb6..f92b56fbe5 100644
+index 8fae54e33d..93a5924be8 100644
 --- a/chrome/browser/ui/tabs/tab_strip_model.h
 +++ b/chrome/browser/ui/tabs/tab_strip_model.h
-@@ -645,6 +645,9 @@ class TabStripModel {
+@@ -644,6 +644,9 @@ class TabStripModel {
            std::nullopt);
  
    // Updates the ratio for the tabs with `split_id` and notifies observers.

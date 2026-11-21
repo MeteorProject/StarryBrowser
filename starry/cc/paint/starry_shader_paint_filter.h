@@ -115,7 +115,6 @@ class CC_PAINT_EXPORT StarryShaderPaintFilter final : public PaintFilter {
   // local matrix：按实际 render surface 的倍率重建取样坐标，再只套平移。
   sk_sp<SkImageFilter> MakeWithLocalMatrix(const SkMatrix& matrix) const;
 
-  gfx::ContentColorUsage GetContentColorUsage() const override;
   size_t SerializedSize() const override;
   bool EqualsForTesting(const StarryShaderPaintFilter& other) const;
 

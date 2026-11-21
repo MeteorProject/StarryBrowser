@@ -1,16 +1,16 @@
 diff --git a/chrome/browser/shell_integration_linux.cc b/chrome/browser/shell_integration_linux.cc
-index bc6dc20d5b..28616ddd9d 100644
+index 1a0f12ac33..24ecc97b2c 100644
 --- a/chrome/browser/shell_integration_linux.cc
 +++ b/chrome/browser/shell_integration_linux.cc
-@@ -48,6 +48,7 @@
+@@ -54,6 +54,7 @@
  #include "chrome/common/chrome_switches.h"
  #include "chrome/grit/branded_strings.h"
  #include "components/version_info/version_info.h"
 +#include "starry/common/branding.h"
+ #include "content/public/browser/browser_thread.h"
  #include "third_party/libxml/chromium/xml_writer.h"
  #include "third_party/re2/src/re2/re2.h"
- #include "ui/base/l10n/l10n_util.h"
-@@ -471,7 +472,8 @@ std::string GetIconName() {
+@@ -581,7 +582,8 @@ std::string GetIconName() {
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
    return "google-chrome";
  #else  // BUILDFLAG(CHROMIUM_BRANDING)
@@ -20,7 +20,7 @@ index bc6dc20d5b..28616ddd9d 100644
  #endif
  }
  
-@@ -885,7 +887,7 @@ std::string GetDirectLaunchUrlScheme() {
+@@ -1040,7 +1042,7 @@ std::string GetDirectLaunchUrlScheme() {
        return "google-chrome";
    }
  #else

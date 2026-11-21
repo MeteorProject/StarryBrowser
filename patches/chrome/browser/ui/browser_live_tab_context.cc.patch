@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/browser_live_tab_context.cc b/chrome/browser/ui/browser_live_tab_context.cc
-index d48ee3c659..93407c2fbb 100644
+index cc8786f0d1..6fa9180dd2 100644
 --- a/chrome/browser/ui/browser_live_tab_context.cc
 +++ b/chrome/browser/ui/browser_live_tab_context.cc
 @@ -3,6 +3,7 @@
@@ -10,16 +10,15 @@ index d48ee3c659..93407c2fbb 100644
  
  #include <algorithm>
  #include <memory>
-@@ -200,6 +201,8 @@ std::map<std::string, std::string> BrowserLiveTabContext::GetExtraDataForTab(
- 
-   glic::PopulateGlicExtraData(tab_strip_model_->GetTabAtIndex(index),
-                               &extra_data);
-+  starry::AddTabExtraData(tab_strip_model_->GetWebContentsAt(index),
-+                          tab_strip_model_->IsTabPinned(index), &extra_data);
+@@ -207,6 +208,7 @@ std::map<std::string, std::string> BrowserLiveTabContext::GetExtraDataForTab(
+               &browser_.get())) {
+     extra_data.merge(contextual_tasks_controller->GetTabRestoreData(tab));
+   }
++  starry::AddTabExtraData(tab->GetContents(), tab->IsPinned(), &extra_data);
  
    return extra_data;
  }
-@@ -493,6 +496,25 @@ void BrowserLiveTabContext::ReconstructSplit(
+@@ -511,6 +513,25 @@ void BrowserLiveTabContext::ReconstructSplit(
    }
  }
  

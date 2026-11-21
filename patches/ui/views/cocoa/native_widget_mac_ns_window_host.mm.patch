@@ -1,8 +1,8 @@
 diff --git a/ui/views/cocoa/native_widget_mac_ns_window_host.mm b/ui/views/cocoa/native_widget_mac_ns_window_host.mm
-index 352ef08958..2354bbb91a 100644
+index 74bbf49cd0..d5cbc9401c 100644
 --- a/ui/views/cocoa/native_widget_mac_ns_window_host.mm
 +++ b/ui/views/cocoa/native_widget_mac_ns_window_host.mm
-@@ -1069,6 +1069,19 @@ void HandleAccelerator(const ui::Accelerator& accelerator,
+@@ -1072,6 +1072,19 @@ void HandleAccelerator(const ui::Accelerator& accelerator,
    return text_input_host_->GetTextInputClient();
  }
  

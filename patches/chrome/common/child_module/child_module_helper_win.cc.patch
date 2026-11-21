@@ -1,0 +1,24 @@
+diff --git a/chrome/common/child_module/child_module_helper_win.cc b/chrome/common/child_module/child_module_helper_win.cc
+index 2d87caf6e0..3b68abcfb4 100644
+--- a/chrome/common/child_module/child_module_helper_win.cc
++++ b/chrome/common/child_module/child_module_helper_win.cc
+@@ -15,9 +15,9 @@
+ #include "base/strings/strcat.h"
+ #include "base/strings/string_util.h"
+ #include "base/win/sid.h"
+-#include "chrome/common/chrome_constants.h"
+ #include "components/base32/base32.h"
+ #include "crypto/hash.h"
++#include "starry/common/version.h"
+ 
+ namespace child_module {
+ 
+@@ -54,7 +54,7 @@ base::FilePath GetModulesDirForUser(const base::FilePath& user_path_component) {
+   if (!base::PathService::Get(base::DIR_EXE, &install_dir)) {
+     return base::FilePath();
+   }
+-  return GetModulesDirForUser(install_dir.AppendASCII(chrome::kChromeVersion),
++  return GetModulesDirForUser(install_dir.AppendASCII(starry::kWindowsVersion),
+                               user_path_component);
+ }
+ 

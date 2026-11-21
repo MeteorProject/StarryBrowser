@@ -339,8 +339,8 @@ void NewTabHandler::HandleRestoreClosed(const base::ListValue& args) {
   // 换掉这个新标签页（带着原来的前进后退），⌘ 点的开新标签。
   new_tab::RestoreClosed(Browser(),
                          SessionID::FromSerializedValue(static_cast<int>(id)),
-                         new_tab ? WindowOpenDisposition::NEW_BACKGROUND_TAB
-                                 : WindowOpenDisposition::CURRENT_TAB);
+                         new_tab ? WindowOpenDisposition::kNewBackgroundTab
+                                 : WindowOpenDisposition::kCurrentTab);
 }
 
 void NewTabHandler::HandleShortcut(const base::ListValue& args) {

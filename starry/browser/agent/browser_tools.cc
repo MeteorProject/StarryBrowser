@@ -3155,7 +3155,7 @@ void ToolRunner::Job::Perform(tabs::TabInterface* tab) {
     NavigateParams params(target,
                           url.is_empty() ? GURL(url::kAboutBlankURL) : url,
                           ui::PAGE_TRANSITION_LINK);
-    params.disposition = WindowOpenDisposition::NEW_BACKGROUND_TAB;
+    params.disposition = WindowOpenDisposition::kNewBackgroundTab;
     base::WeakPtr<content::NavigationHandle> handle = Navigate(&params);
     content::WebContents* contents = params.navigated_or_inserted_contents;
     tabs::TabInterface* opened =

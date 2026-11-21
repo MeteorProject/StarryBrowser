@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/views/permissions/permission_prompt_factory.cc b/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
-index 12bb0ac5fb..bff661e760 100644
+index 5f858c7bc0..48a19edf69 100644
 --- a/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
 +++ b/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
 @@ -38,6 +38,7 @@
@@ -8,15 +8,15 @@ index 12bb0ac5fb..bff661e760 100644
  #include "url/origin.h"
 +#include "starry/browser/starry_hooks.h"  // nogncheck
  
- #if BUILDFLAG(IS_MAC)
- #include "chrome/browser/ui/views/permissions/permission_prompt_notifications_mac.h"
-@@ -234,6 +235,9 @@ std::unique_ptr<permissions::PermissionPrompt> CreateNormalPrompt(
+ namespace {
+ 
+@@ -254,6 +255,9 @@ std::unique_ptr<permissions::PermissionPrompt> CreateNormalPrompt(
                 ? std::make_unique<EmbeddedPermissionPrompt>(web_contents,
                                                              delegate)
                 : nullptr;
 +  } else if (auto starry_prompt =
 +                 starry::CreatePermissionPrompt(web_contents, delegate)) {
 +    return starry_prompt;
-   } else if (ShouldUseChip(delegate) && IsLocationBarDisplayed(web_contents)) {
+   } else if (ShouldUseChip(web_contents, delegate) &&
+              IsLocationBarDisplayed(web_contents)) {
      return std::make_unique<PermissionPromptChip>(web_contents, delegate);
-   } else {

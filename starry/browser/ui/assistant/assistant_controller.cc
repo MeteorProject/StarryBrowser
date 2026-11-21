@@ -643,7 +643,7 @@ tabs::TabInterface* AssistantController::ClaimTab(
   }
   // 用户看着的标签被别的对话占着：后台开一份同样的网页给这个对话。
   NavigateParams params(view_->browser(), url, ui::PAGE_TRANSITION_LINK);
-  params.disposition = WindowOpenDisposition::NEW_BACKGROUND_TAB;
+  params.disposition = WindowOpenDisposition::kNewBackgroundTab;
   Navigate(&params);
   content::WebContents* contents = params.navigated_or_inserted_contents;
   tabs::TabInterface* opened =

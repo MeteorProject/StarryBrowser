@@ -1,5 +1,5 @@
 diff --git a/cc/paint/paint_filter.cc b/cc/paint/paint_filter.cc
-index c73044a739..db2668f55c 100644
+index 156f065952..2f8cc326cd 100644
 --- a/cc/paint/paint_filter.cc
 +++ b/cc/paint/paint_filter.cc
 @@ -22,6 +22,7 @@

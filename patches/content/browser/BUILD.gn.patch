@@ -1,8 +1,8 @@
 diff --git a/content/browser/BUILD.gn b/content/browser/BUILD.gn
-index bee9872ba3..1d9b827b07 100644
+index 5beda3489b..a3091799b4 100644
 --- a/content/browser/BUILD.gn
 +++ b/content/browser/BUILD.gn
-@@ -404,6 +404,15 @@ source_set("browser") {
+@@ -415,6 +415,15 @@ source_set("browser") {
  
    sources = [
      "$target_gen_dir/devtools/protocol/audits.cc",

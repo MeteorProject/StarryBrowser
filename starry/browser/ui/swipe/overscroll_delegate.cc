@@ -47,10 +47,6 @@ const char* ModeName(OverscrollMode mode) {
   switch (mode) {
     case content::OVERSCROLL_NONE:
       return "none";
-    case content::OVERSCROLL_NORTH:
-      return "north";
-    case content::OVERSCROLL_SOUTH:
-      return "south";
     case content::OVERSCROLL_WEST:
       return "west";
     case content::OVERSCROLL_EAST:
@@ -91,12 +87,17 @@ class StarryOverscrollDelegate
                   : gfx::Size();
   }
 
-  bool OnOverscrollUpdate(float delta_x, float delta_y) override {
+  bool OnOverscrollUpdate(float delta_x) override {
+    return OnOverscrollUpdateWithVerticalDelta(delta_x, 0.f);
+  }
+
+  bool OnOverscrollUpdateWithVerticalDelta(float delta_x,
+                                           float delta_y) override {
     if (absorbing_) {
       return true;
     }
     if (!swipe_) {
-      return fallback_ && fallback_->OnOverscrollUpdate(delta_x, delta_y);
+      return fallback_ && fallback_->OnOverscrollUpdate(delta_x);
     }
     const float dx = mode_ == content::OVERSCROLL_EAST ? delta_x : -delta_x;
     TrackVelocity(dx);
@@ -148,7 +149,7 @@ class StarryOverscrollDelegate
         if (!forward) {
           GetWebContents().BackNavigationLikely(
               content::preloading_predictor::kBackGestureNavigation,
-              WindowOpenDisposition::CURRENT_TAB);
+              WindowOpenDisposition::kCurrentTab);
         }
         return;
       }

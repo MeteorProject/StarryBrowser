@@ -1,8 +1,8 @@
 diff --git a/components/sessions/core/live_tab_context.h b/components/sessions/core/live_tab_context.h
-index 99c5a9b2d9..25d8f4d8b3 100644
+index f6daa879ed..8822a794f7 100644
 --- a/components/sessions/core/live_tab_context.h
 +++ b/components/sessions/core/live_tab_context.h
-@@ -108,6 +108,11 @@ class SESSIONS_EXPORT LiveTabContext {
+@@ -112,6 +112,11 @@ class SESSIONS_EXPORT LiveTabContext {
        split_tabs::SplitTabId split_id,
        const split_tabs::SplitTabVisualData& visual_data) = 0;
  

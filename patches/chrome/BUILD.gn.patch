@@ -1,5 +1,5 @@
 diff --git a/chrome/BUILD.gn b/chrome/BUILD.gn
-index f1d133b6cd..d2fc9e4849 100644
+index 06bfcf5a90..dbbd4dc720 100644
 --- a/chrome/BUILD.gn
 +++ b/chrome/BUILD.gn
 @@ -81,18 +81,20 @@ if (is_win && enable_resource_allowlist_generation) {
@@ -99,7 +99,7 @@ index f1d133b6cd..d2fc9e4849 100644
      extra_substitutions = [
        "CHROMIUM_BUNDLE_ID=$chrome_mac_bundle_id",
        "CHROMIUM_SHORT_NAME=$chrome_product_short_name",
-@@ -684,8 +714,8 @@ if (is_win) {
+@@ -698,8 +728,8 @@ if (is_win) {
  
    bundle_data("chrome_resources") {
      sources = [
@@ -109,7 +109,7 @@ index f1d133b6cd..d2fc9e4849 100644
      ]
      outputs = [ "{{bundle_resources_dir}}/{{source_file_part}}" ]
      public_deps = [
-@@ -693,6 +723,7 @@ if (is_win) {
+@@ -707,6 +737,7 @@ if (is_win) {
        ":chrome_app_strings",
        ":chrome_asset_catalog",
        "//components/policy:chrome_manifest_bundle",
@@ -117,7 +117,7 @@ index f1d133b6cd..d2fc9e4849 100644
      ]
    }
  
-@@ -1661,6 +1692,14 @@ group("dependencies") {
+@@ -1676,6 +1707,14 @@ group("dependencies") {
      "//v8:v8_headers",
    ]
  
@@ -132,7 +132,7 @@ index f1d133b6cd..d2fc9e4849 100644
    if (enable_printing) {
      public_deps += [ "//printing" ]
    }
-@@ -1679,12 +1718,22 @@ group("dependencies") {
+@@ -1694,12 +1733,22 @@ group("dependencies") {
  
  if (is_win) {
    process_version_rc_template("chrome_exe_version") {
@@ -157,7 +157,7 @@ index f1d133b6cd..d2fc9e4849 100644
      output = "$target_gen_dir/chrome_dll_version.rc"
    }
  
-@@ -1702,12 +1751,26 @@ if (is_win) {
+@@ -1717,12 +1766,26 @@ if (is_win) {
    }
  }
  
@@ -185,7 +185,7 @@ index f1d133b6cd..d2fc9e4849 100644
  
    if (is_chrome_branded) {
      sources += [
-@@ -1854,7 +1917,7 @@ if (is_android) {
+@@ -1869,7 +1932,7 @@ if (is_android) {
  if (is_win && enable_resource_allowlist_generation) {
    generate_resource_allowlist("resource_allowlist") {
      deps = [ ":chrome_dll" ]

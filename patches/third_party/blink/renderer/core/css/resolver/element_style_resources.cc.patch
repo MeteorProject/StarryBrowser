@@ -1,5 +1,5 @@
 diff --git a/third_party/blink/renderer/core/css/resolver/element_style_resources.cc b/third_party/blink/renderer/core/css/resolver/element_style_resources.cc
-index 31cc4f3060..4e8f0da94a 100644
+index 3f714f3972..25fdcb59df 100644
 --- a/third_party/blink/renderer/core/css/resolver/element_style_resources.cc
 +++ b/third_party/blink/renderer/core/css/resolver/element_style_resources.cc
 @@ -23,6 +23,7 @@

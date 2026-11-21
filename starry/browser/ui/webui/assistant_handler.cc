@@ -236,7 +236,7 @@ void AssistantHandler::HandleOpenLink(const base::ListValue& args) {
   }
   // 回答里的链接在这个窗口的新标签里打开。
   NavigateParams params(view->browser(), url, ui::PAGE_TRANSITION_LINK);
-  params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+  params.disposition = WindowOpenDisposition::kNewForegroundTab;
   Navigate(&params);
 }
 

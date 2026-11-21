@@ -1,8 +1,8 @@
 diff --git a/components/viz/service/BUILD.gn b/components/viz/service/BUILD.gn
-index 42fc3926fd..de1b059ccd 100644
+index f26d694210..e021e87e8b 100644
 --- a/components/viz/service/BUILD.gn
 +++ b/components/viz/service/BUILD.gn
-@@ -288,6 +288,12 @@ viz_component("service") {
+@@ -282,6 +282,12 @@ viz_component("service") {
  
    defines = [ "VIZ_SERVICE_IMPLEMENTATION" ]
  
@@ -12,6 +12,6 @@ index 42fc3926fd..de1b059ccd 100644
 +    "//starry/components/viz/glass_backdrop_pass.h",
 +  ]
 +
-   configs = [
-     "//build/config/compiler:wexit_time_destructors",
-     "//build/config/compiler:wglobal_constructors",
+   configs = [ "//build/config/compiler:wglobal_constructors" ]
+ 
+   deps = [

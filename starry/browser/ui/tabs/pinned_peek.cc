@@ -67,7 +67,7 @@ class PeekThrottle : public content::NavigationThrottle {
     }
     auto params = content::OpenURLParams::FromNavigationHandle(nav);
     params.frame_tree_node_id = content::FrameTreeNodeId();
-    params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+    params.disposition = WindowOpenDisposition::kNewForegroundTab;
     // Run once the cancelled navigation has unwound. Preserve the renderer
     // initiator and referrer for Chromium's normal new-tab navigation.
     base::SequencedTaskRunner::GetCurrentDefault()->PostTask(

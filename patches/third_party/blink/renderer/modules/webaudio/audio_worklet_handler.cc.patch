@@ -1,8 +1,8 @@
 diff --git a/third_party/blink/renderer/modules/webaudio/audio_worklet_handler.cc b/third_party/blink/renderer/modules/webaudio/audio_worklet_handler.cc
-index 26e4285b62..7b6995d580 100644
+index ec5e1c7800..8f7186c4d8 100644
 --- a/third_party/blink/renderer/modules/webaudio/audio_worklet_handler.cc
 +++ b/third_party/blink/renderer/modules/webaudio/audio_worklet_handler.cc
-@@ -52,6 +52,7 @@ AudioWorkletHandler::AudioWorkletHandler(
+@@ -51,6 +51,7 @@ AudioWorkletHandler::AudioWorkletHandler(
        name_(name),
        param_handler_map_(param_handler_map) {
    DCHECK(IsMainThread());
@@ -10,7 +10,7 @@ index 26e4285b62..7b6995d580 100644
  
    const uint32_t render_quantum_frames =
        GetDeferredTaskHandler().RenderQuantumFrames();
-@@ -143,6 +144,7 @@ void AudioWorkletHandler::Process(uint32_t frames_to_process) {
+@@ -142,6 +143,7 @@ void AudioWorkletHandler::Process(uint32_t frames_to_process) {
    for (unsigned i = 0; i < NumberOfInputs(); ++i) {
      inputs_[i] = Input(i).IsConnected() ? Input(i).Bus() : nullptr;
    }
@@ -18,7 +18,7 @@ index 26e4285b62..7b6995d580 100644
    bool allocation_failed = false;
    for (unsigned i = 0; i < NumberOfOutputs(); ++i) {
      if (!Output(i).IsConnectedDuringRendering()) {
-@@ -191,6 +193,7 @@ void AudioWorkletHandler::Process(uint32_t frames_to_process) {
+@@ -184,6 +186,7 @@ void AudioWorkletHandler::Process(uint32_t frames_to_process) {
          param_handler->HasSampleAccurateValues() && frames_to_process > 0) {
        base::span<float> param_values = param_buffer.first(frames_to_process);
        param_handler->CalculateSampleAccurateValues(param_values);

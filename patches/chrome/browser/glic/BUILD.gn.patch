@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/glic/BUILD.gn b/chrome/browser/glic/BUILD.gn
-index e42a0cebb3..08d754ce91 100644
+index bf461e67ba..bd2f2f724f 100644
 --- a/chrome/browser/glic/BUILD.gn
 +++ b/chrome/browser/glic/BUILD.gn
-@@ -626,6 +626,7 @@ source_set("impl") {
+@@ -655,6 +655,7 @@ source_set("impl") {
      "//extensions/buildflags",
      "//net",
      "//pdf:buildflags",

@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/browser_commands.cc b/chrome/browser/ui/browser_commands.cc
-index 365dcd789d..b0b96534c1 100644
+index 224dc66bf6..ee44d58cf3 100644
 --- a/chrome/browser/ui/browser_commands.cc
 +++ b/chrome/browser/ui/browser_commands.cc
 @@ -4,6 +4,8 @@
@@ -11,7 +11,7 @@ index 365dcd789d..b0b96534c1 100644
  #include <algorithm>
  #include <memory>
  #include <numeric>
-@@ -398,6 +400,8 @@ content::WebContents* DuplicateTabAt(BrowserWindowInterface* browser,
+@@ -404,6 +406,8 @@ content::WebContents* DuplicateTabAt(BrowserWindowInterface* browser,
      int add_types = AddTabTypes::ADD_ACTIVE | AddTabTypes::ADD_INHERIT_OPENER |
                      (pinned ? AddTabTypes::ADD_PINNED : 0);
      const auto old_group = tab_strip_model->GetTabGroupForTab(index);
@@ -20,7 +20,7 @@ index 365dcd789d..b0b96534c1 100644
      tab_strip_model->InsertWebContentsAt(dst_index, std::move(contents_dupe),
                                           add_types, old_group);
    } else {
-@@ -603,6 +607,9 @@ bool IsTabSelectable(
+@@ -594,6 +598,9 @@ bool IsTabSelectable(
        model->IsGroupCollapsed(tab->GetGroup().value())) {
      return false;
    }

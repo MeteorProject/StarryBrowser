@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/web_applications/BUILD.gn b/chrome/browser/web_applications/BUILD.gn
-index 0f477a1376..8a52cb8c3e 100644
+index 7799e77862..6f0d998ba7 100644
 --- a/chrome/browser/web_applications/BUILD.gn
 +++ b/chrome/browser/web_applications/BUILD.gn
-@@ -606,6 +606,7 @@ source_set("web_applications") {
+@@ -607,6 +607,7 @@ source_set("web_applications") {
      "//services/network/public/cpp",
      "//services/preferences/public/cpp",
      "//skia",

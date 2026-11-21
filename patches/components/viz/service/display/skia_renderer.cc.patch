@@ -1,8 +1,8 @@
 diff --git a/components/viz/service/display/skia_renderer.cc b/components/viz/service/display/skia_renderer.cc
-index f24bb85953..69ff592597 100644
+index 9e11ec5300..756ed77aa2 100644
 --- a/components/viz/service/display/skia_renderer.cc
 +++ b/components/viz/service/display/skia_renderer.cc
-@@ -71,6 +71,8 @@
+@@ -70,6 +70,8 @@
  #include "gpu/config/gpu_finch_features.h"
  #include "media/base/media_switches.h"
  #include "skia/ext/opacity_filter_canvas.h"
@@ -23,7 +23,7 @@ index f24bb85953..69ff592597 100644
    // Geometry from the bypassed RenderPassDrawQuad.
    std::optional<BypassGeometry> bypass_geometry;
  
-@@ -2553,6 +2560,15 @@ void SkiaRenderer::DrawSingleImage(const SkImage* image,
+@@ -2555,6 +2562,15 @@ void SkiaRenderer::DrawSingleImage(const SkImage* image,
    PrepareCanvas(params->scissor_rect, params->mask_filter_info,
                  &params->content_device_transform);
  
@@ -39,7 +39,7 @@ index f24bb85953..69ff592597 100644
    int matrix_index = -1;
    const SkMatrix* bypass_transform = nullptr;
    if (rpdq_params) {
-@@ -3124,6 +3140,13 @@ SkiaRenderer::DrawRPDQParams SkiaRenderer::CalculateRPDQParams(
+@@ -3126,6 +3142,13 @@ SkiaRenderer::DrawRPDQParams SkiaRenderer::CalculateRPDQParams(
        [](sk_sp<cc::PaintFilter> paint_filter,
           const SkMatrix& local_matrix) -> sk_sp<SkImageFilter> {
      if (paint_filter && paint_filter->cached_sk_filter_) {
@@ -53,7 +53,7 @@ index f24bb85953..69ff592597 100644
        return paint_filter->cached_sk_filter_->makeWithLocalMatrix(local_matrix);
      } else {
        return nullptr;
-@@ -3131,7 +3154,13 @@ SkiaRenderer::DrawRPDQParams SkiaRenderer::CalculateRPDQParams(
+@@ -3133,7 +3156,13 @@ SkiaRenderer::DrawRPDQParams SkiaRenderer::CalculateRPDQParams(
    };
  
    // Convert CC image filters into a SkImageFilter root node
@@ -68,7 +68,7 @@ index f24bb85953..69ff592597 100644
      auto paint_filter =
          cc::RenderSurfaceFilters::BuildImageFilter(quad->filters);
      rpdq_params.image_filter =
-@@ -3440,7 +3469,8 @@ void SkiaRenderer::DrawRenderPassQuad(
+@@ -3442,7 +3471,8 @@ void SkiaRenderer::DrawRenderPassQuad(
    // When the RPDQ was needed because of a copy request, it may not require any
    // advanced filtering/effects at which point it's basically a tiled quad.
    if (!rpdq_params.image_filter && !rpdq_params.backdrop_filter &&

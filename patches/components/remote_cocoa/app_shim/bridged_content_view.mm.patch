@@ -1,8 +1,8 @@
 diff --git a/components/remote_cocoa/app_shim/bridged_content_view.mm b/components/remote_cocoa/app_shim/bridged_content_view.mm
-index 06f9415fc3..18084ada20 100644
+index 848f75c567..a6d543efb6 100644
 --- a/components/remote_cocoa/app_shim/bridged_content_view.mm
 +++ b/components/remote_cocoa/app_shim/bridged_content_view.mm
-@@ -124,6 +124,16 @@ bool ShouldIgnoreAcceleratorWithMarkedText(NSEvent* event) {
+@@ -135,6 +135,16 @@ bool ShouldIgnoreAcceleratorWithMarkedText(NSEvent* event) {
  
  }  // namespace
  
@@ -16,10 +16,10 @@ index 06f9415fc3..18084ada20 100644
 +
 +}  // namespace remote_cocoa
 +
- @interface BridgedContentView ()
- 
- // Dispatch |event| to |bridge_|'s host.
-@@ -338,6 +348,24 @@ - (NSView*)hitTest:(NSPoint)point {
+ @interface BridgedContentView () {
+   // When the -[NSApp updateWindows] call that ended the last deferral started
+   // and returned. Null when no key event can still have waited for it.
+@@ -407,6 +417,24 @@ - (NSView*)hitTest:(NSPoint)point {
      return self;
    }
  

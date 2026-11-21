@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/startup/startup_browser_creator_impl.cc b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
-index 1e34f398af..b86f1f5479 100644
+index 6b030c1f66..d5b3e41efc 100644
 --- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc
 +++ b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
 @@ -4,6 +4,8 @@
@@ -11,7 +11,7 @@ index 1e34f398af..b86f1f5479 100644
  #include <stddef.h>
  
  #include <algorithm>
-@@ -439,6 +441,10 @@ BrowserWindowInterface* StartupBrowserCreatorImpl::OpenTabsInBrowser(
+@@ -436,6 +438,10 @@ BrowserWindowInterface* StartupBrowserCreatorImpl::OpenTabsInBrowser(
      add_types |= AddTabTypes::ADD_FORCE_INDEX;
      if (tab.type == StartupTab::Type::kPinned) {
        add_types |= AddTabTypes::ADD_PINNED;

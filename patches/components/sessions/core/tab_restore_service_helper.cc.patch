@@ -1,5 +1,5 @@
 diff --git a/components/sessions/core/tab_restore_service_helper.cc b/components/sessions/core/tab_restore_service_helper.cc
-index e013931c33..48dbf73383 100644
+index 956beba0a7..cdcac60149 100644
 --- a/components/sessions/core/tab_restore_service_helper.cc
 +++ b/components/sessions/core/tab_restore_service_helper.cc
 @@ -186,16 +186,20 @@ void ReconstructSplits(
@@ -33,7 +33,7 @@ index e013931c33..48dbf73383 100644
      }
    }
  }
-@@ -431,23 +435,19 @@ void TabRestoreServiceHelper::CreateHistoricalSplit(
+@@ -438,23 +442,19 @@ void TabRestoreServiceHelper::CreateHistoricalSplit(
  
    auto split = CreateHistoricalSplitImpl(context, id, split_tabs);
  
@@ -68,7 +68,7 @@ index e013931c33..48dbf73383 100644
    }
  }
  
-@@ -477,7 +477,7 @@ TabRestoreServiceHelper::CreateHistoricalSplitImpl(
+@@ -484,7 +484,7 @@ TabRestoreServiceHelper::CreateHistoricalSplitImpl(
      LiveTabContext* context,
      const split_tabs::SplitTabId& id,
      const std::vector<std::pair<int, LiveTab*>>& split_tabs) {
@@ -77,7 +77,7 @@ index e013931c33..48dbf73383 100644
      return nullptr;
    }
  
-@@ -595,17 +595,16 @@ bool TabRestoreServiceHelper::DeleteFromSplit(
+@@ -602,17 +602,16 @@ bool TabRestoreServiceHelper::DeleteFromSplit(
      Split* split,
      std::unique_ptr<Tab>& remaining_tab) {
    CHECK(ValidateSplit(*split));
@@ -102,7 +102,7 @@ index e013931c33..48dbf73383 100644
    }
    return false;
  }
-@@ -1178,7 +1177,7 @@ std::optional<std::vector<LiveTab*>> TabRestoreServiceHelper::RestoreEntryById(
+@@ -1185,7 +1184,7 @@ std::optional<std::vector<LiveTab*>> TabRestoreServiceHelper::RestoreEntryById(
      case tab_restore::Type::SPLIT: {
        auto& split = static_cast<tab_restore::Split&>(entry);
        CHECK(ValidateSplit(split));
@@ -111,7 +111,7 @@ index e013931c33..48dbf73383 100644
  
        if (entry_id_matches_restore_id) {
          if (split.timestamp != base::Time() &&
-@@ -1195,24 +1194,28 @@ std::optional<std::vector<LiveTab*>> TabRestoreServiceHelper::RestoreEntryById(
+@@ -1202,24 +1201,28 @@ std::optional<std::vector<LiveTab*>> TabRestoreServiceHelper::RestoreEntryById(
            live_tabs.push_back(restored_leading_tab->GetWeakPtr());
          }
  
@@ -157,7 +157,7 @@ index e013931c33..48dbf73383 100644
          }
  
        } else {
-@@ -1623,10 +1626,13 @@ TabRestoreServiceHelper::RestoreOneTabFromSplit(
+@@ -1632,10 +1635,13 @@ TabRestoreServiceHelper::RestoreOneTabFromSplit(
          live_tabs.push_back(restored_tab->GetWeakPtr());
        }
  
@@ -175,7 +175,7 @@ index e013931c33..48dbf73383 100644
        return remaining_tab;
      }
    }
-@@ -1713,11 +1719,11 @@ bool TabRestoreServiceHelper::ValidateGroup(const Group& group) {
+@@ -1722,11 +1728,11 @@ bool TabRestoreServiceHelper::ValidateGroup(const Group& group) {
  }
  
  bool TabRestoreServiceHelper::ValidateSplit(const Split& split) {
@@ -190,7 +190,7 @@ index e013931c33..48dbf73383 100644
  }
  
  bool TabRestoreServiceHelper::IsTabInteresting(const Tab& tab) {
-@@ -1750,11 +1756,12 @@ bool TabRestoreServiceHelper::IsGroupInteresting(const Group& group) {
+@@ -1759,11 +1765,12 @@ bool TabRestoreServiceHelper::IsGroupInteresting(const Group& group) {
  }
  
  bool TabRestoreServiceHelper::IsSplitInteresting(const Split& split) {

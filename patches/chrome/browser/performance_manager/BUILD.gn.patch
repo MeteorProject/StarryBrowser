@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/performance_manager/BUILD.gn b/chrome/browser/performance_manager/BUILD.gn
-index fd6dd416df..bc4b4b2484 100644
+index 022d8b5c42..7f21efd8fd 100644
 --- a/chrome/browser/performance_manager/BUILD.gn
 +++ b/chrome/browser/performance_manager/BUILD.gn
 @@ -269,6 +269,7 @@ source_set("impl") {

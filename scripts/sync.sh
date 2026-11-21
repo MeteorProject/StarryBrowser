@@ -51,17 +51,49 @@ solutions = [
 target_os = [$target_os_list]
 EOF
 
+tag="refs/tags/$CHROMIUM_VERSION"
+revision="$tag"
 if [ -d "$CHROMIUM_SRC/.git" ]; then
-    if [ "$force" = 0 ] && ! "$STARRY_ROOT/scripts/patches.sh" check; then
-        starry_die "src has changes that are not exported as patches: run scripts/patches.sh export first, or pass --force to discard them"
+    if ! git -C "$CHROMIUM_SRC" rev-parse --verify --quiet "$tag^{commit}" >/dev/null; then
+        git -C "$CHROMIUM_SRC" fetch --no-tags --depth=1 origin "$tag:$tag"
     fi
-    starry_log "Reverting old patches"
-    "$STARRY_ROOT/scripts/patches.sh" revert
+    # gclient treats ref names as unresolved on an existing checkout and fetches
+    # all remote branches. Pass the commit we just obtained from the release tag.
+    revision="$(git -C "$CHROMIUM_SRC" rev-parse --verify "$tag^{commit}")"
+    if [ -n "$(git -C "$CHROMIUM_SRC" status --porcelain --ignore-submodules=dirty)" ]; then
+        patches="$STARRY_ROOT/patches"
+        if [ "$force" = 0 ] && ! "$STARRY_ROOT/scripts/patches.sh" check; then
+            # After updating Starry, the applied patches can still match the
+            # last Starry revision on the old Chromium version.
+            old_tag="$(git -C "$CHROMIUM_SRC" describe --tags --exact-match HEAD 2>/dev/null || true)"
+            previous=""
+            if [ -n "$old_tag" ]; then
+                previous="$(git -C "$STARRY_ROOT" log -1 --format=%H -S"$old_tag" -- chromium.version)"
+            fi
+            baseline=HEAD
+            if [ "$(git -C "$STARRY_ROOT" show HEAD:chromium.version)" != "$old_tag" ]; then
+                baseline="$previous^"
+            fi
+            if [ -z "$old_tag" ] || ! git -C "$STARRY_ROOT" cat-file -e "$baseline:patches" 2>/dev/null ||
+                [ "$(git -C "$STARRY_ROOT" show "$baseline:chromium.version")" != "$old_tag" ]; then
+                starry_die "src has unexported changes; save them before syncing"
+            fi
+            old_patches="$(mktemp -d)"
+            trap 'rm -rf "$old_patches"' EXIT
+            git -C "$STARRY_ROOT" archive "$baseline" patches | tar -x -C "$old_patches"
+            patches="$old_patches/patches"
+            "$STARRY_ROOT/scripts/patches.sh" check "$patches" ||
+                starry_die "src differs from its recorded patches; save the changes before syncing"
+        fi
+        starry_log "Reverting old patches"
+        "$STARRY_ROOT/scripts/patches.sh" revert "$patches"
+    fi
 fi
 
 cd "$CHROMIUM_ROOT"
 starry_log "gclient sync to $CHROMIUM_VERSION"
-gclient sync --nohooks --no-history -D --force
+gclient sync --nohooks --no-history -D --force --revision "src@$revision"
+starry_src_at_pinned_version || starry_die "Chromium HEAD does not match refs/tags/$CHROMIUM_VERSION"
 if [ "$hooks" = 1 ]; then
     starry_map_win_toolchain
     starry_log "gclient runhooks"

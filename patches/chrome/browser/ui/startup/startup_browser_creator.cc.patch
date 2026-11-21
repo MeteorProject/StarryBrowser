@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/startup/startup_browser_creator.cc b/chrome/browser/ui/startup/startup_browser_creator.cc
-index 49f777ff63..6ef0cb73b0 100644
+index 0c7f221246..4ba147f34b 100644
 --- a/chrome/browser/ui/startup/startup_browser_creator.cc
 +++ b/chrome/browser/ui/startup/startup_browser_creator.cc
 @@ -4,6 +4,8 @@
@@ -11,9 +11,9 @@ index 49f777ff63..6ef0cb73b0 100644
  #include <stddef.h>
  
  #include <optional>
-@@ -754,6 +756,14 @@ void StartupBrowserCreator::LaunchBrowser(
-   DCHECK(!command_line.HasSwitch(credential_provider::kGcpwSigninSwitch));
-   DCHECK(!command_line.HasSwitch(switches::kNotificationLaunchId));
+@@ -758,6 +760,14 @@ void StartupBrowserCreator::LaunchBrowser(
+   CHECK(!command_line.HasSwitch(switches::kNotificationLaunchId),
+         base::NotFatalUntil::M162);
  #endif  // BUILDFLAG(IS_WIN)
 +  // Starry：其他 App 打开的链接用小窗口，启动窗口可能推迟。
 +  if (starry::InterceptLaunchBrowser(

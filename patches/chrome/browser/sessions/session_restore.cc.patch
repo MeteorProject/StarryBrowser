@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/sessions/session_restore.cc b/chrome/browser/sessions/session_restore.cc
-index 816c2a017b..a771ef7474 100644
+index ea1990e8cd..219f070d43 100644
 --- a/chrome/browser/sessions/session_restore.cc
 +++ b/chrome/browser/sessions/session_restore.cc
 @@ -115,6 +115,7 @@
@@ -28,7 +28,7 @@ index 816c2a017b..a771ef7474 100644
        // Sort the tabs in the order they should be restored, and start loading
        // them.
        std::stable_sort(restored_tabs.begin(), restored_tabs.end());
-@@ -1122,9 +1134,8 @@ class SessionRestoreImpl : public BrowserCollectionObserver {
+@@ -1129,9 +1141,8 @@ class SessionRestoreImpl : public BrowserCollectionObserver {
              browser->GetTabStripModel()->GetIndexOfTab(tab));
        }
  
@@ -40,7 +40,7 @@ index 816c2a017b..a771ef7474 100644
          browser->GetTabStripModel()->RestoreSplit(
              split_id, tab_index_list, split_tabs::SplitTabVisualData());
        }
-@@ -1227,12 +1238,8 @@ class SessionRestoreImpl : public BrowserCollectionObserver {
+@@ -1234,12 +1245,8 @@ class SessionRestoreImpl : public BrowserCollectionObserver {
        }
  
        CHECK(browser->GetTabStripModel()->GetSplitData(session_split_tab->id_));

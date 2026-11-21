@@ -1,5 +1,5 @@
 diff --git a/components/policy/core/common/BUILD.gn b/components/policy/core/common/BUILD.gn
-index 1344e5cf74..f28a7aae95 100644
+index c2ceef2f47..908429bfe1 100644
 --- a/components/policy/core/common/BUILD.gn
 +++ b/components/policy/core/common/BUILD.gn
 @@ -536,7 +536,10 @@ source_set("policy_path_constants") {

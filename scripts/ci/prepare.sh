@@ -36,7 +36,8 @@ esac
 
 stamp="$CHROMIUM_ROOT/.starry-synced"
 want="$CHROMIUM_VERSION ${STARRY_EXTRA_TARGET_OS:-}"
-if [ -d "$CHROMIUM_SRC/.git" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$want" ]; then
+if [ -d "$CHROMIUM_SRC/.git" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$want" ] &&
+    starry_src_at_pinned_version; then
     starry_log "Chromium $CHROMIUM_VERSION is already synced; syncing patches only"
     "$STARRY_ROOT/scripts/patches.sh" sync
 else

@@ -1,10 +1,10 @@
 diff --git a/content/browser/renderer_host/overscroll_controller.cc b/content/browser/renderer_host/overscroll_controller.cc
-index dba98b7fbc..db586545ec 100644
+index 3285229fd3..f91db77d62 100644
 --- a/content/browser/renderer_host/overscroll_controller.cc
 +++ b/content/browser/renderer_host/overscroll_controller.cc
-@@ -108,6 +108,11 @@ bool OverscrollController::WillHandleEvent(const blink::WebInputEvent& event) {
-   if (!ShouldProcessEvent(event))
+@@ -105,6 +105,11 @@ bool OverscrollController::WillHandleEvent(const blink::WebInputEvent& event) {
      return false;
+   }
  
 +  // Starry：翻页进行中的事件给 delegate 看（找手指离开、甅出去）。
 +  if (delegate_ && overscroll_mode_ != OVERSCROLL_NONE) {
@@ -13,10 +13,10 @@ index dba98b7fbc..db586545ec 100644
 +
    // TODO(mohsen): Consider filtering mouse-wheel events during overscroll. See
    // https://crbug.com/772106.
-   if (event.GetType() == blink::WebInputEvent::Type::kMouseWheel)
-@@ -507,6 +512,12 @@ bool OverscrollController::ProcessOverscroll(float delta_x,
-            fabs(overscroll_delta_y_) > fabs(overscroll_delta_x_) * kMinRatio)
-     new_mode = overscroll_delta_y_ > 0.f ? OVERSCROLL_SOUTH : OVERSCROLL_NORTH;
+   if (event.GetType() == blink::WebInputEvent::Type::kMouseWheel) {
+@@ -493,6 +498,12 @@ bool OverscrollController::ProcessOverscroll(float delta_x,
+     new_mode = overscroll_delta_x_ > 0.f ? OVERSCROLL_EAST : OVERSCROLL_WEST;
+   }
  
 +  // Starry：上过膛以后上下移动用来选翻几页，左右的模式保持。
 +  if (delegate_ && overscroll_mode_ != OVERSCROLL_NONE &&
@@ -27,3 +27,16 @@ index dba98b7fbc..db586545ec 100644
    // The horizontal overscroll is used for history navigation. Enable it for
    // touchpad only if TouchpadOverscrollHistoryNavigation is enabled.
    if ((new_mode == OVERSCROLL_EAST || new_mode == OVERSCROLL_WEST) &&
+@@ -527,7 +538,11 @@ bool OverscrollController::ProcessOverscroll(float delta_x,
+     } else {
+       delegate_delta_x = 0.f;
+     }
+-    return delegate_->OnOverscrollUpdate(delegate_delta_x);
++    const float delegate_delta_y =
++        overscroll_delta_y_ -
++        std::clamp(overscroll_delta_y_, -start_threshold, start_threshold);
++    return delegate_->OnOverscrollUpdateWithVerticalDelta(delegate_delta_x,
++                                                          delegate_delta_y);
+   }
+   return false;
+ }

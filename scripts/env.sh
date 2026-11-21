@@ -75,6 +75,13 @@ starry_require_depot_tools() {
     [ -x "$DEPOT_TOOLS/gclient" ] || starry_die "depot_tools not found; run scripts/bootstrap.sh first"
 }
 
+starry_src_at_pinned_version() {
+    local expected actual
+    expected="$(git -C "$CHROMIUM_SRC" rev-parse --verify "refs/tags/$CHROMIUM_VERSION^{commit}" 2>/dev/null)" || return 1
+    actual="$(git -C "$CHROMIUM_SRC" rev-parse --verify HEAD)" || return 1
+    [ "$actual" = "$expected" ]
+}
+
 starry_require_src() {
     [ -d "$CHROMIUM_SRC/.git" ] || starry_die "Chromium source not found; run scripts/sync.sh first"
 }

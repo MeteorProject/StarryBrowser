@@ -1,8 +1,8 @@
 diff --git a/cc/paint/paint_op_reader.cc b/cc/paint/paint_op_reader.cc
-index 53be3b7b34..00960c058f 100644
+index e7a0573252..f42dabdef6 100644
 --- a/cc/paint/paint_op_reader.cc
 +++ b/cc/paint/paint_op_reader.cc
-@@ -41,6 +41,7 @@
+@@ -42,6 +42,7 @@
  #include "cc/paint/skottie_transfer_cache_entry.h"
  #include "cc/paint/skottie_wrapper.h"
  #include "cc/paint/transfer_cache_deserialize_helper.h"
@@ -10,7 +10,7 @@ index 53be3b7b34..00960c058f 100644
  #include "components/crash/core/common/crash_key.h"
  #include "third_party/skia/include/core/SkColorSpace.h"
  #include "third_party/skia/include/core/SkImage.h"
-@@ -1228,6 +1229,12 @@ void PaintOpReader::Read(sk_sp<PaintFilter>* filter) {
+@@ -1280,6 +1281,12 @@ void PaintOpReader::Read(sk_sp<PaintFilter>* filter) {
      case PaintFilter::Type::kLightingSpot:
        ReadLightingSpotPaintFilter(filter, crop_rect);
        break;

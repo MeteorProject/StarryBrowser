@@ -1,5 +1,5 @@
 diff --git a/components/sessions/core/tab_restore_service_impl.cc b/components/sessions/core/tab_restore_service_impl.cc
-index fc0c2c5531..b8ff884eea 100644
+index 3b7a1b253b..51260a674e 100644
 --- a/components/sessions/core/tab_restore_service_impl.cc
 +++ b/components/sessions/core/tab_restore_service_impl.cc
 @@ -305,6 +305,10 @@ bool ReadSplitTabVisualData(base::PickleIterator* iter,

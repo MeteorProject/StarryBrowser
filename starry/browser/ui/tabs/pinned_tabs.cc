@@ -130,7 +130,7 @@ class PinnedTabPage : public content::WebContentsUserData<PinnedTabPage>,
                            bool from_menu,
                            bool renderer_initiated) override {
     if (renderer_initiated && !from_menu &&
-        disposition == WindowOpenDisposition::NEW_FOREGROUND_TAB &&
+        disposition == WindowOpenDisposition::kNewForegroundTab &&
         ui::PageTransitionCoreTypeIs(transition, ui::PAGE_TRANSITION_LINK) &&
         frame == web_contents()->GetPrimaryMainFrame()) {
       PinnedPeek::LinkOpened(web_contents(), target, url);

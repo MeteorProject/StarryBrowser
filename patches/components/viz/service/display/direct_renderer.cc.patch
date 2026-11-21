@@ -1,5 +1,5 @@
 diff --git a/components/viz/service/display/direct_renderer.cc b/components/viz/service/display/direct_renderer.cc
-index 93c637769d..321701127b 100644
+index 524d48f1ad..5185eb707c 100644
 --- a/components/viz/service/display/direct_renderer.cc
 +++ b/components/viz/service/display/direct_renderer.cc
 @@ -43,6 +43,7 @@

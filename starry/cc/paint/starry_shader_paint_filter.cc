@@ -711,10 +711,6 @@ bool StarryShaderPaintFilter::DrawMaterial(SkCanvas* canvas,
   return true;
 }
 
-gfx::ContentColorUsage StarryShaderPaintFilter::GetContentColorUsage() const {
-  return gfx::ContentColorUsage::kSRGB;
-}
-
 size_t StarryShaderPaintFilter::SerializedSize() const {
   base::CheckedNumeric<size_t> total_size = BaseSerializedSize();
   total_size += PaintOpWriter::SerializedSize<uint32_t>();

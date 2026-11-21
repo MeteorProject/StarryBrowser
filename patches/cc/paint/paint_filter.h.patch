@@ -1,5 +1,5 @@
 diff --git a/cc/paint/paint_filter.h b/cc/paint/paint_filter.h
-index 7d8a84c8c7..0f8e5e83db 100644
+index e6bf28e081..d9ce081fed 100644
 --- a/cc/paint/paint_filter.h
 +++ b/cc/paint/paint_filter.h
 @@ -61,8 +61,11 @@ class CC_PAINT_EXPORT PaintFilter : public SkRefCnt {

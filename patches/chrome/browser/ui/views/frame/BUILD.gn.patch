@@ -1,10 +1,10 @@
 diff --git a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
-index 07ff3566c1..a0bbc778ec 100644
+index 268324dce9..faadaf29d0 100644
 --- a/chrome/browser/ui/views/frame/BUILD.gn
 +++ b/chrome/browser/ui/views/frame/BUILD.gn
-@@ -3304,6 +3304,7 @@ source_set("multi_contents_view_impl") {
-     "//chrome/browser:browser_public_dependencies",
-   ]
+@@ -3199,6 +3199,7 @@ source_set("multi_contents_view_impl") {
+   sources = [ "multi_contents_view.cc" ]
+   public_deps = [ ":multi_contents_view" ]
    deps = [
 +    "//starry/components/split_layout",
      ":browser_view_header",

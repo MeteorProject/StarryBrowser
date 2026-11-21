@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.mm b/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.mm
-index c72e8fe07d..b1ea43af21 100644
+index 0da54369fc..ddd06b27ae 100644
 --- a/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.mm
 +++ b/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_delegate.mm
 @@ -36,6 +36,8 @@

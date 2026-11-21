@@ -1024,7 +1024,7 @@ void CommandBarView::HomeOpenUrl(const GURL& url) {
   previous_focus_.SetView(nullptr);
   Close();
   NavigateParams params(browser_, url, ui::PAGE_TRANSITION_AUTO_BOOKMARK);
-  params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+  params.disposition = WindowOpenDisposition::kNewForegroundTab;
   Navigate(&params);
   if (tabs::TabInterface* tab = browser_->GetActiveTabInterface()) {
     tab->GetContents()->Focus();
@@ -1718,10 +1718,10 @@ void CommandBarView::OpenMatch(const AutocompleteMatch& match) {
   }
 
   WindowOpenDisposition disposition =
-      mode_ == Mode::kNewTab ? WindowOpenDisposition::NEW_FOREGROUND_TAB
-                             : WindowOpenDisposition::CURRENT_TAB;
+      mode_ == Mode::kNewTab ? WindowOpenDisposition::kNewForegroundTab
+                             : WindowOpenDisposition::kCurrentTab;
   if (IsTabMatch(match)) {
-    disposition = WindowOpenDisposition::SWITCH_TO_TAB;
+    disposition = WindowOpenDisposition::kSwitchToTab;
   }
   const GURL url = match.destination_url;
   const ui::PageTransition transition = ui::PageTransitionFromInt(

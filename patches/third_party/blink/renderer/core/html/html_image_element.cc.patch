@@ -1,36 +1,37 @@
 diff --git a/third_party/blink/renderer/core/html/html_image_element.cc b/third_party/blink/renderer/core/html/html_image_element.cc
-index 73846aed5d..8354429d77 100644
+index fcc1e7e745..b45627c9a8 100644
 --- a/third_party/blink/renderer/core/html/html_image_element.cc
 +++ b/third_party/blink/renderer/core/html/html_image_element.cc
-@@ -23,6 +23,7 @@
+@@ -25,6 +25,7 @@
  
- #include "third_party/blink/renderer/core/html/html_image_element.h"
- 
+ #include "base/functional/bind.h"
+ #include "base/task/single_thread_task_runner.h"
 +#include "starry/renderer/fingerprint_protection.h"
  #include "third_party/blink/public/common/features.h"
  #include "third_party/blink/public/common/loader/lcp_critical_path_predictor_util.h"
  #include "third_party/blink/renderer/bindings/core/v8/v8_image_bitmap_options.h"
-@@ -537,8 +538,9 @@ ImageCandidate HTMLImageElement::FindBestFitImageFromPictureParent() {
-       continue;
- 
+@@ -590,8 +591,9 @@ ImageCandidate HTMLImageElement::FindBestFitImageFromPictureParent() {
+                                          : static_cast<Element&>(*this));
+     }
      ImageCandidate candidate = BestFitSourceForSrcsetAttribute(
--        GetDocument().DevicePixelRatio(), SourceSize(*source), srcset,
--        &GetDocument());
+-        GetDocument().DevicePixelRatio(), SourceSize(*source),
+-        default_aspect_ratio, srcset, &GetDocument());
 +        starry::ProtectDevicePixelRatio(GetDocument().GetFrame(),
-+                                        GetDocument().DevicePixelRatio()),
-+        SourceSize(*source), srcset, &GetDocument());
++                                       GetDocument().DevicePixelRatio()),
++        SourceSize(*source), default_aspect_ratio, srcset, &GetDocument());
      if (candidate.IsEmpty())
        continue;
      source_ = source;
-@@ -1071,8 +1073,9 @@ void HTMLImageElement::SelectSourceURL(
-     const float source_size{SourceSize(*this)};
+@@ -1155,8 +1157,10 @@ void HTMLImageElement::SelectSourceURL(
+     }
  
      candidate = BestFitSourceForImageAttributes(
--        GetDocument().DevicePixelRatio(), source_size,
--        FastGetAttribute(html_names::kSrcAttr),
+-        GetDocument().DevicePixelRatio(), SourceSize(*this),
+-        default_aspect_ratio, FastGetAttribute(html_names::kSrcAttr),
 +        starry::ProtectDevicePixelRatio(GetDocument().GetFrame(),
-+                                        GetDocument().DevicePixelRatio()),
-+        source_size, FastGetAttribute(html_names::kSrcAttr),
++                                       GetDocument().DevicePixelRatio()),
++        SourceSize(*this), default_aspect_ratio,
++        FastGetAttribute(html_names::kSrcAttr),
          FastGetAttribute(html_names::kSrcsetAttr), &GetDocument());
    }
    if (old_source != source_)

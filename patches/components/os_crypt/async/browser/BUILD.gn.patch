@@ -1,8 +1,8 @@
 diff --git a/components/os_crypt/async/browser/BUILD.gn b/components/os_crypt/async/browser/BUILD.gn
-index 2309659150..cb128cca18 100644
+index e39729b483..7af72d62ef 100644
 --- a/components/os_crypt/async/browser/BUILD.gn
 +++ b/components/os_crypt/async/browser/BUILD.gn
-@@ -140,7 +140,7 @@ if (is_linux && use_dbus) {
+@@ -139,7 +139,7 @@ if (is_linux && use_dbus) {
        "//crypto",
        "//dbus",
      ]

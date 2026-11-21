@@ -1,5 +1,5 @@
 diff --git a/components/translate/core/browser/translate_manager.cc b/components/translate/core/browser/translate_manager.cc
-index de791aedd3..d2d7d031b2 100644
+index b2943db6e1..8473cd87d4 100644
 --- a/components/translate/core/browser/translate_manager.cc
 +++ b/components/translate/core/browser/translate_manager.cc
 @@ -56,6 +56,7 @@
@@ -10,7 +10,7 @@ index de791aedd3..d2d7d031b2 100644
  #include "third_party/metrics_proto/translate_event.pb.h"
  
  namespace translate {
-@@ -366,6 +367,9 @@ void TranslateManager::TranslatePage(std::string_view original_source_lang,
+@@ -387,6 +388,9 @@ void TranslateManager::TranslatePage(std::string_view original_source_lang,
                                       std::string_view target_lang,
                                       bool triggered_from_menu,
                                       TranslationType translation_type) {

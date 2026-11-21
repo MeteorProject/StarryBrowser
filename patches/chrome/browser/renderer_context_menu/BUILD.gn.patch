@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/renderer_context_menu/BUILD.gn b/chrome/browser/renderer_context_menu/BUILD.gn
-index 710da547b7..d376d9e2e5 100644
+index fe5a6b11df..17039fef38 100644
 --- a/chrome/browser/renderer_context_menu/BUILD.gn
 +++ b/chrome/browser/renderer_context_menu/BUILD.gn
 @@ -88,6 +88,7 @@ source_set("impl") {

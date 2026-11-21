@@ -1,5 +1,5 @@
 diff --git a/chrome/app/main_dll_loader_win.cc b/chrome/app/main_dll_loader_win.cc
-index 9d457efe7d..a87d2a2d1b 100644
+index 460f158438..6b045955cd 100644
 --- a/chrome/app/main_dll_loader_win.cc
 +++ b/chrome/app/main_dll_loader_win.cc
 @@ -57,6 +57,7 @@
@@ -10,7 +10,7 @@ index 9d457efe7d..a87d2a2d1b 100644
  
  namespace {
  
-@@ -205,7 +206,7 @@ base::FilePath GetModulePath(std::wstring_view module_name) {
+@@ -210,7 +211,7 @@ base::FilePath GetModulePath(std::wstring_view module_name) {
    // executable's directory and return the path if it can be read. This is the
    // expected location of modules for proper installs.
    const base::FilePath module_path =

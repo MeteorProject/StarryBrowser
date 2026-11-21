@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/extensions/api/messaging/BUILD.gn b/chrome/browser/extensions/api/messaging/BUILD.gn
-index bec4b7e20b..55e0ad64a8 100644
+index 8f66d3efea..b21eba07a0 100644
 --- a/chrome/browser/extensions/api/messaging/BUILD.gn
 +++ b/chrome/browser/extensions/api/messaging/BUILD.gn
 @@ -91,6 +91,7 @@ source_set("messaging") {

@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/views/frame/browser_native_widget_mac.mm b/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
-index 73a8db26c2..d5199cb03b 100644
+index fd4cc9a121..c50256fcef 100644
 --- a/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
 +++ b/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
 @@ -4,6 +4,9 @@
@@ -12,7 +12,7 @@ index 73a8db26c2..d5199cb03b 100644
  #include <array>
  
  #import "base/apple/foundation_util.h"
-@@ -275,6 +278,12 @@ - (NSTouchBar*)makeTouchBar {
+@@ -276,6 +279,12 @@ - (NSTouchBar*)makeTouchBar {
  void BrowserNativeWidgetMac::GetWindowFrameTitlebarHeight(
      bool* override_titlebar_height,
      float* titlebar_height) {
@@ -25,7 +25,7 @@ index 73a8db26c2..d5199cb03b 100644
    if (browser_view_ && browser_view_->browser_widget() &&
        browser_view_->browser_widget()->GetFrameView()) {
      *override_titlebar_height = true;
-@@ -735,7 +744,8 @@ - (NSTouchBar*)makeTouchBar {
+@@ -737,7 +746,8 @@ - (NSTouchBar*)makeTouchBar {
                           NSWindowStyleMaskTitled | NSWindowStyleMaskResizable;
      params->window_title_hidden = true;
    } else if (browser_view_->GetIsNormalType() ||
@@ -35,7 +35,7 @@ index 73a8db26c2..d5199cb03b 100644
      params->window_class = remote_cocoa::mojom::WindowClass::kBrowser;
      params->style_mask |= NSWindowStyleMaskFullSizeContentView;
  
-@@ -743,7 +753,8 @@ - (NSTouchBar*)makeTouchBar {
+@@ -745,7 +755,8 @@ - (NSTouchBar*)makeTouchBar {
      params->titlebar_appears_transparent = true;
  
      // Hosted apps draw their own window title.
@@ -45,7 +45,7 @@ index 73a8db26c2..d5199cb03b 100644
        params->window_title_hidden = true;
      }
    } else {
-@@ -755,7 +766,11 @@ - (NSTouchBar*)makeTouchBar {
+@@ -757,7 +768,11 @@ - (NSTouchBar*)makeTouchBar {
  NativeWidgetMacNSWindow* BrowserNativeWidgetMac::CreateNSWindow(
      const remote_cocoa::mojom::CreateWindowParams* params) {
    CHECK(browser_view_);

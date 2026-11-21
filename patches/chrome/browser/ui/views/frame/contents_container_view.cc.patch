@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/views/frame/contents_container_view.cc b/chrome/browser/ui/views/frame/contents_container_view.cc
-index 5407bd717c..2b7f8d8f01 100644
+index 413b2f626d..c189733a03 100644
 --- a/chrome/browser/ui/views/frame/contents_container_view.cc
 +++ b/chrome/browser/ui/views/frame/contents_container_view.cc
 @@ -48,6 +48,7 @@
@@ -10,7 +10,7 @@ index 5407bd717c..2b7f8d8f01 100644
  
  #if BUILDFLAG(IS_WIN)
  #include "ui/views/widget/native_widget_aura.h"
-@@ -199,6 +200,9 @@ std::vector<views::View*> ContentsContainerView::GetAccessiblePanes() {
+@@ -196,6 +197,9 @@ std::vector<views::View*> ContentsContainerView::GetAccessiblePanes() {
  void ContentsContainerView::UpdateBorderAndOverlay(bool is_in_split,
                                                     bool is_active,
                                                     bool is_highlighted) {

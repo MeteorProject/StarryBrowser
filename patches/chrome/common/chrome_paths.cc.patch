@@ -1,5 +1,5 @@
 diff --git a/chrome/common/chrome_paths.cc b/chrome/common/chrome_paths.cc
-index 32d01c008e..e057d2e6c8 100644
+index 4448f86df8..d18674f371 100644
 --- a/chrome/common/chrome_paths.cc
 +++ b/chrome/common/chrome_paths.cc
 @@ -19,6 +19,7 @@
@@ -7,10 +7,10 @@ index 32d01c008e..e057d2e6c8 100644
  #include "extensions/buildflags/buildflags.h"
  #include "media/media_buildflags.h"
 +#include "starry/common/branding.h"
+ #include "ui/webui/buildflags.h"
  
  #if BUILDFLAG(IS_ANDROID)
- #include "base/android/path_utils.h"
-@@ -55,7 +56,7 @@ const base::FilePath::CharType kFilepathSinglePrefExtensions[] =
+@@ -56,7 +57,7 @@ const base::FilePath::CharType kFilepathSinglePrefExtensions[] =
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
      FILE_PATH_LITERAL("/usr/share/google-chrome/extensions");
  #else
@@ -19,7 +19,7 @@ index 32d01c008e..e057d2e6c8 100644
  #endif  // BUILDFLAG(GOOGLE_CHROME_BRANDING)
  
  #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-@@ -434,8 +435,7 @@ bool PathProvider(int key, base::FilePath* result) {
+@@ -440,8 +441,7 @@ bool PathProvider(int key, base::FilePath* result) {
          return false;
        }
  
@@ -29,7 +29,7 @@ index 32d01c008e..e057d2e6c8 100644
                  .Append(FILE_PATH_LITERAL("External Extensions"));
  #else
        if (!base::PathService::Get(base::DIR_MODULE, &cur)) {
-@@ -459,8 +459,9 @@ bool PathProvider(int key, base::FilePath* result) {
+@@ -465,8 +465,9 @@ bool PathProvider(int key, base::FilePath* result) {
        cur = base::FilePath(FILE_PATH_LITERAL(
            "/Library/Google/ChromeForTesting/NativeMessagingHosts"));
  #else
@@ -41,7 +41,7 @@ index 32d01c008e..e057d2e6c8 100644
  #endif
  #else  // BUILDFLAG(IS_MAC)
  #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
-@@ -470,8 +471,8 @@ bool PathProvider(int key, base::FilePath* result) {
+@@ -476,8 +477,8 @@ bool PathProvider(int key, base::FilePath* result) {
        cur = base::FilePath(FILE_PATH_LITERAL(
            "/etc/opt/chrome_for_testing/native-messaging-hosts"));
  #else

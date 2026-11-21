@@ -1,8 +1,8 @@
 diff --git a/third_party/blink/renderer/core/input/mouse_event_manager.cc b/third_party/blink/renderer/core/input/mouse_event_manager.cc
-index 09de09bc42..2d2b74cc3f 100644
+index db8237277b..85813407a1 100644
 --- a/third_party/blink/renderer/core/input/mouse_event_manager.cc
 +++ b/third_party/blink/renderer/core/input/mouse_event_manager.cc
-@@ -6,6 +6,7 @@
+@@ -8,6 +8,7 @@
  
  #include "base/metrics/histogram_functions.h"
  #include "build/build_config.h"
@@ -10,7 +10,7 @@ index 09de09bc42..2d2b74cc3f 100644
  #include "third_party/blink/public/platform/web_input_event_result.h"
  #include "third_party/blink/renderer/bindings/core/v8/v8_drag_event_init.h"
  #include "third_party/blink/renderer/bindings/core/v8/v8_pointer_event_init.h"
-@@ -65,12 +66,13 @@ void UpdateMouseMovementXY(const WebMouseEvent& mouse_event,
+@@ -68,12 +69,13 @@ void UpdateMouseMovementXY(const WebMouseEvent& mouse_event,
        last_position) {
      // movementX/Y is type int for now, so we need to truncated the coordinates
      // before calculate movement.

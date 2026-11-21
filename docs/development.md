@@ -41,7 +41,7 @@ Create `chromium\.gclient` (replace the tag with the version in `chromium.versio
 solutions = [
   {
     "name": "src",
-    "url": "https://chromium.googlesource.com/chromium/src.git@refs/tags/157.0.8103.51",
+    "url": "https://chromium.googlesource.com/chromium/src.git@refs/tags/158.0.8127.37",
     "managed": False,
     "custom_deps": {},
     "custom_vars": {},
@@ -54,7 +54,8 @@ Sync the source tree, overlay `starry/`, apply patches, and build:
 
 ```bat
 cd chromium
-gclient sync --nohooks --no-history -D --force
+set /p CHROMIUM_VERSION=<..\chromium.version
+gclient sync --nohooks --no-history -D --force --revision src@refs/tags/%CHROMIUM_VERSION%
 gclient runhooks
 
 python3 ..\scripts\windows_overlay.py ..\starry src\starry

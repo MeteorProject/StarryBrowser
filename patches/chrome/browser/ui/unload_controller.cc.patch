@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/ui/unload_controller.cc b/chrome/browser/ui/unload_controller.cc
-index 02ae74168c..1e9215c52b 100644
+index 9cefffb0e2..3ef9f3ee25 100644
 --- a/chrome/browser/ui/unload_controller.cc
 +++ b/chrome/browser/ui/unload_controller.cc
 @@ -4,6 +4,8 @@
@@ -11,7 +11,7 @@ index 02ae74168c..1e9215c52b 100644
  #include <algorithm>
  
  #include "base/functional/bind.h"
-@@ -265,6 +267,9 @@ void UnloadController::CloseContents(content::WebContents* contents) {
+@@ -266,6 +268,9 @@ void UnloadController::CloseContents(content::WebContents* contents) {
      ClearUnloadState(contents, true);
    }
    if (CanCloseContents(contents)) {

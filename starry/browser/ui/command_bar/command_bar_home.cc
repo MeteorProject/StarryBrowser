@@ -764,7 +764,7 @@ void CommandBarHome::CardClicked(Card* card) {
   const SessionID id = card->entry().id;
   delegate_->HomeDismiss();
   new_tab::RestoreClosed(browser_, id,
-                         WindowOpenDisposition::NEW_FOREGROUND_TAB);
+                         WindowOpenDisposition::kNewForegroundTab);
 }
 
 void CommandBarHome::FooterClicked(int item) {

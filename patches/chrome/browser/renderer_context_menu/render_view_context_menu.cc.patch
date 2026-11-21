@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/renderer_context_menu/render_view_context_menu.cc b/chrome/browser/renderer_context_menu/render_view_context_menu.cc
-index cd1fc2e4db..017ef996ce 100644
+index 28b124adca..e3a60a1b18 100644
 --- a/chrome/browser/renderer_context_menu/render_view_context_menu.cc
 +++ b/chrome/browser/renderer_context_menu/render_view_context_menu.cc
-@@ -264,6 +264,7 @@
+@@ -265,6 +265,7 @@
  #include "services/metrics/public/cpp/ukm_recorder.h"
  #include "services/network/public/cpp/constants.h"
  #include "services/service_manager/public/cpp/interface_provider.h"
@@ -10,7 +10,7 @@ index cd1fc2e4db..017ef996ce 100644
  #include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
  #include "third_party/blink/public/common/context_menu_data/context_menu_data.h"
  #include "third_party/blink/public/common/context_menu_data/edit_flags.h"
-@@ -1646,6 +1647,10 @@ int RenderViewContextMenu::GetSearchForVideoFrameIdc() const {
+@@ -1649,6 +1650,10 @@ int RenderViewContextMenu::GetSearchForVideoFrameIdc() const {
  }
  
  const TemplateURL* RenderViewContextMenu::GetImageSearchProvider() const {

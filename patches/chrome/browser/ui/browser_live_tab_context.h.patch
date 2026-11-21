@@ -1,8 +1,8 @@
 diff --git a/chrome/browser/ui/browser_live_tab_context.h b/chrome/browser/ui/browser_live_tab_context.h
-index 94bf57893c..8f126e4cf2 100644
+index 135eff5218..731df841af 100644
 --- a/chrome/browser/ui/browser_live_tab_context.h
 +++ b/chrome/browser/ui/browser_live_tab_context.h
-@@ -112,6 +112,10 @@ class BrowserLiveTabContext : public sessions::LiveTabContext {
+@@ -113,6 +113,10 @@ class BrowserLiveTabContext : public sessions::LiveTabContext {
        sessions::LiveTab* trailing_tab,
        split_tabs::SplitTabId split_id,
        const split_tabs::SplitTabVisualData& visual_data) override;

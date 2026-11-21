@@ -1,5 +1,5 @@
 diff --git a/chrome/test/BUILD.gn b/chrome/test/BUILD.gn
-index f7779bf105..616faa0f1d 100644
+index b0ef6f56ec..0ea939ba5d 100644
 --- a/chrome/test/BUILD.gn
 +++ b/chrome/test/BUILD.gn
 @@ -69,6 +69,10 @@ assert(!is_ios, "Chromium/iOS shouldn't use anything in //chrome")
@@ -12,8 +12,8 @@ index f7779bf105..616faa0f1d 100644
 +
  if (is_android) {
    import("//build/config/android/rules.gni")
-   import("//chrome/android/features/dev_ui/dev_ui_module.gni")
-@@ -3051,7 +3055,7 @@ test("unit_tests") {
+   import("//build/config/locales.gni")
+@@ -2857,7 +2861,7 @@ test("unit_tests") {
      assert(toolkit_views)
      deps += [ "//chrome/common/win:unit_tests" ]
  
@@ -22,7 +22,7 @@ index f7779bf105..616faa0f1d 100644
  
      data_deps += [
        "//chrome",
-@@ -5110,6 +5114,7 @@ if (is_win) {
+@@ -4630,6 +4634,7 @@ if (is_win) {
        "//chrome/install_static:install_static_util",
        "//chrome/install_static/test:test_support",
        "//mojo:buildflags",
@@ -30,7 +30,7 @@ index f7779bf105..616faa0f1d 100644
        "//testing/gtest",
      ]
  
-@@ -5117,7 +5122,7 @@ if (is_win) {
+@@ -4637,7 +4642,7 @@ if (is_win) {
      # the //chrome target to bundle up both initial/chrome.exe and chrome.exe.
      # As a workaround, explicitly include a data dep on just chrome.exe, and
      # add //chrome to deps above to make sure it's been built.
