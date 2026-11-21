@@ -1801,3 +1801,110 @@ starry-extensions .empty-state {
   gap: 8px;
   justify-content: flex-end;
 }
+
+/* 新标签页风格的示意图（newTabMock）。 */
+.mock-page {
+  inset: calc(var(--p) * 7) calc(var(--p) * 8) auto;
+  position: absolute;
+}
+
+.mock-page b,
+.mock-page u {
+  background: var(--mock-row);
+  border-radius: calc(var(--p) * 1.5);
+  display: block;
+  height: calc(var(--p) * 3);
+  margin-bottom: calc(var(--p) * 3);
+}
+
+.mock-page b {
+  background: var(--mock-line);
+  height: calc(var(--p) * 5);
+  width: 60%;
+}
+
+.mock-page u.short {
+  width: 70%;
+}
+
+.mock-nt-pill {
+  background: color-mix(in srgb, var(--mock-card) 60%, var(--mock-line));
+  border-radius: calc(var(--p) * 3);
+  box-shadow: 0 0 0 0.5px var(--mock-line);
+  height: calc(var(--p) * 7);
+  left: 18%;
+  position: absolute;
+  right: 18%;
+  top: calc(var(--p) * 11);
+}
+
+.mock-nt-pill.floating {
+  background: var(--mock-card);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25), 0 0 0 0.5px var(--mock-line);
+  left: calc(var(--p) * 30);
+  right: calc(var(--p) * 18);
+  top: calc(var(--p) * 10);
+}
+
+.mock-nt.overlay .mock-nt-pill.floating {
+  left: calc(var(--p) * 24);
+  right: calc(var(--p) * 24);
+}
+
+.mock-nt-grid {
+  display: grid;
+  gap: calc(var(--p) * 2);
+  grid-auto-rows: calc(var(--p) * 9);
+  grid-template-columns: repeat(3, 1fr);
+  left: 14%;
+  position: absolute;
+  right: 14%;
+  top: calc(var(--p) * 23);
+}
+
+.mock-nt-grid i {
+  background: color-mix(in srgb, var(--mock-row) 70%, transparent);
+  border-radius: calc(var(--p) * 2);
+  display: block;
+}
+
+.mock-nt-grid i.wide {
+  grid-column: span 2;
+}
+
+.mock-nt.card .mock-card {
+  background:
+    radial-gradient(70% 60% at 15% 5%, rgb(124 92 255 / 0.24), transparent 70%),
+    var(--mock-card);
+}
+
+.mock-nt-dim {
+  background: rgb(0 0 0 / 0.16);
+  inset: 0;
+  position: absolute;
+}
+
+.mock-nt-blur {
+  backdrop-filter: blur(3px);
+  background: color-mix(in srgb, var(--mock-window) 62%, transparent);
+  inset: 0;
+  position: absolute;
+}
+
+.mock-nt-tiles {
+  display: grid;
+  gap: calc(var(--p) * 2.5) calc(var(--p) * 3);
+  grid-template-columns: repeat(5, calc(var(--p) * 8));
+  justify-content: center;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: calc(var(--p) * 24);
+}
+
+.mock-nt-tiles i {
+  aspect-ratio: 1;
+  background: var(--mock-line);
+  border-radius: calc(var(--p) * 2.4);
+  display: block;
+}

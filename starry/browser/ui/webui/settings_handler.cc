@@ -41,6 +41,7 @@
 #include "content/public/browser/web_ui.h"
 #include "starry/browser/l10n/interface_language.h"
 #include "starry/browser/l10n/l10n.h"
+#include "starry/browser/new_tab/new_tab.h"
 #include "starry/browser/prefs/starry_prefs.h"
 #include "starry/browser/privacy/fingerprint_protection.h"
 #include "starry/browser/tab_organizer/organizer_memory.h"
@@ -223,6 +224,10 @@ void SettingsHandler::OnJavascriptAllowed() {
            starry::prefs::kDownloadAutoRetry,
            starry::prefs::kDownloadResumeOnLaunch,
            starry::prefs::kDownloadNotifyOnCompletion,
+           starry::prefs::kNewTabStyle,
+           starry::prefs::kNewTabBackground,
+           starry::prefs::kNewTabWidgets,
+           starry::prefs::kNewTabShortcutRows,
        }) {
     profile_prefs_.Add(name, changed);
   }
@@ -494,6 +499,16 @@ base::DictValue SettingsHandler::State() {
   }
   state.Set("utilityButtons", std::move(buttons));
 
+  // 新标签页
+  state.Set("newTabStyle", prefs->GetString(starry::prefs::kNewTabStyle));
+  state.Set("newTabBackground",
+            prefs->GetString(starry::prefs::kNewTabBackground));
+  state.Set("newTabWidgets",
+            prefs->GetList(starry::prefs::kNewTabWidgets).Clone());
+  state.Set(
+      "newTabShortcutRows",
+      std::clamp(prefs->GetInteger(starry::prefs::kNewTabShortcutRows), 1, 2));
+
   // 性能
   state.Set("memorySaver",
             local->GetInteger(perf_prefs::kMemorySaverModeState) ==
@@ -717,6 +732,34 @@ void SettingsHandler::HandleSetSetting(const base::ListValue& args) {
     base::Value entry(*id);
     update->EraseValue(entry);
     if (*hidden) {
+      update->Append(std::move(entry));
+    }
+  } else if (key == "newTabStyle" && value.is_string()) {
+    const std::string& style = value.GetString();
+    if (style == starry::prefs::kNewTabStyleMinimal ||
+        style == starry::prefs::kNewTabStyleCard ||
+        style == starry::prefs::kNewTabStyleOverlay) {
+      prefs->SetString(starry::prefs::kNewTabStyle, style);
+    }
+  } else if (key == "newTabBackground" && value.is_string()) {
+    // 自己的图片在新标签页上选（要弹文件选择），这里只换这三种。
+    const std::string& background = value.GetString();
+    if (background == "theme" || background == "sky" || background == "solid") {
+      prefs->SetString(starry::prefs::kNewTabBackground, background);
+    }
+  } else if (key == "newTabShortcutRows" && value.is_int()) {
+    prefs->SetInteger(starry::prefs::kNewTabShortcutRows,
+                      std::clamp(value.GetInt(), 1, 2));
+  } else if (key == "newTabWidget" && value.is_dict()) {
+    const std::string* id = value.GetDict().FindString("id");
+    const std::optional<bool> on = value.GetDict().FindBool("on");
+    if (!id || !on || !new_tab::IsWidgetId(*id)) {
+      return;
+    }
+    ScopedListPrefUpdate update(prefs, starry::prefs::kNewTabWidgets);
+    base::Value entry(*id);
+    update->EraseValue(entry);
+    if (*on) {
       update->Append(std::move(entry));
     }
   } else if (key == "memorySaver" && value.is_bool()) {

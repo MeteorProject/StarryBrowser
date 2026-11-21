@@ -3,6 +3,8 @@
 #include "starry/browser/prefs/starry_prefs.h"
 
 #include <memory>
+#include <string>
+#include <utility>
 
 #include "base/no_destructor.h"
 #include "base/values.h"
@@ -109,6 +111,17 @@ class StarryPrefsFactory : public ProfileKeyedServiceFactory {
     registry->RegisterBooleanPref(kDownloadNotifyOnCompletion, true);
     registry->RegisterBooleanPref(kOnboardingPending, false);
     registry->RegisterIntegerPref(kOnboardingVersion, 0);
+    registry->RegisterStringPref(kNewTabStyle, kNewTabStyleMinimal);
+    registry->RegisterStringPref(kNewTabBackground, "theme");
+    base::ListValue widgets;
+    for (const char* id :
+         {"clock", "shortcuts", "continue", "playing", "archive", "shield"}) {
+      widgets.Append(id);
+    }
+    registry->RegisterListPref(kNewTabWidgets, std::move(widgets));
+    registry->RegisterIntegerPref(kNewTabShortcutRows, 1);
+    registry->RegisterStringPref(kNewTabNote, std::string());
+    registry->RegisterDictionaryPref(kBlockedStats);
   }
 };
 

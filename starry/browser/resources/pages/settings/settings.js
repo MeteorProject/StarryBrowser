@@ -33,6 +33,8 @@ const PANES = [
   {id: 'general', title: L('settings.pane.general.title'), icon: 'gearshape', summary: L('settings.pane.general.summary')},
   {id: 'appearance', title: L('settings.pane.appearance.title'), icon: 'paintpalette',
    summary: L('settings.pane.appearance.summary')},
+  {id: 'newTab', title: L('settings.pane.newTab.title'), icon: 'macwindow',
+   summary: L('settings.pane.newTab.summary')},
   {id: 'tabs', title: L('settings.pane.tabs.title'), icon: 'rectangle.stack',
    summary: L('settings.pane.tabs.summary')},
   {id: 'performance', title: L('settings.pane.performance.title'), icon: 'speedometer',
@@ -178,6 +180,23 @@ function mockWindow({dark = false, floating = false, half = false, top = false,
               html`<div class="mock-sidebar ${addressOnTop ? 'no-address' : ''}"><i></i><i></i><i></i><i></i></div>`}
       ${toolbarRow ? html`<div class="mock-address"></div>` : nothing}
       <div class="mock-card"></div>
+    </div>`;
+}
+
+function newTabMock(style, dark) {
+  const page = html`<div class="mock-page"><b></b><u></u><u></u><u class="short"></u></div>`;
+  return html`
+    <div class="mock ${dark ? 'dark' : ''} mock-nt ${style}">
+      <div class="mock-sidebar"><i></i><i></i><i></i><i></i></div>
+      <div class="mock-card">
+        ${style === 'card' ? html`
+          <div class="mock-nt-pill"></div>
+          <div class="mock-nt-grid"><i class="wide"></i><i></i><i></i><i></i><i></i></div>` : page}
+      </div>
+      ${style === 'minimal' ? html`<div class="mock-nt-dim"></div><div class="mock-nt-pill floating"></div>` : nothing}
+      ${style === 'overlay' ? html`
+        <div class="mock-nt-blur"></div><div class="mock-nt-pill floating"></div>
+        <div class="mock-nt-tiles">${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(() => html`<i></i>`)}</div>` : nothing}
     </div>`;
 }
 
@@ -487,6 +506,8 @@ class StarrySettings extends LitElement {
         return this.general_(s);
       case 'appearance':
         return this.appearance_(s);
+      case 'newTab':
+        return this.newTab_(s);
       case 'tabs':
         return this.tabs_(s);
       case 'performance':
@@ -1013,6 +1034,75 @@ class StarrySettings extends LitElement {
                keywords: L('settings.appearance.utilityButtons.keywords')}),
       ]),
     ];
+  }
+
+  // 「新标签页」：风格、背景与页面小组件。
+  newTab_(s) {
+    const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const styles = [
+      {value: 'minimal', title: L('newTab.style.minimal'), preview: newTabMock('minimal', dark)},
+      {value: 'card', title: L('newTab.style.card'), preview: newTabMock('card', dark)},
+      {value: 'overlay', title: L('newTab.style.overlay'), preview: newTabMock('overlay', dark)},
+    ];
+    const style = s.newTabStyle || 'minimal';
+    const minimal = style === 'minimal';
+    const widgets = s.newTabWidgets || [];
+    const backgrounds = [
+      {value: 'theme', title: L('newTab.background.theme')},
+      {value: 'sky', title: L('newTab.background.sky')},
+      {value: 'solid', title: L('newTab.background.solid')},
+    ];
+    if (s.newTabBackground === 'image') {
+      backgrounds.push({value: 'image', title: L('newTab.background.image'), disabled: true});
+    }
+    // [id, title, detail, overlaySupported]
+    const items = [
+      ['clock', L('newTab.widget.clock'), L('settings.newTab.clock.detail'), false],
+      ['shortcuts', L('newTab.shortcuts'), L('settings.newTab.shortcuts.detail'), true],
+      ['continue', L('newTab.continue'), L('settings.newTab.continue.detail'), true],
+      ['playing', L('newTab.playing'), L('settings.newTab.playing.detail'), true],
+      ['archive', L('newTab.archive'), L('settings.newTab.archive.detail'), false],
+      ['shield', L('newTab.shield'), L('settings.newTab.shield.detail'), true],
+      ['note', L('newTab.note'), L('settings.newTab.note.detail'), false],
+    ];
+    const styleDetail = {
+      minimal: L('newTab.style.minimal.detail'),
+      card: L('newTab.style.card.detail'),
+      overlay: L('newTab.style.overlay.detail'),
+    }[style];
+    return [
+      group('newTabStyle', L('settings.newTab.style.title'), [
+        entry('newTabStyle', L('settings.newTab.style.title'),
+              visualPicker('newTabStyle', style, styles, (value) => this.set_('newTabStyle', value)),
+              {layout: 'block', detail: styleDetail, keywords: L('settings.newTab.style.keywords')}),
+      ]),
+      group('newTabPage', L('settings.newTab.page.title'), [
+        entry('newTabBackground', L('newTab.background'),
+              menuControl(s.newTabBackground, backgrounds, (value) => this.set_('newTabBackground', value),
+                          {disabled: minimal}),
+              {detail: L('settings.newTab.background.detail'), disabled: minimal,
+               keywords: L('settings.newTab.background.keywords')}),
+        ...items.map(([id, title, detail, overlay]) => entry(`newTabWidget-${id}`, title,
+            switchControl(widgets.includes(id), (on) => this.setNewTabWidget_(id, on),
+                          {label: title, disabled: minimal || (style === 'overlay' && !overlay)}),
+            {detail: style === 'overlay' && !overlay ? L('settings.newTab.cardOnly') : detail,
+             disabled: minimal || (style === 'overlay' && !overlay), keywords: L('settings.newTab.style.keywords')})),
+        entry('newTabShortcutRows', L('settings.newTab.shortcutRows.title'),
+              switchControl(s.newTabShortcutRows === 2, (on) => this.set_('newTabShortcutRows', on ? 2 : 1),
+                            {label: L('settings.newTab.shortcutRows.title'), disabled: style !== 'card'}),
+              {detail: style === 'card' ? L('settings.newTab.shortcutRows.detail') : L('settings.newTab.cardOnly'),
+               disabled: style !== 'card'}),
+      ], {footer: minimal ? L('settings.newTab.minimalFooter') : ''}),
+    ];
+  }
+
+  setNewTabWidget_(id, on) {
+    const widgets = (this.settings_.newTabWidgets || []).filter((widget) => widget !== id);
+    if (on) {
+      widgets.push(id);
+    }
+    this.settings_ = {...this.settings_, newTabWidgets: widgets};
+    chrome.send('setSetting', ['newTabWidget', {id, on}]);
   }
 
   // 「标签管理」：自动整理、归档、AI 整理用哪个模型。

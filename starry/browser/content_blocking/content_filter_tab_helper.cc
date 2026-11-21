@@ -16,6 +16,7 @@
 #include "content/public/browser/render_process_host_observer.h"
 #include "content/public/browser/web_contents.h"
 #include "mojo/public/cpp/bindings/associated_remote.h"
+#include "starry/browser/content_blocking/blocked_stats.h"
 #include "starry/browser/content_blocking/filter_config.h"
 #include "starry/components/content_filter/filter_engine.h"
 #include "starry/components/content_filter/mojom/content_filter.mojom.h"
@@ -100,6 +101,7 @@ void Count(content::RenderFrameHost* frame) {
   }
   content::RenderFrameHost* main = frame->GetOutermostMainFrame();
   BlockedRequests::GetOrCreateForPage(main->GetPage())->count++;
+  RecordBlocked(main->GetBrowserContext());
   if (!main->GetPage().IsPrimary()) {
     return;
   }

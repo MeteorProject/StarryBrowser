@@ -8,16 +8,20 @@
 #include <string>
 #include <vector>
 
+#include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
 #include "components/omnibox/browser/autocomplete_controller.h"
+#include "starry/browser/ui/command_bar/command_bar_home.h"
 #include "starry/browser/ui/design/theme.h"
 #include "starry/browser/ui/motion/layer_motion.h"
 #include "starry/browser/ui/motion/value_motion.h"
 #include "ui/base/metadata/metadata_header_macros.h"
 #include "ui/gfx/range/range.h"
 #include "ui/views/controls/textfield/textfield_controller.h"
+#include "ui/views/focus/focus_manager.h"
 #include "ui/views/view.h"
+#include "ui/views/view_targeter_delegate.h"
 #include "ui/views/view_tracker.h"
 
 class BrowserWindowInterface;
@@ -49,8 +53,13 @@ class GlassView;
 // 动效：打开时遮罩淡入，面板自上方落下、放大、去模糊并淡入；关闭时整体原地淡出。
 // 建议变化时面板高度与行位置平滑过渡，新行淡入、移除的行原地淡出（行按网址或搜索词
 // 标识）。触发动画的条件见 RebuildRows。
+// 卡片风格新标签页通过 OpenDocked 停靠在页面搜索框上（无遮罩、失焦即关）；
+// 全屏浮层风格在输入框为空时展示 CommandBarHome。
 class CommandBarView : public views::View,
                        public views::TextfieldController,
+                       public views::ViewTargeterDelegate,
+                       public views::FocusChangeListener,
+                       public CommandBarHome::Delegate,
                        public AutocompleteController::Observer {
   METADATA_HEADER(CommandBarView, views::View)
 
@@ -68,6 +77,16 @@ class CommandBarView : public views::View,
   ~CommandBarView() override;
 
   void Open(Mode mode);
+  // 停靠到卡片风格新标签页的搜索框上；slot 返回本视图坐标（为空时沿用上次位置），
+  // drop 控制是否使用下落入场动画，closed 在关闭或切换停靠目标时触发。
+  using DockSlot = base::RepeatingCallback<std::optional<gfx::Rect>()>;
+  void OpenDocked(DockSlot slot,
+                  const std::u16string& text,
+                  bool drop,
+                  base::OnceClosure closed);
+  void DockMoved();
+  void FocusField(const std::u16string& text);
+  bool docked_open() const { return open_ && !dock_slot_.is_null(); }
   void Close();
   bool is_open() const { return open_; }
   Mode mode() const { return mode_; }
@@ -91,6 +110,20 @@ class CommandBarView : public views::View,
   bool OnMousePressed(const ui::MouseEvent& event) override;
   void OnMouseReleased(const ui::MouseEvent& event) override;
 
+  // views::ViewTargeterDelegate:
+  bool DoesIntersectRect(const views::View* target,
+                         const gfx::Rect& rect) const override;
+
+  // views::FocusChangeListener:
+  void OnWillChangeFocus(views::View* focused_before,
+                         views::View* focused_now) override {}
+  void OnDidChangeFocus(views::View* focused_before,
+                        views::View* focused_now) override;
+
+  // CommandBarHome::Delegate:
+  void HomeOpenUrl(const GURL& url) override;
+  void HomeDismiss() override;
+
   // views::TextfieldController:
   void ContentsChanged(views::Textfield* sender,
                        const std::u16string& new_contents) override;
@@ -102,6 +135,13 @@ class CommandBarView : public views::View,
                        bool default_match_changed) override;
 
  private:
+  void OpenImpl(Mode mode,
+                DockSlot slot,
+                const std::u16string& text,
+                bool drop,
+                base::OnceClosure closed);
+  void UpdateHome();
+  void StopFocusListening();
   // 面板的宽度、离窗口顶边的距离；高度是正在动的那个。
   gfx::Rect PanelBounds() const;
   // 面板最后的高度（按现在的行数）。
@@ -173,6 +213,12 @@ class CommandBarView : public views::View,
   bool pressed_backdrop_ = false;
 
   raw_ptr<views::View> backdrop_ = nullptr;
+  raw_ptr<CommandBarHome> home_ = nullptr;
+  bool home_enabled_ = false;
+  DockSlot dock_slot_;
+  mutable gfx::Rect dock_rect_;
+  base::OnceClosure dock_closed_;
+  raw_ptr<views::FocusManager> focus_listening_ = nullptr;
   raw_ptr<GlassView> glass_ = nullptr;
   raw_ptr<CommandBarPanel> panel_ = nullptr;
   raw_ptr<views::Textfield> field_ = nullptr;

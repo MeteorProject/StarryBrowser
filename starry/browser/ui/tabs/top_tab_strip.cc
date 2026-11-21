@@ -76,7 +76,7 @@ TopTabStrip::TopTabStrip(BrowserWindowInterface* browser)
       base::BindRepeating(
           [](BrowserWindowInterface* browser) {
             if (StarryBrowserView* view = StarryBrowserView::From(browser)) {
-              view->OpenCommandBar(CommandBarView::Mode::kNewTab);
+              view->NewTab();
             }
           },
           browser),

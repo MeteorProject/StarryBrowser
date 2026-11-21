@@ -70,7 +70,8 @@ bool IsBlankTabUrl(const GURL& url) {
   return url.is_empty() || url.IsAboutBlank() ||
          (IsInternalURL(url) &&
           (url.host() == chrome::kChromeUINewTabHost ||
-           url.host() == chrome::kChromeUINewTabPageHost));
+           url.host() == chrome::kChromeUINewTabPageHost ||
+           url.host() == "starry-newtab"));
 }
 
 }  // namespace starry

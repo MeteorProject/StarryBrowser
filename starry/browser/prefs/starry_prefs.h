@@ -151,6 +151,19 @@ inline constexpr char kAgentAllowUploads[] = "starry.agent.allow_uploads";
 inline constexpr char kAgentAllowPrivateTabs[] =
     "starry.agent.allow_private_tabs";
 
+// 新标签页（starry/browser/new_tab/new_tab.h）：风格（minimal / card / overlay）、
+// 背景（theme / sky / image / solid）、启用的小组件顺序、快捷网站行数（1 或 2）与便签。
+inline constexpr char kNewTabStyle[] = "starry.new_tab.style";
+inline constexpr char kNewTabStyleMinimal[] = "minimal";
+inline constexpr char kNewTabStyleCard[] = "card";
+inline constexpr char kNewTabStyleOverlay[] = "overlay";
+inline constexpr char kNewTabBackground[] = "starry.new_tab.background";
+inline constexpr char kNewTabWidgets[] = "starry.new_tab.widgets";
+inline constexpr char kNewTabShortcutRows[] = "starry.new_tab.shortcut_rows";
+inline constexpr char kNewTabNote[] = "starry.new_tab.note";
+// 每日拦截计数（"YYYY-MM-DD" → 次数），保留最近 14 天；无痕窗口不记录。
+inline constexpr char kBlockedStats[] = "starry.content_blocking.daily_blocked";
+
 // 设置向导（starry/browser/onboarding/onboarding.h）：是否待完成及已完成的版本号（0 表示未完成）。
 inline constexpr char kOnboardingPending[] = "starry.onboarding.pending";
 inline constexpr char kOnboardingVersion[] = "starry.onboarding.version";

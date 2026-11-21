@@ -45,11 +45,13 @@
 #include "components/prefs/pref_service.h"
 #include "components/tabs/public/tab_interface.h"
 #include "content/public/browser/download_manager.h"
+#include "content/public/browser/host_zoom_map.h"
 #include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "starry/browser/downloads/download_service.h"
 #include "starry/browser/l10n/l10n.h"
+#include "starry/browser/new_tab/new_tab.h"
 #include "starry/browser/onboarding/onboarding.h"
 #include "starry/browser/prefs/starry_prefs.h"
 #include "starry/browser/starry_hooks.h"
@@ -98,6 +100,7 @@
 #include "starry/browser/ui/toolbar/page_color.h"
 #include "starry/browser/ui/toolbar/toolbar_parts.h"
 #include "starry/browser/ui/webui/starry_pages.h"
+#include "third_party/blink/public/common/page/page_zoom.h"
 #include "ui/actions/actions.h"
 #include "ui/base/hit_test.h"
 #include "ui/base/metadata/metadata_impl_macros.h"
@@ -376,8 +379,7 @@ bool HandleNewTabCommand(BrowserWindowInterface* browser) {
   if (!view || !view->command_bar()) {
     return false;
   }
-  // ⌘T 先打开命令栏，确认后再在新标签打开。
-  view->OpenCommandBar(CommandBarView::Mode::kNewTab);
+  view->NewTab();
   return true;
 }
 
@@ -992,6 +994,11 @@ void StarryBrowserView::UpdateForActiveTab() {
   }
   KeepOnboardingTab();
   tabs::TabInterface* tab = browser()->GetActiveTabInterface();
+  if (command_bar_ && command_bar_->docked_open() &&
+      (!tab || tab->GetContents() != docked_contents_.get() ||
+       !new_tab::IsNewTabPage(tab->GetContents()))) {
+    command_bar_->Close();
+  }
   const InternalPage page =
       tab ? InternalPageForUrl(tab->GetContents()->GetVisibleURL())
           : InternalPage::kNone;
@@ -1080,6 +1087,9 @@ void StarryBrowserView::UpdateWindowButtons(bool animated) {
 void StarryBrowserView::UpdateChromeGeometry() {
   if (!sidebar_) {
     return;
+  }
+  if (command_bar_ && command_bar_->docked_open()) {
+    command_bar_->DockMoved();
   }
   MultiContentsView* contents = multi_contents_view();
   const double presence = std::clamp(compact_presence_.value(), 0.0, 1.0) *
@@ -1191,9 +1201,103 @@ StarryBrowserView* StarryBrowserView::From(BrowserWindowInterface* browser) {
 }
 
 void StarryBrowserView::OpenCommandBar(CommandBarView::Mode mode) {
-  if (command_bar_ && !onboarding_active_) {
-    command_bar_->Open(mode);
+  if (!command_bar_ || onboarding_active_) {
+    return;
   }
+  if (mode == CommandBarView::Mode::kEdit && !mini_toolbar_) {
+    tabs::TabInterface* tab = browser()->GetActiveTabInterface();
+    content::WebContents* contents = tab ? tab->GetContents() : nullptr;
+    if (new_tab::IsNewTabPage(contents)) {
+      OpenNewTabSearch(contents, std::u16string());
+      return;
+    }
+  }
+  command_bar_->Open(mode);
+}
+
+void StarryBrowserView::NewTab() {
+  if (!command_bar_ || onboarding_active_) {
+    return;
+  }
+  if (new_tab::GetStyle(browser()->GetProfile()) != new_tab::Style::kCard) {
+    OpenCommandBar(CommandBarView::Mode::kNewTab);
+    return;
+  }
+  NavigateParams params(browser(), GURL(chrome::kChromeUINewTabURL),
+                        ui::PAGE_TRANSITION_TYPED);
+  params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+  Navigate(&params);
+  tabs::TabInterface* tab = browser()->GetActiveTabInterface();
+  if (tab) {
+    // 网页尚未载入时先按默认位置停靠，页面上报后再对齐。
+    OpenNewTabSearch(tab->GetContents(), std::u16string(), /*drop=*/true);
+  }
+}
+
+void StarryBrowserView::OpenNewTabSearch(content::WebContents* contents,
+                                         const std::u16string& text,
+                                         bool drop) {
+  if (!command_bar_ || onboarding_active_ || !contents) {
+    return;
+  }
+  tabs::TabInterface* tab = browser()->GetActiveTabInterface();
+  if (!tab || tab->GetContents() != contents) {
+    return;
+  }
+  if (command_bar_->docked_open() && docked_contents_.get() == contents) {
+    // 已经停在这一页上（Chrome 切过来时又要地址栏拿焦点）：不动输入框里的字。
+    command_bar_->FocusField(text);
+    return;
+  }
+  new_tab::NewTabState::CreateForWebContents(contents);
+  new_tab::NewTabState::FromWebContents(contents)->SetSearchDocked(true);
+  docked_contents_ = contents->GetWeakPtr();
+  command_bar_->OpenDocked(
+      base::BindRepeating(
+          [](base::WeakPtr<StarryBrowserView> view,
+             base::WeakPtr<content::WebContents> contents)
+              -> std::optional<gfx::Rect> {
+            return view ? view->NewTabSearchSlot(contents) : std::nullopt;
+          },
+          weak_factory_.GetWeakPtr(), contents->GetWeakPtr()),
+      text, drop,
+      base::BindOnce(
+          [](base::WeakPtr<content::WebContents> contents) {
+            if (contents) {
+              if (auto* state =
+                      new_tab::NewTabState::FromWebContents(contents.get())) {
+                state->SetSearchDocked(false);
+              }
+            }
+          },
+          contents->GetWeakPtr()));
+}
+
+void StarryBrowserView::NewTabSearchMoved(content::WebContents* contents) {
+  if (command_bar_ && command_bar_->docked_open() &&
+      docked_contents_.get() == contents) {
+    command_bar_->DockMoved();
+  }
+}
+
+std::optional<gfx::Rect> StarryBrowserView::NewTabSearchSlot(
+    base::WeakPtr<content::WebContents> weak_contents) {
+  content::WebContents* contents = weak_contents.get();
+  if (!contents || !command_bar_) {
+    return std::nullopt;
+  }
+  const gfx::Rect page = PageBoundsFor(contents);
+  gfx::Rect rect;
+  auto* state = new_tab::NewTabState::FromWebContents(contents);
+  if (state && state->search_rect()) {
+    const double zoom = blink::ZoomLevelToZoomFactor(
+        content::HostZoomMap::GetZoomLevel(contents));
+    rect = gfx::ToRoundedRect(gfx::ScaleRect(*state->search_rect(), zoom));
+  } else {
+    rect = new_tab::DefaultSearchRect(page.size());
+  }
+  rect.Offset(page.OffsetFromOrigin());
+  return views::View::ConvertRectToTarget(this, command_bar_.get(), rect);
 }
 
 void StarryBrowserView::SetFocusToLocationBar(bool is_user_initiated) {
@@ -1201,9 +1305,17 @@ void StarryBrowserView::SetFocusToLocationBar(bool is_user_initiated) {
     BrowserView::SetFocusToLocationBar(is_user_initiated);
     return;
   }
-  // Chrome 给新标签页聚焦地址栏时也会走这里：只有用户要的（⌘L）才打开命令栏。
+  // Chrome 给新标签页聚焦地址栏时也会走这里：只有用户要的（⌘L）才打开命令栏；卡片风格的
+  // 新标签页（切过去、刚开）把命令栏停到页面的搜索框上，可以直接打字。
   if (is_user_initiated) {
     OpenCommandBar(CommandBarView::Mode::kEdit);
+    return;
+  }
+  tabs::TabInterface* tab = browser()->GetActiveTabInterface();
+  content::WebContents* contents = tab ? tab->GetContents() : nullptr;
+  if (!mini_toolbar_ && new_tab::IsNewTabPage(contents) && GetWidget() &&
+      GetWidget()->IsActive()) {
+    OpenNewTabSearch(contents, std::u16string());
   }
 }
 

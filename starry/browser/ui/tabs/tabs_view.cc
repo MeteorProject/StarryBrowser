@@ -1490,7 +1490,7 @@ void TabsView::TabFolderAction(const std::string& id,
                                std::optional<gfx::Point> menu_point) {
   if (id == "@tabs") {
     if (auto* view = StarryBrowserView::From(browser_)) {
-      view->OpenCommandBar(CommandBarView::Mode::kNewTab);
+      view->NewTab();
     }
     return;
   }

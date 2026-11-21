@@ -2,8 +2,6 @@
 
 #include "starry/browser/starry_content_browser_client.h"
 
-#include "starry/browser/ui/tabs/pinned_peek.h"
-
 #include <string>
 #include <utility>
 
@@ -34,10 +32,12 @@
 #include "starry/browser/content_blocking/content_blocking_hooks.h"
 #include "starry/browser/content_blocking/content_filter_proxy.h"
 #include "starry/browser/content_blocking/content_filter_tab_helper.h"
+#include "starry/browser/new_tab/new_tab.h"
 #include "starry/browser/privacy/fingerprint_protection.h"
 #include "starry/browser/sessions/session_titles.h"
 #include "starry/browser/starry_browser_main_extra_parts.h"
 #include "starry/browser/ui/media/media_pip.h"
+#include "starry/browser/ui/tabs/pinned_peek.h"
 #include "starry/browser/web_time_zone.h"
 #include "starry/common/fingerprint_protection.h"
 #include "starry/common/internal_urls.h"
@@ -98,20 +98,6 @@ void AppendFeatures(base::CommandLine& command_line,
 void DisableUnwantedFeatures(base::CommandLine& command_line) {
   AppendFeatures(command_line, switches::kDisableFeatures, kDisabledFeatures);
   AppendFeatures(command_line, switches::kEnableFeatures, kEnabledFeatures);
-}
-
-// 将新标签页重定向到空白页：Chrome 的新标签页（chrome://new-tab-page）包含
-// Google 搜索框并依赖 Chrome 侧边面板，与 Starry 布局不兼容。
-bool RewriteNewTabURL(GURL* url, content::BrowserContext* browser_context) {
-  if (!url->SchemeIs(content::kChromeUIScheme)) {
-    return false;
-  }
-  if (url->host() != chrome::kChromeUINewTabHost &&
-      url->host() != chrome::kChromeUINewTabPageHost) {
-    return false;
-  }
-  *url = GURL(url::kAboutBlankURL);
-  return true;
 }
 
 // 扩展页重定向到 Starry 设置页的「扩展」分类。Chrome 内部打开的扩展管理、
@@ -341,8 +327,7 @@ void StarryContentBrowserClient::BrowserURLHandlerCreated(
   // 改写成 chrome://new-tab-page。
   handler->AddHandlerPair(&RewritePublicURL,
                           content::BrowserURLHandler::null_handler());
-  handler->AddHandlerPair(&RewriteNewTabURL,
-                          content::BrowserURLHandler::null_handler());
+  handler->AddHandlerPair(&new_tab::RewriteURL, &new_tab::ReverseURL);
   handler->AddHandlerPair(&RewriteExtensionsURL, &ReverseInternalURL);
   handler->AddHandlerPair(&RewriteImportDataURL, &ReverseInternalURL);
   ChromeContentBrowserClient::BrowserURLHandlerCreated(handler);

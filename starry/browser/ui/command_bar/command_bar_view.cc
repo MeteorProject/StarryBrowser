@@ -39,6 +39,7 @@
 #include "content/public/browser/web_contents.h"
 #include "content/public/common/url_constants.h"
 #include "starry/browser/l10n/l10n.h"
+#include "starry/browser/new_tab/new_tab.h"
 #include "starry/browser/tab_organizer/tab_archive.h"
 #include "starry/browser/tab_organizer/tab_grouper.h"
 #include "starry/browser/tab_organizer/tab_organizer.h"
@@ -71,6 +72,7 @@
 #include "ui/views/background.h"
 #include "ui/views/controls/textfield/textfield.h"
 #include "ui/views/focus/focus_manager.h"
+#include "ui/views/view_targeter.h"
 #include "ui/views/widget/widget.h"
 #include "url/gurl.h"
 
@@ -567,6 +569,10 @@ CommandBarView::CommandBarView(BrowserWindowInterface* browser)
   backdrop_->layer()->SetOpacity(0);
   backdrop_->SetCanProcessEventsWithinSubtree(false);
 
+  home_ = AddChildView(std::make_unique<CommandBarHome>(browser, this));
+  home_->SetVisible(false);
+  SetEventTargeter(std::make_unique<views::ViewTargeter>(this));
+
   glass_ = AddChildView(std::make_unique<GlassView>());
   glass_->SetCornerRadius(radius::kLarge, true);
   panel_ = glass_->AddChildView(std::make_unique<CommandBarPanel>());
@@ -603,26 +609,93 @@ CommandBarView::CommandBarView(BrowserWindowInterface* browser)
 }
 
 CommandBarView::~CommandBarView() {
+  StopFocusListening();
   controller_->RemoveObserver(this);
 }
 
 void CommandBarView::Open(Mode mode) {
+  OpenImpl(mode, DockSlot(), std::u16string(), /*drop=*/true,
+           base::OnceClosure());
+}
+
+void CommandBarView::OpenDocked(DockSlot slot,
+                                const std::u16string& text,
+                                bool drop,
+                                base::OnceClosure closed) {
+  OpenImpl(Mode::kEdit, std::move(slot), text, drop, std::move(closed));
+}
+
+void CommandBarView::DockMoved() {
+  if (!dock_slot_.is_null() && GetVisible()) {
+    LayoutPanel();
+  }
+}
+
+void CommandBarView::FocusField(const std::u16string& text) {
+  if (!open_) {
+    return;
+  }
+  if (!text.empty()) {
+    field_->SetText(text);
+    field_->SetSelectedRange(gfx::Range(text.size()));
+    ContentsChanged(field_, text);
+  }
+  field_->RequestFocus();
+}
+
+void CommandBarView::OpenImpl(Mode mode,
+                              DockSlot slot,
+                              const std::u16string& initial_text,
+                              bool drop,
+                              base::OnceClosure closed) {
   const bool was_open = open_;
-  if (was_open && mode_ == mode) {
+  const bool docked = !slot.is_null();
+  const bool was_docked = !dock_slot_.is_null();
+  if (was_open && docked && was_docked) {
+    if (dock_closed_) {
+      std::move(dock_closed_).Run();
+    }
+    dock_slot_ = std::move(slot);
+    dock_closed_ = std::move(closed);
+    LayoutPanel();
+    if (!initial_text.empty()) {
+      FocusField(initial_text);
+    } else {
+      field_->SelectAll(false);
+      field_->RequestFocus();
+    }
+    return;
+  }
+  if (was_open && !docked && !was_docked && mode_ == mode) {
     field_->SelectAll(false);
     field_->RequestFocus();
     return;
+  }
+  if (was_open && was_docked && dock_closed_) {
+    std::move(dock_closed_).Run();
+  }
+  if (!docked) {
+    StopFocusListening();
   }
   // 关掉后还在淡出时又打开。
   const bool closing = !was_open && GetVisible();
   mode_ = mode;
   open_ = true;
   ++close_generation_;
+  dock_slot_ = std::move(slot);
+  dock_closed_ = std::move(closed);
+  home_enabled_ =
+      !docked && mode == Mode::kNewTab &&
+      new_tab::GetStyle(browser_->GetProfile()) == new_tab::Style::kOverlay;
 
   tabs::TabInterface* tab = browser_->GetActiveTabInterface();
-  text_ = mode == Mode::kEdit && tab ? EditText(tab->GetContents())
-                                     : std::u16string();
-  edited_ = false;
+  if (docked) {
+    text_ = initial_text;
+  } else {
+    text_ = mode == Mode::kEdit && tab ? EditText(tab->GetContents())
+                                       : std::u16string();
+  }
+  edited_ = docked && !text_.empty();
   prevent_inline_ = false;
   selected_ = 0;
   hovered_.reset();
@@ -642,16 +715,47 @@ void CommandBarView::Open(Mode mode) {
 
   syncing_ = true;
   field_->SetText(text_);
-  field_->SelectAll(false);
+  if (edited_) {
+    // 在页面上打的字：光标放在后面，接着打。
+    field_->SetSelectedRange(gfx::Range(text_.size()));
+  } else {
+    field_->SelectAll(false);
+  }
   synced_text_ = text_;
   synced_selection_ = field_->GetSelectedRange();
   syncing_ = false;
   field_->RequestFocus();
+  if (docked) {
+    // 点到网页上（焦点去了网页）就关。
+    if (views::FocusManager* focus_manager = GetFocusManager();
+        focus_manager && !focus_listening_) {
+      focus_manager->AddFocusChangeListener(this);
+      focus_listening_ = focus_manager;
+    }
+  }
+  if (edited_) {
+    StartQuery();
+  }
 
-  // 遮罩淡入；面板从上方偏移落下、缩放、去模糊并淡入。
+  home_->SetVisible(home_enabled_);
+  if (home_enabled_) {
+    home_->SetBoundsRect(GetLocalBounds());
+    home_->Refresh(/*reveal=*/!was_open && !closing);
+  }
+
+  // 遮罩淡入；面板从上方偏移落下、缩放、去模糊并淡入。停靠时没有遮罩，点了页面上的
+  // 搜索框时面板原地淡入。
   const MotionCurve curve = MotionCurve::Of(motion::kCommandBarOpen);
-  backdrop_motion_.AnimateOpacity(backdrop_->layer(), 1, curve);
-  if (closing) {
+  if (docked) {
+    backdrop_motion_.SetOpacity(backdrop_->layer(), 0);
+  } else {
+    backdrop_motion_.AnimateOpacity(backdrop_->layer(), 1, curve);
+  }
+  if (docked && !drop && !closing) {
+    glass_motion_.SetTransform(glass_->layer(), LayerPose());
+    glass_motion_.AnimateOpacityFrom(glass_->layer(), 0, 1,
+                                     MotionCurve::EaseOut(0.12));
+  } else if (closing) {
     // 还在淡出：从现在的样子淡回来，不再落一次。
     glass_motion_.AnimateOpacity(glass_->layer(), 1, curve);
   } else if (!was_open) {
@@ -676,6 +780,13 @@ void CommandBarView::Close() {
     return;
   }
   open_ = false;
+  StopFocusListening();
+  if (dock_closed_) {
+    std::move(dock_closed_).Run();
+  }
+  if (home_enabled_) {
+    home_->SetCanProcessEventsWithinSubtree(false);
+  }
   controller_->Stop(AutocompleteStopReason::kInteraction);
   const int generation = ++close_generation_;
 
@@ -705,6 +816,10 @@ void CommandBarView::FinishClose() {
   if (open_) {
     return;
   }
+  dock_slot_.Reset();
+  home_enabled_ = false;
+  home_->SetVisible(false);
+  home_->SetCanProcessEventsWithinSubtree(true);
   SetVisible(false);
   controller_->Stop(AutocompleteStopReason::kClobbered);
   RebuildRows(/*allow_animation=*/false);
@@ -725,9 +840,19 @@ void CommandBarView::SetTheme(const Theme& theme) {
 }
 
 void CommandBarView::ApplyTheme() {
-  // 遮罩：深色 28%、浅色 12% 的黑。
-  backdrop_->SetBackground(views::CreateSolidBackground(
-      SkColorSetA(SK_ColorBLACK, theme_.is_dark ? 0x47 : 0x1F)));
+  if (home_enabled_) {
+    // 全屏浮层：整个窗口模糊，再压暗（深色 52% 的黑、浅色 50% 的白），首页的字直接写在上面。
+    backdrop_->SetBackground(views::CreateSolidBackground(
+        theme_.is_dark ? SkColorSetA(SK_ColorBLACK, 0x85)
+                       : SkColorSetA(SK_ColorWHITE, 0x80)));
+    backdrop_->layer()->SetBackgroundBlur(28);
+  } else {
+    // 遮罩：深色 28%、浅色 12% 的黑。
+    backdrop_->SetBackground(views::CreateSolidBackground(
+        SkColorSetA(SK_ColorBLACK, theme_.is_dark ? 0x47 : 0x1F)));
+    backdrop_->layer()->SetBackgroundBlur(0);
+  }
+  home_->SetTheme(theme_);
   GlassStyle style;
   style.dark = theme_.is_dark;
   style.luma = theme_.is_dark ? 0.1f : 0.9f;
@@ -796,9 +921,16 @@ void CommandBarView::RowRemoveClicked(CommandBarRow* row) {
 }
 
 gfx::Rect CommandBarView::PanelBounds() const {
+  const int height = static_cast<int>(std::round(height_.value()));
+  if (!dock_slot_.is_null()) {
+    if (std::optional<gfx::Rect> slot = dock_slot_.Run()) {
+      dock_rect_ = *slot;
+    }
+    return gfx::Rect(dock_rect_.x(), dock_rect_.y(), dock_rect_.width(),
+                     std::max(kHeaderHeight, height));
+  }
   const int width = std::min(metrics::kCommandBarWidth,
                              std::max(0, this->width() - 2 * kSideMargin));
-  const int height = static_cast<int>(std::round(height_.value()));
   return gfx::Rect((this->width() - width) / 2, top_offset_, width,
                    std::max(kHeaderHeight, height));
 }
@@ -814,6 +946,8 @@ int CommandBarView::TargetPanelHeight() const {
 
 void CommandBarView::Layout(PassKey) {
   backdrop_->SetBoundsRect(GetLocalBounds());
+  home_->SetBoundsRect(GetLocalBounds());
+  home_->SetPanelBottom(top_offset_ + kHeaderHeight);
   LayoutPanel();
   PlaceRows(/*animate=*/false);
 }
@@ -851,6 +985,60 @@ void CommandBarView::PlaceRows(bool animate) {
           LayerPose(), MotionCurve::Of(motion::kSearchResize));
     }
     y += metrics::kCommandBarRowHeight + kRowSpacing;
+  }
+}
+
+bool CommandBarView::DoesIntersectRect(const views::View* target,
+                                       const gfx::Rect& rect) const {
+  if (target != this) {
+    return views::ViewTargeterDelegate::DoesIntersectRect(target, rect);
+  }
+  if (dock_slot_.is_null()) {
+    // 遮罩盖住整个窗口（点外面关掉）。
+    return true;
+  }
+  // 停着时只有面板接鼠标，别处的点击给网页和侧栏。
+  gfx::Rect panel = glass_->glass_rect();
+  panel.Offset(glass_->bounds().OffsetFromOrigin());
+  return panel.Intersects(rect);
+}
+
+void CommandBarView::OnDidChangeFocus(views::View* focused_before,
+                                      views::View* focused_now) {
+  if (!docked_open() || !focused_now || Contains(focused_now)) {
+    return;
+  }
+  // 点了网页（或者别的界面）：焦点不还回去。
+  previous_focus_.SetView(nullptr);
+  Close();
+}
+
+void CommandBarView::StopFocusListening() {
+  if (focus_listening_) {
+    focus_listening_->RemoveFocusChangeListener(this);
+    focus_listening_ = nullptr;
+  }
+}
+
+void CommandBarView::HomeOpenUrl(const GURL& url) {
+  previous_focus_.SetView(nullptr);
+  Close();
+  NavigateParams params(browser_, url, ui::PAGE_TRANSITION_AUTO_BOOKMARK);
+  params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+  Navigate(&params);
+  if (tabs::TabInterface* tab = browser_->GetActiveTabInterface()) {
+    tab->GetContents()->Focus();
+  }
+}
+
+void CommandBarView::HomeDismiss() {
+  previous_focus_.SetView(nullptr);
+  Close();
+}
+
+void CommandBarView::UpdateHome() {
+  if (home_enabled_ && open_) {
+    home_->SetShown(text_.empty());
   }
 }
 
@@ -952,6 +1140,7 @@ void CommandBarView::OnResultChanged(AutocompleteController* controller,
 }
 
 void CommandBarView::StartQuery() {
+  UpdateHome();
   if (text_.empty()) {
     controller_->Stop(AutocompleteStopReason::kClobbered);
     RebuildRows(/*allow_animation=*/true);

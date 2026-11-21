@@ -1,6 +1,6 @@
 // Copyright 2026 The Starry Browser Authors
 //
-// 首次启动设置向导（starry://welcome）：欢迎 → 导入 → 外观 → 隐私 → AI 助手 → 完成。
+// 首次启动设置向导（starry://welcome）：欢迎 → 导入 → 外观 → 新标签页 → 隐私 → AI 助手 → 完成。
 // 选项直接复用设置页 Handler 即时生效；AI 助手在点击「继续」时写入，跳过时保持不变。
 
 import {html, LitElement, nothing} from 'chrome://resources/lit/v3_0/lit.rollup.js';
@@ -10,8 +10,8 @@ import {joinList, L, locale, platform} from './common/l10n.js';
 import {icon} from './common/library.js';
 import {Motion, reduceMotion} from './common/motion.js';
 
-const STEP = {welcome: 0, import: 1, appearance: 2, privacy: 3, ai: 4, done: 5};
-const STEP_COUNT = 6;
+const STEP = {welcome: 0, import: 1, appearance: 2, newTab: 3, privacy: 4, ai: 5, done: 6};
+const STEP_COUNT = 7;
 const IMPORT_ITEMS = ['bookmarks', 'history', 'passwords', 'searchEngines', 'autofill'];
 
 // 隐私预设：cookies 1 = 阻止全部第三方 Cookie，2 = 仅无痕窗口阻止。
@@ -133,6 +133,24 @@ function previewWindow(dark, layout, address) {
           <div class="site-body"><b></b><u></u><u></u><u style="width:80%"></u><em></em><u></u><u style="width:70%"></u></div>
         </div>
       </div>
+    </div>`;
+}
+
+function newTabPreview(style, dark) {
+  const page = html`<div class="ntv-page"><b></b><u></u><u></u><u class="s"></u><em></em></div>`;
+  return html`
+    <div class="ntv ${style} ${dark ? '' : 'light'}" aria-hidden="true">
+      <div class="ntv-side"><span class="ntv-lights"><i></i><i></i><i></i></span><i class="bar"></i><i></i><i class="s"></i><i></i><i></i></div>
+      <div class="ntv-card">
+        ${style === 'card' ? html`
+          <div class="ntv-hello"></div><div class="ntv-pill"></div>
+          <div class="ntv-grid"><i class="w"></i><i></i><i></i><i></i><i></i></div>` : page}
+      </div>
+      ${style === 'minimal' ? html`<div class="ntv-dim"></div><div class="ntv-pill floating"></div>` : nothing}
+      ${style === 'overlay' ? html`
+        <div class="ntv-blur"></div><div class="ntv-pill floating"></div>
+        <div class="ntv-tiles">${Array.from({length: 12}, () => html`<i></i>`)}</div>
+        <div class="ntv-cards"><i></i><i></i><i></i></div>` : nothing}
     </div>`;
 }
 
@@ -517,8 +535,8 @@ class StarryWelcome extends LitElement {
   }
 
   renderProgress_() {
-    const titles = [L('welcome.step.import'), L('welcome.step.appearance'), L('welcome.step.privacy'),
-                    L('welcome.step.ai'), L('welcome.step.done')];
+    const titles = [L('welcome.step.import'), L('welcome.step.appearance'), L('welcome.step.newTab'),
+                    L('welcome.step.privacy'), L('welcome.step.ai'), L('welcome.step.done')];
     return titles.map((title, index) => {
       const step = index + 1;
       const state = step < this.step_ ? 'done' : step === this.step_ ? 'cur' : '';
@@ -534,6 +552,8 @@ class StarryWelcome extends LitElement {
         return this.renderImport_();
       case STEP.appearance:
         return this.renderAppearance_();
+      case STEP.newTab:
+        return this.renderNewTab_();
       case STEP.privacy:
         return this.renderPrivacy_();
       case STEP.ai:
@@ -801,6 +821,34 @@ class StarryWelcome extends LitElement {
           <div class="preview-caption">${icon('eye', 12)}${L('welcome.appearance.preview')}</div>
         </div>
       </div>`;
+  }
+
+  renderNewTab_() {
+    const s = this.settings_;
+    const dark = this.isDark_();
+    const current = s.newTabStyle || 'minimal';
+    const styles = [
+      {value: 'minimal', title: L('newTab.style.minimal'), detail: L('newTab.style.minimal.detail')},
+      {value: 'card', title: L('newTab.style.card'), detail: L('newTab.style.card.detail')},
+      {value: 'overlay', title: L('newTab.style.overlay'), detail: L('newTab.style.overlay.detail')},
+    ];
+    return html`
+      <h1 class="st">${L('welcome.newTab.title')}</h1>
+      <div class="sub st">${L('welcome.newTab.subtitle', {shortcut: shortcut('T')})}</div>
+      <div class="st" style="margin-top:20px">
+        <div class="pick grid3" role="radiogroup" aria-label=${L('welcome.newTab.title')} data-pick="newTab">
+          <div class="ring" style="border-radius:14px"></div>
+          ${styles.map((style) => html`
+            <button class="preset ntp-option ${current === style.value ? 'sel' : ''}" role="radio"
+                aria-checked=${current === style.value ? 'true' : 'false'} data-value=${style.value}
+                @click=${() => this.set_('newTabStyle', style.value)}>
+              ${newTabPreview(style.value, dark)}
+              <div class="preset-head">${style.title}</div>
+              <div class="ntp-detail">${style.detail}</div>
+            </button>`)}
+        </div>
+      </div>
+      <div class="note st">${icon('info.circle', 13)}<span>${L('welcome.newTab.note')}</span></div>`;
   }
 
   renderPrivacy_() {

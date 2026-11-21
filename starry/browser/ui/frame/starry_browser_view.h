@@ -211,6 +211,12 @@ class StarryBrowserView : public BrowserView {
   void PresentDialog(DialogSpec spec, DialogAnswerCallback callback);
   // ⌘L（编辑当前网址）、⌘T 和「新标签页」（在新标签打开）。
   void OpenCommandBar(CommandBarView::Mode mode);
+  // 按新标签页风格打开新标签页或命令栏（new_tab/new_tab.h）。
+  void NewTab();
+  void OpenNewTabSearch(content::WebContents* contents,
+                        const std::u16string& text,
+                        bool drop = false);
+  void NewTabSearchMoved(content::WebContents* contents);
   const Theme& theme() const { return theme_; }
 
   // BrowserView:
@@ -265,6 +271,9 @@ class StarryBrowserView : public BrowserView {
   void OnZoomChanged(bool can_show_bubble);
   void KeepOnboardingTab();
   void ReplaceWelcomeTab(base::WeakPtr<content::WebContents> contents);
+  // 新标签页搜索框在命令栏坐标中的位置；网页已销毁时为空。
+  std::optional<gfx::Rect> NewTabSearchSlot(
+      base::WeakPtr<content::WebContents> contents);
 
   Theme theme_ = Theme::DarkBase();
   // 不跟网页时的主题（深浅跟着系统和 Chrome 的设置）。
@@ -337,6 +346,7 @@ class StarryBrowserView : public BrowserView {
   bool onboarding_checked_ = false;
   bool onboarding_active_ = false;
   base::WeakPtr<content::WebContents> onboarding_contents_;
+  base::WeakPtr<content::WebContents> docked_contents_;
   std::unique_ptr<FrameMotion> onboarding_motion_;
   raw_ptr<views::View> onboarding_drag_ = nullptr;
   base::WeakPtrFactory<StarryBrowserView> weak_factory_{this};

@@ -1,0 +1,835 @@
+/* Copyright 2026 The Starry Browser Authors */
+
+/* 新标签页。搜索框的位置要和 starry/browser/new_tab/new_tab.cc 的 DefaultSearchRect 一样：
+   高 56、最宽 640（两边至少留 16）、离顶边是窗口高度的 28%，夹在 72 到 168 之间。
+   类名都带 nt- 前缀（common/base.css 里有 .row、.page、.search 这些）。 */
+
+:root {
+  --nt-search-top: clamp(72px, 28vh, 168px);
+  --nt-fg: var(--on-surface);
+  --nt-muted: var(--on-surface-variant);
+  --nt-card: color-mix(in srgb, var(--surface-panel) 72%, transparent);
+  --nt-card-line: color-mix(in srgb, var(--on-surface) 9%, transparent);
+  --nt-fill: color-mix(in srgb, var(--on-surface) 7%, transparent);
+  --nt-fill-hover: color-mix(in srgb, var(--on-surface) 12%, transparent);
+  --nt-glass: color-mix(in srgb, var(--surface-panel) 80%, transparent);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.nt {
+  position: relative;
+  min-height: 100vh;
+  color: var(--nt-fg);
+  isolation: isolate;
+}
+
+.nt.on-dark {
+  --nt-fg: #fff;
+  --nt-muted: rgb(232 226 255 / 0.7);
+  --nt-card: rgb(255 255 255 / 0.08);
+  --nt-card-line: rgb(255 255 255 / 0.11);
+  --nt-fill: rgb(255 255 255 / 0.09);
+  --nt-fill-hover: rgb(255 255 255 / 0.15);
+  --nt-glass: rgb(28 24 48 / 0.62);
+  color-scheme: dark;
+}
+
+/* ---- 背景 ---- */
+
+.nt-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--surface-panel);
+}
+
+/* 柔光：应用图标的紫和珊瑚色两团光（主题色是灰的时候也有颜色）。 */
+.bg-theme .nt-bg {
+  background:
+    radial-gradient(60% 55% at 16% 6%, rgb(124 92 255 / 0.2), transparent 70%),
+    radial-gradient(55% 60% at 94% 98%, rgb(255 138 101 / 0.13), transparent 72%),
+    var(--surface-panel);
+}
+
+@media (prefers-color-scheme: light) {
+  .bg-theme .nt-bg {
+    background:
+      radial-gradient(60% 55% at 16% 6%, rgb(124 92 255 / 0.12), transparent 70%),
+      radial-gradient(55% 60% at 94% 98%, rgb(255 138 101 / 0.12), transparent 72%),
+      var(--surface-panel);
+  }
+}
+
+.bg-sky .nt-bg {
+  background:
+    radial-gradient(90% 60% at 50% 0%, #241b56 0%, transparent 70%),
+    linear-gradient(#0e0b26 0%, #171238 45%, #221a4d 100%);
+}
+
+@media (prefers-color-scheme: light) {
+  .bg-sky .nt-bg {
+    background:
+      radial-gradient(90% 70% at 50% 0%, #fff 0%, transparent 70%),
+      linear-gradient(#ece8ff 0%, #f3e9f6 55%, #fde3da 100%);
+  }
+}
+
+.nt-stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 地平线的一道光（同应用图标、设置向导）。 */
+.nt-glow {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 30px);
+  width: 3000px;
+  height: 3000px;
+  margin-left: -1500px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #fe7971 97%, transparent 100%);
+  box-shadow: 0 0 0 10px rgb(177 77 121 / 0.6), 0 -30px 120px 30px rgb(254 121 113 / 0.28);
+  opacity: 0.8;
+}
+
+@media (prefers-color-scheme: light) {
+  .nt-glow {
+    opacity: 0.45;
+  }
+}
+
+.nt-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.nt-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgb(0 0 0 / 0.28), rgb(0 0 0 / 0.42));
+}
+
+/* ---- 问候、搜索框 ---- */
+
+.nt-main {
+  position: relative;
+  min-height: 100vh;
+  padding: calc(var(--nt-search-top) + 56px + 34px) 24px 72px;
+}
+
+.nt-hello {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--nt-search-top) - 88px);
+  text-align: center;
+}
+
+.nt-hello h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.nt-date {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nt-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-height: 470px) {
+  .nt-hello {
+    display: none;
+  }
+}
+
+.nt-search {
+  position: absolute;
+  top: var(--nt-search-top);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100vw - 32px));
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--nt-glass);
+  box-shadow: inset 0 0 0 1px var(--nt-card-line), 0 18px 50px rgb(0 0 0 / 0.16), 0 2px 8px rgb(0 0 0 / 0.06);
+  backdrop-filter: blur(30px) saturate(1.6);
+  color: var(--nt-muted);
+  text-align: left;
+  cursor: text;
+  transition: opacity 120ms ease-out;
+}
+
+.nt-search-text {
+  flex: 1;
+  font-size: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.nt-search-key {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* 命令栏停在上面：自己的字不要透过玻璃露出来。 */
+.nt-search.docked {
+  opacity: 0;
+  transition-duration: 60ms;
+}
+
+/* ---- 小组件 ---- */
+
+.nt-grid {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 148px;
+  grid-auto-flow: dense;
+  gap: 16px;
+}
+
+@media (max-width: 700px) {
+  .nt-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  .nt-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.nt-card {
+  position: relative;
+  min-width: 0;
+  padding: 13px 16px 14px;
+  border-radius: 16px;
+  background: var(--nt-card);
+  box-shadow: inset 0 0 0 1px var(--nt-card-line), 0 8px 24px rgb(0 0 0 / 0.06);
+  backdrop-filter: blur(24px) saturate(1.4);
+  display: flex;
+  flex-direction: column;
+  transition: transform 220ms var(--ease-lift), box-shadow 220ms ease-out, opacity 160ms ease-out;
+}
+
+.nt-card.wide {
+  grid-column: span 2;
+}
+
+.nt-card.wide.rows-2 {
+  grid-row: span 2;
+}
+
+@media (max-width: 460px) {
+  .nt-card.wide {
+    grid-column: auto;
+  }
+}
+
+.editing .nt-card {
+  cursor: grab;
+}
+
+.nt-card.lifted {
+  opacity: 0.5;
+}
+
+.nt-remove {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #6b6b74;
+  color: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+  cursor: pointer;
+}
+
+.nt-card-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 18px;
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--nt-muted);
+  flex: none;
+}
+
+.nt-card-h .sp {
+  flex: 1;
+}
+
+.nt-link {
+  height: 22px;
+  padding: 0 7px;
+  margin-right: -7px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--nt-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.nt-link:hover {
+  background: var(--nt-fill);
+  color: var(--nt-fg);
+}
+
+.nt-empty {
+  font-size: 12.5px;
+  color: var(--nt-muted);
+  margin-top: 6px;
+}
+
+.nt-big {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.nt-big small {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--nt-muted);
+  margin-left: 4px;
+}
+
+.nt-sub {
+  font-size: 11.5px;
+  color: var(--nt-muted);
+  margin-top: 4px;
+}
+
+.nt-chip {
+  align-self: flex-start;
+  margin-top: auto;
+  height: 26px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--nt-fill);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nt-chip:hover {
+  background: var(--nt-fill-hover);
+}
+
+/* 快捷网站 */
+.nt-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 72px);
+  justify-content: space-between;
+  gap: 8px 4px;
+  margin: 0 -4px;
+}
+
+.nt-tile {
+  position: relative;
+}
+
+.nt-tile-link {
+  width: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.nt-tile-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nt-fill);
+  box-shadow: inset 0 0 0 1px var(--nt-card-line);
+  color: var(--nt-muted);
+  transition: background-color 180ms ease-out, transform 220ms var(--ease-lift);
+}
+
+.nt-tile-link:hover .nt-tile-box {
+  background: var(--nt-fill-hover);
+  transform: translateY(-1px) scale(1.04);
+}
+
+.nt-tile-link:active .nt-tile-box {
+  transform: scale(0.96);
+}
+
+.nt-tile-title {
+  max-width: 70px;
+  font-size: 11.5px;
+  color: var(--nt-fg);
+  opacity: 0.86;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.nt-tile-more {
+  position: absolute;
+  top: -2px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-panel);
+  color: var(--nt-muted);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.18);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+  cursor: pointer;
+}
+
+.nt-tile:hover .nt-tile-more,
+.nt-tile-more:focus-visible {
+  opacity: 1;
+}
+
+/* 正在播放 */
+.nt-np {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.nt-art {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--nt-fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nt-muted);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
+  cursor: pointer;
+}
+
+.nt-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nt-np-ctl {
+  display: flex;
+  gap: 2px;
+}
+
+.nt-np-ctl button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 15px;
+  background: none;
+  color: var(--nt-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.nt-np-ctl button:hover {
+  background: var(--nt-fill);
+}
+
+.nt-np-ctl button.pp {
+  background: var(--nt-fg);
+  color: var(--surface-panel);
+}
+
+.nt.on-dark .nt-np-ctl button.pp {
+  color: #1d1648;
+}
+
+.nt-np-meta {
+  margin-top: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.nt-np-meta b,
+.nt-np-meta span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.nt-np-meta b {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nt-np-meta span {
+  font-size: 11.5px;
+  color: var(--nt-muted);
+  margin-top: 2px;
+}
+
+/* 最近关闭 */
+.nt-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 30px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.nt-row:hover {
+  background: var(--nt-fill);
+}
+
+.nt-row .tt {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.nt-row .tm {
+  flex: none;
+  font-size: 11px;
+  color: var(--nt-muted);
+}
+
+.nt-fav {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* 已归档 */
+.nt-stack {
+  display: flex;
+  margin-top: auto;
+}
+
+.nt-stack img {
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  margin-right: -5px;
+  border-radius: 6px;
+  background: var(--surface-panel);
+  box-shadow: 0 0 0 1.5px var(--nt-card-line);
+}
+
+/* 本周拦截 */
+.nt-shield {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: auto;
+}
+
+.nt-shield > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.nt-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 36px;
+  width: 64px;
+  flex: none;
+}
+
+.nt-bars i {
+  flex: 1;
+  border-radius: 2px;
+  background: var(--nt-fg);
+  opacity: 0.2;
+}
+
+.nt-bars i.today {
+  opacity: 0.9;
+  background: var(--accent);
+}
+
+/* 便签 */
+.nt-note {
+  flex: 1;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  resize: none;
+  background: none;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--nt-fg);
+  outline: none;
+}
+
+.nt-note::placeholder {
+  color: var(--nt-muted);
+}
+
+/* ---- 自定义 ---- */
+
+.nt-customize {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nt-card);
+  box-shadow: inset 0 0 0 1px var(--nt-card-line);
+  backdrop-filter: blur(20px);
+  color: var(--nt-fg);
+  cursor: pointer;
+  transition: background-color 180ms ease-out;
+  z-index: 3;
+}
+
+.nt-customize:hover,
+.nt-customize.on {
+  background: var(--nt-fill-hover);
+}
+
+.nt-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 60px;
+  width: 280px;
+  padding: 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-panel) 88%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 10%, transparent), 0 18px 50px rgb(0 0 0 / 0.25);
+  backdrop-filter: blur(30px) saturate(1.6);
+  color: var(--on-surface);
+  z-index: 3;
+  animation: nt-panel-in var(--duration-tab-preview) var(--ease-tab-preview);
+  transform-origin: 100% 100%;
+}
+
+@keyframes nt-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-panel {
+    animation: none;
+  }
+}
+
+.nt-panel-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 2px 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nt-panel-h span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--on-surface-variant);
+}
+
+.nt-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 26px;
+}
+
+.nt-swatch {
+  position: relative;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-surface-variant);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 10%, transparent);
+  cursor: pointer;
+}
+
+.nt-swatch span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -17px;
+  font-size: 10.5px;
+  color: var(--on-surface-variant);
+}
+
+.nt-swatch.sel {
+  box-shadow: 0 0 0 2px var(--on-surface);
+}
+
+.nt-swatch.sel span {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+.sw-theme {
+  background:
+    radial-gradient(70% 70% at 15% 10%, rgb(124 92 255 / 0.5), transparent 70%),
+    radial-gradient(60% 70% at 95% 100%, rgb(255 138 101 / 0.4), transparent 70%),
+    var(--surface-panel);
+}
+
+.sw-sky {
+  background: linear-gradient(#0e0b26, #2a1f5c);
+}
+
+.sw-image {
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+}
+
+.sw-solid {
+  background: var(--surface-panel);
+}
+
+.nt-line {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  font-size: 12.5px;
+}
+
+.nt-switch {
+  position: relative;
+  width: 30px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--on-surface) 14%, transparent);
+  cursor: pointer;
+  transition: background-color 160ms ease-out;
+}
+
+.nt-switch::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  transition: transform 220ms var(--ease-selection);
+}
+
+.nt-switch.on {
+  background: var(--on-surface);
+}
+
+.nt-switch.on::after {
+  transform: translateX(12px);
+  background: var(--surface-panel);
+}
+
+.nt-more {
+  width: 100%;
+  height: 30px;
+  margin-top: 6px;
+  padding: 0 4px;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--on-surface) 8%, transparent);
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+}
+
+.nt-more:hover {
+  color: var(--on-surface);
+}

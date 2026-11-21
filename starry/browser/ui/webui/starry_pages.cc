@@ -8,6 +8,8 @@
 #include <utility>
 
 #include "base/containers/span.h"
+#include "base/files/file_path.h"
+#include "base/files/file_util.h"
 #include "base/functional/bind.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/no_destructor.h"
@@ -15,6 +17,7 @@
 #include "base/strings/strcat.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/task/thread_pool.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 #include "chrome/browser/ui/navigator/browser_navigator_params.h"
@@ -36,6 +39,7 @@
 #include "services/network/public/mojom/content_security_policy.mojom.h"
 #include "starry/browser/assistant/assistant_images.h"
 #include "starry/browser/l10n/l10n.h"
+#include "starry/browser/new_tab/new_tab.h"
 #include "starry/browser/resources/starry_page_resources.h"
 #include "starry/browser/tab_organizer/tab_archive.h"
 #include "starry/browser/ui/design/theme.h"
@@ -48,6 +52,7 @@
 #include "starry/browser/ui/webui/extensions_handler.h"
 #include "starry/browser/ui/webui/history_handler.h"
 #include "starry/browser/ui/webui/import_handler.h"
+#include "starry/browser/ui/webui/new_tab_handler.h"
 #include "starry/browser/ui/webui/page_handler.h"
 #include "starry/browser/ui/webui/settings_handler.h"
 #include "starry/browser/ui/webui/welcome_handler.h"
@@ -73,6 +78,7 @@ constexpr PageInfo kPages[] = {
     {StarryPage::kAssistant, kStarryAssistantHost, "assistant"},
     {StarryPage::kArchive, kStarryArchiveHost, "archive"},
     {StarryPage::kWelcome, kStarryWelcomeHost, "welcome"},
+    {StarryPage::kNewTab, new_tab::kHost, "newtab"},
 };
 
 const PageInfo& InfoFor(StarryPage page) {
@@ -96,6 +102,20 @@ const PageResource* FindResource(std::string_view path) {
 std::string_view StripQuery(std::string_view path) {
   const size_t end = path.find_first_of("?#");
   return end == std::string_view::npos ? path : path.substr(0, end);
+}
+
+// 新标签页自己选的背景图（background?v=…）。
+bool IsNewTabBackground(const char* dir, std::string_view path) {
+  return std::string_view(dir) == "newtab" && StripQuery(path) == "background";
+}
+
+scoped_refptr<base::RefCountedMemory> ReadBackground(
+    const base::FilePath& path) {
+  std::optional<std::vector<uint8_t>> bytes = base::ReadFileToBytes(path);
+  if (!bytes) {
+    return nullptr;
+  }
+  return base::MakeRefCounted<base::RefCountedBytes>(std::move(*bytes));
 }
 
 // 已归档页的缩略图：thumb/<id>.jpg。不是的时候是空的。
@@ -210,7 +230,7 @@ bool ShouldHandle(const char* dir, const std::string& path) {
       assistant::IsImagePath(StripQuery(path))) {
     return true;
   }
-  if (!ArchiveThumbnailId(dir, path).empty()) {
+  if (!ArchiveThumbnailId(dir, path).empty() || IsNewTabBackground(dir, path)) {
     return true;
   }
   return StripQuery(path) == "theme.css" ||
@@ -232,6 +252,13 @@ void HandleRequest(const char* dir,
   if (const std::string_view id = ArchiveThumbnailId(dir, path); !id.empty()) {
     tab_organizer::TabArchive::ForProfile(profile)->ReadThumbnail(
         std::string(id), std::move(callback));
+    return;
+  }
+  if (IsNewTabBackground(dir, path)) {
+    base::ThreadPool::PostTaskAndReplyWithResult(
+        FROM_HERE, {base::MayBlock(), base::TaskPriority::USER_VISIBLE},
+        base::BindOnce(&ReadBackground, NewTabHandler::BackgroundPath(profile)),
+        std::move(callback));
     return;
   }
   if (StripQuery(path) == "theme.css") {
@@ -339,6 +366,9 @@ StarryPageUI::StarryPageUI(content::WebUI* web_ui, StarryPage page)
       web_ui->AddMessageHandler(std::make_unique<ContentBlockingHandler>());
       web_ui->AddMessageHandler(std::make_unique<ImportHandler>(profile));
       web_ui->AddMessageHandler(std::make_unique<WelcomeHandler>(profile));
+      break;
+    case StarryPage::kNewTab:
+      web_ui->AddMessageHandler(std::make_unique<NewTabHandler>(profile));
       break;
   }
 }

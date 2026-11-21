@@ -35,6 +35,7 @@ enum class StarryPage {
   kAssistant,
   kArchive,
   kWelcome,
+  kNewTab,
 };
 
 inline constexpr char kStarrySettingsHost[] = "starry-settings";
