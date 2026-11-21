@@ -23,25 +23,25 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: 核对 tag 和 starry/VERSION
+      - name: Check tag against starry/VERSION
         if: github.ref_type == 'tag'
         run: |
           version="$(tr -d ' \r\n' < starry/VERSION)"
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::tag 是 $GITHUB_REF_NAME，starry/VERSION 是 $version"
+            echo "::error::Tag is $GITHUB_REF_NAME but starry/VERSION is $version"
             exit 1
           fi
 
-      - name: 准备 Chromium 源码
+      - name: Prepare Chromium source
         run: scripts/ci/prepare.sh
 
-      - name: 打包 Linux 版
+      - name: Package Linux
         run: scripts/package.sh --config Release
 
-      - name: 打包 Windows 版
+      - name: Package Windows
         run: scripts/package.sh --config Release-Win --keep-dist
 
-      - name: 传到 Release
+      - name: Upload to GitHub Release
         if: github.ref_type == 'tag'
         env:
           # 发到别的仓库：仓库变量 RELEASE_REPO 设成 owner/name，

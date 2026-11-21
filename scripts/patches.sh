@@ -36,7 +36,7 @@ link_overlay() {
     if [ -L "$link" ]; then
         [ "$(readlink "$link")" = "$STARRY_ROOT/starry" ] || { rm "$link"; ln -s "$STARRY_ROOT/starry" "$link"; }
     elif [ -e "$link" ]; then
-        starry_die "$link 已经存在而且不是链接"
+        starry_die "$link already exists and is not a symlink"
     else
         ln -s "$STARRY_ROOT/starry" "$link"
     fi
@@ -69,10 +69,10 @@ cmd_apply() {
     link_overlay
     local p n=0
     while IFS= read -r p; do
-        git_src apply --whitespace=nowarn "$p" || starry_die "补丁打不上：${p#"$PATCHES"/}（上游改了，要手动更新）"
+        git_src apply --whitespace=nowarn "$p" || starry_die "Patch does not apply: ${p#"$PATCHES"/} (upstream changed; update it by hand)"
         n=$((n + 1))
     done < <(patch_files)
-    starry_log "打上了 $n 个补丁"
+    starry_log "Applied $n patches"
 }
 
 cmd_revert() {
@@ -95,7 +95,7 @@ cmd_export() {
     find "$PATCHES" -depth -mindepth 1 -type d -empty -delete
     cp -R "$tmp/." "$PATCHES/"
     rm -rf "$tmp"
-    starry_log "导出了 $(patch_files | wc -l | tr -d ' ') 个补丁"
+    starry_log "Exported $(patch_files | wc -l | tr -d ' ') patches"
 }
 
 # 和 patches/ 不一致的上游文件：目录 $1（write_patches 写的现状）和 patches/ 里补丁不同、
@@ -130,7 +130,7 @@ cmd_sync() {
         fi
         if [ -f "$PATCHES/$f.patch" ]; then
             git_src apply --whitespace=nowarn "$PATCHES/$f.patch" ||
-                starry_die "补丁打不上：$f.patch（上游改了，要手动更新）"
+                starry_die "Patch does not apply: $f.patch (upstream changed; update it by hand)"
         fi
         if [ -f "$keep" ] && [ -f "$CHROMIUM_SRC/$f" ] && cmp -s "$keep" "$CHROMIUM_SRC/$f"; then
             touch -r "$keep" "$CHROMIUM_SRC/$f"
@@ -138,7 +138,7 @@ cmd_sync() {
         n=$((n + 1))
     done < <(diverged_files "$tmp/current")
     rm -rf "$tmp"
-    starry_log "和 patches/ 对齐：改了 $n 个文件"
+    starry_log "Synced with patches/: $n files changed"
 }
 
 cmd_check() {
@@ -156,5 +156,5 @@ case "${1:-}" in
     export) cmd_export ;;
     check) cmd_check ;;
     sync) cmd_sync ;;
-    *) starry_die "用法：scripts/patches.sh apply|revert|export|check|sync" ;;
+    *) starry_die "Usage: scripts/patches.sh apply|revert|export|check|sync" ;;
 esac

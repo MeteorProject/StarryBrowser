@@ -19,7 +19,7 @@ done
 [ "${STARRY_NO_LOCAL_ARGS:-0}" = 1 ] && use_local=0
 
 name="$(printf '%s' "$config" | tr '[:upper:]' '[:lower:]')"
-[ -f "$STARRY_ROOT/starry/build/args/$name.gn" ] || starry_die "没有这个配置：${config}（starry/build/args/$name.gn）"
+[ -f "$STARRY_ROOT/starry/build/args/$name.gn" ] || starry_die "Unknown config: ${config} (no starry/build/args/$name.gn)"
 
 out="$CHROMIUM_SRC/out/$config"
 mkdir -p "$out"

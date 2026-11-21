@@ -9,7 +9,7 @@
 # 要先 gh auth login（或者设 GH_TOKEN）。传到别的仓库：GH_REPO=<owner/name> scripts/release.sh
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
-command -v gh >/dev/null 2>&1 || starry_die "没有 gh（GitHub CLI）"
+command -v gh >/dev/null 2>&1 || starry_die "gh (GitHub CLI) not found"
 cd "$STARRY_ROOT"
 
 version="$STARRY_VERSION"
@@ -28,7 +28,7 @@ for f in "$dist/$name-$version-"*; do
     (cd "$dist" && checksum "${f##*/}") > "$f.sha256"
     files+=("$f" "$f.sha256")
 done
-[ ${#files[@]} -gt 0 ] || starry_die "dist/ 里没有 $version 的发布包，先运行 scripts/package.sh"
+[ ${#files[@]} -gt 0 ] || starry_die "No $version packages in dist/; run scripts/package.sh first"
 
 if ! gh release view "$tag" >/dev/null 2>&1; then
     # 发到本仓库时 tag 必须已经推上去，免得 gh 在默认分支上新建一个
@@ -37,11 +37,11 @@ if ! gh release view "$tag" >/dev/null 2>&1; then
     if [ -z "${GH_REPO:-}" ] || [ "$GH_REPO" = "$own_repo" ]; then
         verify=--verify-tag
     fi
-    starry_log "新建 Release $tag"
+    starry_log "Creating release $tag"
     # 失败多半是另一边（CI 或 Mac）刚好同时建好了
     gh release create "$tag" ${verify:+"$verify"} --title "$STARRY_PRODUCT_NAME $version" --notes "" ||
         gh release view "$tag" >/dev/null
 fi
-starry_log "上传：${files[*]##*/}"
+starry_log "Uploading: ${files[*]##*/}"
 gh release upload "$tag" "${files[@]}" --clobber
-starry_log "完成：$(gh release view "$tag" --json url -q .url)"
+starry_log "Done: $(gh release view "$tag" --json url -q .url)"

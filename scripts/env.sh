@@ -62,19 +62,19 @@ starry_map_win_toolchain() {
     if [ ${#zips[@]} -eq 1 ] && [ -f "${zips[0]}" ]; then
         got="$(basename "${zips[0]}" .zip)"
         export "$var=$got"
-        starry_log "Windows 工具链：$var=$got"
+        starry_log "Windows toolchain: $var=$got"
     else
-        starry_die "$dir 里要正好有一个工具链 zip（或者设 $var=<zip 的哈希>），现在有：$(ls "$dir" | tr '\n' ' ')"
+        starry_die "$dir must contain exactly one toolchain zip (or set $var=<zip hash>); found: $(ls "$dir" | tr '\n' ' ')"
     fi
 }
 
 starry_log() { printf '[starry] %s\n' "$*" >&2; }
-starry_die() { printf '[starry] 错误：%s\n' "$*" >&2; exit 1; }
+starry_die() { printf '[starry] error: %s\n' "$*" >&2; exit 1; }
 
 starry_require_depot_tools() {
-    [ -x "$DEPOT_TOOLS/gclient" ] || starry_die "没有 depot_tools，先运行 scripts/bootstrap.sh"
+    [ -x "$DEPOT_TOOLS/gclient" ] || starry_die "depot_tools not found; run scripts/bootstrap.sh first"
 }
 
 starry_require_src() {
-    [ -d "$CHROMIUM_SRC/.git" ] || starry_die "没有 Chromium 源码，先运行 scripts/sync.sh"
+    [ -d "$CHROMIUM_SRC/.git" ] || starry_die "Chromium source not found; run scripts/sync.sh first"
 }

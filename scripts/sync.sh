@@ -21,7 +21,7 @@ for arg in "$@"; do
     case "$arg" in
         --force) force=1 ;;
         --nohooks) hooks=0 ;;
-        *) starry_die "不认识的参数：$arg" ;;
+        *) starry_die "Unknown argument: $arg" ;;
     esac
 done
 
@@ -29,7 +29,7 @@ case "$(uname -s)" in
     Darwin) target_os=mac ;;
     Linux) target_os=linux ;;
     MINGW* | MSYS* | CYGWIN*) target_os=win ;;
-    *) starry_die "不认识的系统：$(uname -s)" ;;
+    *) starry_die "Unsupported OS: $(uname -s)" ;;
 esac
 target_os_list="\"$target_os\""
 for extra in ${STARRY_EXTRA_TARGET_OS:-}; do
@@ -53,14 +53,14 @@ EOF
 
 if [ -d "$CHROMIUM_SRC/.git" ]; then
     if [ "$force" = 0 ] && ! "$STARRY_ROOT/scripts/patches.sh" check; then
-        starry_die "src 里有没导出成补丁的改动：先运行 scripts/patches.sh export，或者加 --force 丢掉它们"
+        starry_die "src has changes that are not exported as patches: run scripts/patches.sh export first, or pass --force to discard them"
     fi
-    starry_log "撤掉旧补丁"
+    starry_log "Reverting old patches"
     "$STARRY_ROOT/scripts/patches.sh" revert
 fi
 
 cd "$CHROMIUM_ROOT"
-starry_log "gclient sync 到 $CHROMIUM_VERSION"
+starry_log "gclient sync to $CHROMIUM_VERSION"
 gclient sync --nohooks --no-history -D --force
 if [ "$hooks" = 1 ]; then
     starry_map_win_toolchain
@@ -69,4 +69,4 @@ if [ "$hooks" = 1 ]; then
 fi
 
 "$STARRY_ROOT/scripts/patches.sh" apply
-starry_log "完成：${CHROMIUM_SRC}（${CHROMIUM_VERSION}）"
+starry_log "Done: ${CHROMIUM_SRC} (${CHROMIUM_VERSION})"

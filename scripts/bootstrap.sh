@@ -4,12 +4,12 @@ set -euo pipefail
 source "$(dirname "$0")/env.sh"
 
 if [ ! -d "$DEPOT_TOOLS/.git" ]; then
-    starry_log "克隆 depot_tools 到 $DEPOT_TOOLS"
+    starry_log "Cloning depot_tools into $DEPOT_TOOLS"
     mkdir -p "$(dirname "$DEPOT_TOOLS")"
     git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git "$DEPOT_TOOLS"
 fi
 
 # 第一次运行会下载 depot_tools 自带的 Python 和 cipd
-starry_log "准备 depot_tools"
+starry_log "Preparing depot_tools"
 gclient --version >/dev/null
-starry_log "depot_tools 就绪：$DEPOT_TOOLS"
+starry_log "depot_tools ready: $DEPOT_TOOLS"
