@@ -7,6 +7,8 @@
 #   scripts/patches.sh revert   把补丁碰过的文件恢复成上游的样子
 #   scripts/patches.sh export   把 src 里现在的改动写回 patches/（增删补丁文件）
 #   scripts/patches.sh check    src 里的改动和 patches/ 一致时返回 0
+#   scripts/patches.sh sync     只把和 patches/ 不一致的文件改成补丁里的样子，别的不碰（时间戳
+#                               不变，增量编译不会白白重编）。src 里没导出成补丁的改动会丢，CI 用
 #
 # 目前只管 src 这一个 git 仓库；改 v8、skia 这些子仓库时再扩展。
 set -euo pipefail
@@ -96,6 +98,49 @@ cmd_export() {
     starry_log "导出了 $(patch_files | wc -l | tr -d ' ') 个补丁"
 }
 
+# 和 patches/ 不一致的上游文件：目录 $1（write_patches 写的现状）和 patches/ 里补丁不同、
+# 或者只有一边有。每行一个上游路径。
+diverged_files() {
+    local current="$1" p
+    {
+        (cd "$current" && find . -type f -name '*.patch')
+        (cd "$PATCHES" && find . -type f -name '*.patch')
+    } | sed 's|^\./||' | LC_ALL=C sort -u | while IFS= read -r p; do
+        cmp -s "$current/$p" "$PATCHES/$p" || printf '%s\n' "${p%.patch}"
+    done
+}
+
+cmd_sync() {
+    link_overlay
+    local tmp f keep n=0
+    tmp="$(mktemp -d)"
+    write_patches "$tmp/current"
+    mkdir -p "$tmp/keep"
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        # 先留一份现在的文件：改完内容没变（比如只是 diff 的写法不同）就把时间戳还原
+        keep="$tmp/keep/$n"
+        if [ -f "$CHROMIUM_SRC/$f" ]; then
+            cp -p "$CHROMIUM_SRC/$f" "$keep"
+        fi
+        if git_src cat-file -e "HEAD:$f" 2>/dev/null; then
+            git_src checkout HEAD -- "$f"
+        else
+            rm -f "$CHROMIUM_SRC/$f"
+        fi
+        if [ -f "$PATCHES/$f.patch" ]; then
+            git_src apply --whitespace=nowarn "$PATCHES/$f.patch" ||
+                starry_die "补丁打不上：$f.patch（上游改了，要手动更新）"
+        fi
+        if [ -f "$keep" ] && [ -f "$CHROMIUM_SRC/$f" ] && cmp -s "$keep" "$CHROMIUM_SRC/$f"; then
+            touch -r "$keep" "$CHROMIUM_SRC/$f"
+        fi
+        n=$((n + 1))
+    done < <(diverged_files "$tmp/current")
+    rm -rf "$tmp"
+    starry_log "和 patches/ 对齐：改了 $n 个文件"
+}
+
 cmd_check() {
     local tmp status=0
     tmp="$(mktemp -d)"
@@ -110,5 +155,6 @@ case "${1:-}" in
     revert) cmd_revert ;;
     export) cmd_export ;;
     check) cmd_check ;;
-    *) starry_die "用法：scripts/patches.sh apply|revert|export|check" ;;
+    sync) cmd_sync ;;
+    *) starry_die "用法：scripts/patches.sh apply|revert|export|check|sync" ;;
 esac

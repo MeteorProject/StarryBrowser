@@ -1,0 +1,8 @@
+# Windows 的 Release，在 Linux（或 Mac）上交叉编译，CI 发版用。要先准备 VS 工具链、
+# 同步时带上 Windows 的依赖（STARRY_EXTRA_TARGET_OS=win），见 docs/development.md「发版」。
+# 改了这里要重新 scripts/gen.sh Release-Win。
+
+import("//starry/build/args/release.gn")
+
+target_os = "win"
+target_cpu = "x64"

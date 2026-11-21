@@ -4,6 +4,7 @@
 #   scripts/package.sh [选项]
 #     --config <名字>      构建配置，默认 Release（Dev 是组件构建，不能打包）
 #     --skip-build         不编译，直接用 out/<配置> 里现有的
+#     --keep-dist          打包前不清空 dist/（连续打多个平台的包时用）
 #
 # macOS：签名、打成 DMG（Chromium 自带的签名流程 chrome/installer/mac/signing）。
 #     --identity <证书>    签名用的证书（钥匙串里 Developer ID Application 的名字或 SHA-1）。
@@ -11,9 +12,10 @@
 #     --notary-profile <名字>
 #                          公证：xcrun notarytool store-credentials 存的钥匙串配置名。
 #                          要配合 Developer ID 证书，会等 Apple 的结果并把票据钉进 DMG
-# Windows：Chromium 的安装程序 mini_installer.exe（还没有签名）。
+# Windows：Chromium 的安装程序 mini_installer.exe（还没有签名）。在 Linux 上交叉编译用 --config Release-Win。
 # Linux：Chromium 的 .deb 和 .rpm（装 rpmbuild 才有 .rpm）。
 #   平台标识从 starry/app/theme/BRANDING 生成。
+# 打哪个平台的包看构建目录的 target_os / target_cpu，没写就是编译机自己的平台。
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 starry_require_src
@@ -21,12 +23,14 @@ starry_require_depot_tools
 
 config=Release
 build=1
+keep_dist=0
 identity=""
 notary_profile=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --config) config="$2"; shift 2 ;;
         --skip-build) build=0; shift ;;
+        --keep-dist) keep_dist=1; shift ;;
         --identity) identity="$2"; shift 2 ;;
         --notary-profile) notary_profile="$2"; shift 2 ;;
         *) starry_die "不认识的参数：$1（见脚本开头的说明）" ;;
@@ -35,8 +39,14 @@ done
 [ "$config" != Dev ] || starry_die "Dev 是组件构建，不能打包；用 Release"
 
 out="$CHROMIUM_SRC/out/$config"
-[ -d "$out" ] || starry_die "没有 ${out}，先运行 scripts/gen.sh $config"
-gn_args="$(gn args "$out" --list --short --overrides-only 2>/dev/null || true)"
+if [ ! -f "$out/build.ninja" ]; then
+    [ "$build" = 1 ] || starry_die "没有 ${out}，先运行 scripts/gen.sh $config"
+    "$STARRY_ROOT/scripts/gen.sh" "$config"
+fi
+# gn 要在源码目录里跑：depot_tools 的 gn 包装按当前目录找 gn。
+gn_args="$(cd "$CHROMIUM_SRC" && gn args "out/$config" --list --short --overrides-only)" ||
+    starry_die "读不了 out/$config 的 gn 参数"
+gn_value() { printf '%s\n' "$gn_args" | sed -n "s/^$1 = \"\(.*\)\"\$/\1/p"; }
 if printf '%s\n' "$gn_args" | grep -q '^is_component_build = true'; then
     starry_die "$config 是组件构建，不能打包"
 fi
@@ -48,14 +58,23 @@ fi
 version="$STARRY_VERSION"
 [ -n "$version" ] || starry_die "starry/VERSION 为空"
 linux_version="$(starry_linux_package_version "$version")"
-case "$(uname -m)" in
+target_os="$(gn_value target_os)"
+if [ -z "$target_os" ]; then
+    case "$(uname -s)" in
+        Darwin) target_os=mac ;;
+        Linux) target_os=linux ;;
+        MINGW* | MSYS* | CYGWIN*) target_os=win ;;
+        *) starry_die "不认识的系统：$(uname -s)" ;;
+    esac
+fi
+target_cpu="$(gn_value target_cpu)"
+case "${target_cpu:-$(uname -m)}" in
     arm64 | aarch64) arch=arm64 ;;
-    x86_64 | amd64 | AMD64) arch=x64 ;;
-    *) arch="$(uname -m)" ;;
+    x64 | x86_64 | amd64 | AMD64) arch=x64 ;;
+    *) arch="${target_cpu:-$(uname -m)}" ;;
 esac
 name="$(printf '%s' "$STARRY_PRODUCT_NAME" | tr -d ' ')"
 dist="$STARRY_ROOT/dist"
-mkdir -p "$dist"
 
 build_targets() {
     [ "$build" = 1 ] || return 0
@@ -191,9 +210,19 @@ package_linux() {
     [ "$found" = 1 ] || starry_die "没有找到 .deb / .rpm"
 }
 
-case "$(uname -s)" in
-    Darwin) package_mac ;;
-    Linux) package_linux ;;
-    MINGW* | MSYS* | CYGWIN*) package_win ;;
-    *) starry_die "不认识的系统：$(uname -s)" ;;
+case "$target_os" in
+    mac) [ "$(uname -s)" = Darwin ] || starry_die "macOS 版只能在 Mac 上打包" ;;
+    linux | win) ;;
+    *) starry_die "不认识的 target_os：$target_os" ;;
+esac
+
+if [ "$keep_dist" = 0 ]; then
+    rm -rf "$dist"
+fi
+mkdir -p "$dist"
+
+case "$target_os" in
+    mac) package_mac ;;
+    linux) package_linux ;;
+    win) package_win ;;
 esac

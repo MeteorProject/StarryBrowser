@@ -89,6 +89,7 @@ scripts/patches.sh apply      # 链接 starry/ 并应用 patches/
 scripts/patches.sh export     # 将 chromium/src 的当前改动重新导出到 patches/
 scripts/patches.sh check      # 校验 chromium/src 与 patches/ 是否一致
 scripts/patches.sh revert     # 还原补丁修改过的上游文件
+scripts/patches.sh sync       # 只更新与 patches/ 不一致的文件（保留其余文件的时间戳；未导出的改动会丢失，供 CI 使用）
 ```
 
 ## 品牌、版本、图标与打包
@@ -102,7 +103,29 @@ scripts/patches.sh revert     # 还原补丁修改过的上游文件
 scripts/package.sh                                  # 编译 Release 并打包
 scripts/package.sh --skip-build                     # 直接使用已有 out/Release 产物打包
 scripts/package.sh --identity "Developer ID Application: …" --notary-profile <profile>   # macOS 签名与公证
+scripts/package.sh --config Release-Win             # 在 Linux 上交叉编译 Windows 版（见下文「发版」）
 ```
+
+## 发版
+
+推送 `v<版本>` tag（须与 `starry/VERSION` 一致）后，[`.github/workflows/release.yml`](../.github/workflows/release.yml) 在自托管的 Linux 编译机上打包 Linux 版（`Release`）和 Windows 版（`Release-Win`，交叉编译），并上传到 GitHub Release `v<版本>`。手动运行该 workflow 只编译打包、不发版，可用于预热编译缓存。macOS 版在 Mac 上打包后手动上传到同一个 Release：
+
+```sh
+scripts/package.sh --identity "Developer ID Application: …" --notary-profile <profile>
+scripts/release.sh            # 需要先 gh auth login；Release 不存在时会先新建
+```
+
+默认发布到本仓库。要发布到其他仓库（例如公开的发版仓库），将仓库变量 `RELEASE_REPO` 设为 `owner/name`，并在 Secret `RELEASE_TOKEN` 中存一个对该仓库有 Contents 写权限的 fine-grained token；本机上传时使用 `GH_REPO=owner/name scripts/release.sh`。目标仓库至少要有一个提交。
+
+编译机要求：
+
+- runner 标签为 `starry-linux`，x86-64 Linux，已安装 Chromium 的系统依赖（`build/install-build-deps.py`）、`gh` 和 `rpm`。依赖不全时，`scripts/ci/prepare.sh` 会列出缺少的包并停止。
+- `STARRY_CHROMIUM_ROOT`、`STARRY_DEPOT_TOOLS` 指向 runner 工作区以外的持久目录（`actions/checkout` 每次都会清空工作区）。runner 的工作目录本身也需要持久保存，`starry/` 中未改动的文件才能保持原有时间戳。
+- Windows 工具链：在 Windows 上运行 `depot_tools/win_toolchain/package_from_installed.py <VS 版本> -w <SDK 版本>` 打包（版本见 `build/vs_toolchain.py` 中的 `MSVS_VERSIONS`、`SDK_VERSION`），把 zip 放进 `DEPOT_TOOLS_WIN_TOOLCHAIN_BASE_URL` 指向的目录，并设置 `GYP_MSVS_HASH_<TOOLCHAIN_HASH>=<zip 的 hash>`。Chromium 升级后若要求的版本变化，需要重新打包。
+- Windows SDK 必须放在不区分大小写的文件系统上：将一个启用了 casefold 的 ext4 目录挂载到 `depot_tools/win_toolchain/vs_files`，否则 Chromium 会尝试用 ciopfs 挂载 FUSE。
+- 交叉编译的 Windows 版没有 Crashpad 崩溃上报（上游限制，见 `chromium/src/docs/win_cross.md`）。
+
+为保留增量编译，`scripts/ci/prepare.sh` 只在 `chromium.version` 变化时执行 `gclient sync`，其余时候通过 `scripts/patches.sh sync` 仅更新与 `patches/` 不一致的文件。
 
 ## 界面本地化
 

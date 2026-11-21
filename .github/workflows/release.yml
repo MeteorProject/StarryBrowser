@@ -1,0 +1,51 @@
+# 推 v<版本> tag 后，在自托管的 Linux 编译机上编 Linux 版和 Windows 版（交叉编译），传到 GitHub Release。
+# macOS 版在 Mac 上自己打包，再用 scripts/release.sh 传到同一个 Release。
+# 手动运行（Run workflow）只编译打包、不发版，可以先跑一次把编译缓存热起来。
+# 编译机的要求见 docs/development.md「发版」。
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux-windows:
+    runs-on: [self-hosted, starry-linux]
+    # 默认只有 6 小时；第一次要 gclient sync 再加两个完整编译
+    timeout-minutes: 2880
+    env:
+      STARRY_EXTRA_TARGET_OS: win
+      STARRY_NO_LOCAL_ARGS: '1'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 核对 tag 和 starry/VERSION
+        if: github.ref_type == 'tag'
+        run: |
+          version="$(tr -d ' \r\n' < starry/VERSION)"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag 是 $GITHUB_REF_NAME，starry/VERSION 是 $version"
+            exit 1
+          fi
+
+      - name: 准备 Chromium 源码
+        run: scripts/ci/prepare.sh
+
+      - name: 打包 Linux 版
+        run: scripts/package.sh --config Release
+
+      - name: 打包 Windows 版
+        run: scripts/package.sh --config Release-Win --keep-dist
+
+      - name: 传到 Release
+        if: github.ref_type == 'tag'
+        env:
+          # 发到别的仓库：仓库变量 RELEASE_REPO 设成 owner/name，
+          # Secret RELEASE_TOKEN 放一个对那个仓库有 Contents 写权限的 fine-grained token
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          GH_REPO: ${{ vars.RELEASE_REPO || github.repository }}
+        run: scripts/release.sh

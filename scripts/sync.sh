@@ -7,6 +7,9 @@
 #                              （chromium/src/build/install-build-deps.sh）才能跑 hooks：
 #                              先 --nohooks，装完依赖再不带参数跑一遍
 #
+# 交叉编译别的平台时，把它加进 STARRY_EXTRA_TARGET_OS（空格分隔），gclient 才会拉它的依赖。
+# 比如在 Linux 上编 Windows：STARRY_EXTRA_TARGET_OS=win（还要 VS 工具链，见 docs/development.md）
+#
 # 第一次是浅克隆（--no-history），几十 GB，要几个小时。
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
@@ -28,6 +31,10 @@ case "$(uname -s)" in
     MINGW* | MSYS* | CYGWIN*) target_os=win ;;
     *) starry_die "不认识的系统：$(uname -s)" ;;
 esac
+target_os_list="\"$target_os\""
+for extra in ${STARRY_EXTRA_TARGET_OS:-}; do
+    [ "$extra" = "$target_os" ] || target_os_list="$target_os_list, \"$extra\""
+done
 
 mkdir -p "$CHROMIUM_ROOT"
 cat > "$CHROMIUM_ROOT/.gclient" <<EOF
@@ -41,7 +48,7 @@ solutions = [
     "custom_vars": {},
   },
 ]
-target_os = ["$target_os"]
+target_os = [$target_os_list]
 EOF
 
 if [ -d "$CHROMIUM_SRC/.git" ]; then
