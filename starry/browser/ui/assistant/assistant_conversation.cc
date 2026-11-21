@@ -148,11 +148,7 @@ AssistantConversation::AssistantConversation(Host* host,
   active_backend_ = Text(dict, "backend");
   active_model_ = Text(dict, "model");
   if (const base::DictValue* sessions = dict.FindDict("sessions")) {
-    for (const auto [backend, session] : *sessions) {
-      if (session.is_string()) {
-        sessions_[backend] = session.GetString();
-      }
-    }
+    claude_session_id_ = Text(*sessions, assistant::kBackendClaudeCode);
   }
   if (const base::DictValue* usage = dict.FindDict("usage")) {
     usage_.input_tokens = usage->FindInt("input").value_or(0);
@@ -651,7 +647,10 @@ void AssistantConversation::StartLocalTurn(const assistant::Settings& settings,
   const std::string signature = base::StrCat(
       {settings.backend, "|", settings.local_path, "|", settings.local_model,
        "|", settings.allow_private_tabs ? "private-tabs" : ""});
-  if (backend_ && backend_signature_ == signature) {
+  if (backend_ && backend_signature_ == signature &&
+      (kind != assistant::LocalAgentKind::kCodex ||
+       static_cast<assistant::CodexBackend*>(backend_.get())
+           ->has_live_thread())) {
     SendToBackend(std::move(message));
     return;
   }
@@ -684,10 +683,12 @@ void AssistantConversation::LaunchLocal(assistant::Settings settings,
   }
   SwitchBackend(name);
   const bool off_the_record = profile()->IsOffTheRecord();
-  // 从聊天记录打开的、换了后端：接不上原来的会话，把前文写进这一条。
-  const std::string resume =
-      off_the_record ? std::string() : sessions_[settings.backend];
-  if (restored_ && resume.empty()) {
+  // 从记录打开对话或重启 Codex 时，用浏览器保存的文字续聊。
+  const bool resume_claude = kind == assistant::LocalAgentKind::kClaudeCode &&
+                             !off_the_record && !claude_session_id_.empty();
+  if (!resume_claude &&
+      (restored_ || (kind == assistant::LocalAgentKind::kCodex &&
+                     active_backend_ == settings.backend))) {
     if (std::optional<std::string> earlier = EarlierConversation()) {
       message.text = base::StrCat({*earlier, "\n\n", message.text});
     }
@@ -714,7 +715,9 @@ void AssistantConversation::LaunchLocal(assistant::Settings settings,
     config.server = std::move(server);
     config.working_directory = launch.workspace;
     config.environment = std::move(launch.environment);
-    config.session_id = resume;
+    if (resume_claude) {
+      config.session_id = claude_session_id_;
+    }
     config.persists_session = !off_the_record;
     backend_ =
         std::make_unique<assistant::ClaudeCodeBackend>(std::move(config), this);
@@ -726,10 +729,8 @@ void AssistantConversation::LaunchLocal(assistant::Settings settings,
     config.server = std::move(server);
     config.working_directory = launch.workspace;
     config.environment = std::move(launch.environment);
-    config.thread_id = resume;
     config.disabled_features = std::move(launch.disabled_features);
     config.disabled_servers = std::move(launch.disabled_servers);
-    config.ephemeral = off_the_record;
     backend_ =
         std::make_unique<assistant::CodexBackend>(std::move(config), this);
   }
@@ -1041,8 +1042,9 @@ void AssistantConversation::OnModel(const std::string& model) {
 }
 
 void AssistantConversation::OnSession(const std::string& id) {
-  if (!active_backend_.empty() && sessions_[active_backend_] != id) {
-    sessions_[active_backend_] = id;
+  if (active_backend_ == assistant::kBackendClaudeCode &&
+      claude_session_id_ != id) {
+    claude_session_id_ = id;
     dirty_ = true;
   }
 }
@@ -1360,7 +1362,6 @@ std::unique_ptr<assistant::Backend> AssistantConversation::MakeReviewBackend(
         static_cast<assistant::CodexBackend*>(backend_.get())->config();
     config.system_prompt = assistant::ReviewSystemPrompt();
     config.server.reset();
-    config.thread_id.clear();
     if (!active_model_.empty()) {
       config.model = active_model_;
     }
@@ -1541,12 +1542,8 @@ std::string AssistantConversation::RecordJson() const {
   }
   base::DictValue sessions;
   // 无痕窗口里本机智能体的会话不写磁盘，记着也接不上。
-  if (!profile()->IsOffTheRecord()) {
-    for (const auto& [backend, session] : sessions_) {
-      if (!session.empty()) {
-        sessions.Set(backend, session);
-      }
-    }
+  if (!profile()->IsOffTheRecord() && !claude_session_id_.empty()) {
+    sessions.Set(assistant::kBackendClaudeCode, claude_session_id_);
   }
   base::DictValue record;
   record.Set("version", 1);

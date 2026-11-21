@@ -22,7 +22,7 @@
 #include "starry/browser/assistant/local_agent.h"
 
 // 本机的 Codex 后端：`codex app-server`（IDE 插件用的 JSON-RPC，标准输入输出每行
-// 一条，没有 jsonrpc 字段），一个对话一个进程、一个 thread。用它自己的登录和模型；
+// 一条，没有 jsonrpc 字段），一个对话一个进程，多轮共用一个临时 thread。用它自己的登录和模型；
 // 它自带的工具（Shell、改文件、联网搜索、图片、浏览器、电脑控制）和用户配置的 MCP
 // 服务器都关掉，只留浏览器的工具（-c mcp_servers.starry.*）。协议基于 codex-cli
 // 0.166。
@@ -41,18 +41,14 @@ class CodexBackend : public Backend {
     base::FilePath executable;
     std::string model;
     std::string system_prompt;
-    // 没有：自动审核用的，没有浏览器的工具，system_prompt 换掉它自己的、thread 不存。
+    // 没有：不提供浏览器工具，system_prompt 换掉它自己的。
     std::optional<BrowserMcpServer> server;
     base::FilePath working_directory;
     base::EnvironmentMap environment;
-    // 接着上次的 thread。
-    std::string thread_id;
     // 要关掉的功能开关（只放这个版本认得的，见 CodexFeatures）。
     std::vector<std::string> disabled_features;
     // 用户配置里的 MCP 服务器，全部关掉。
     std::vector<std::string> disabled_servers;
-    // thread 不写到磁盘（无痕窗口）。
-    bool ephemeral = false;
   };
 
   // 想关掉的功能开关：都是它自带的工具。版本不同，实际只关 `codex features list` 里有的。
@@ -64,7 +60,7 @@ class CodexBackend : public Backend {
   CodexBackend& operator=(const CodexBackend&) = delete;
   ~CodexBackend() override;
 
-  const std::string& thread_id() const { return thread_id_; }
+  bool has_live_thread() const { return !thread_id_.empty(); }
   const Config& config() const { return config_; }
   // 这一轮要发的 effort：模型不支持的不发；从某个等级换回「默认」时发模型默认的
   //（turn/start 的 effort 对之后的每一轮都有效）。

@@ -94,8 +94,7 @@ class Backend {
     virtual void OnStarting() {}
     virtual void OnModel(const std::string& model) {}
     virtual void OnToolsUnavailable(const std::string& detail) {}
-    // 本机智能体的会话（Claude Code 的 session、Codex 的 thread）：存进聊天记录，接着聊时
-    // 用它接上。
+    // 可恢复的本机会话 ID，存进浏览器聊天记录以便下次接上。
     virtual void OnSession(const std::string& id) {}
     // Codex 说了这个模型支持哪些思考程度（model/list）。
     virtual void OnReasoningLevels(const std::vector<std::string>& levels) {}

@@ -168,9 +168,7 @@ std::vector<std::string> CodexBackend::Arguments(const Config& config) {
 }
 
 CodexBackend::CodexBackend(Config config, Delegate* delegate)
-    : config_(std::move(config)),
-      delegate_(delegate),
-      thread_id_(config_.thread_id) {}
+    : config_(std::move(config)), delegate_(delegate) {}
 
 bool CodexBackend::running() const {
   return running_;
@@ -348,39 +346,26 @@ void CodexBackend::OpenThread() {
   params.Set("cwd", config_.working_directory.AsUTF8Unsafe());
   params.Set("approvalPolicy", "never");
   params.Set("sandbox", "read-only");
+  // 聊天记录由浏览器管理，普通窗口也不在 Codex 的会话列表里留下记录。
+  params.Set("ephemeral", true);
   params.Set("developerInstructions", config_.server
                                           ? config_.system_prompt + kToolNote
                                           : config_.system_prompt);
-  // 审核用的：换掉它自己的系统提示，thread 不存。
   if (!config_.server) {
     params.Set("baseInstructions", config_.system_prompt);
-  }
-  if (config_.ephemeral || !config_.server) {
-    params.Set("ephemeral", true);
   }
   if (!config_.model.empty()) {
     params.Set("model", config_.model);
   }
-  const bool resume =
-      !thread_id_.empty() && !config_.ephemeral && config_.server;
-  if (resume) {
-    params.Set("threadId", thread_id_);
-  }
   Request(
-      resume ? "thread/resume" : "thread/start", std::move(params),
+      "thread/start", std::move(params),
       base::BindOnce(
-          [](base::WeakPtr<CodexBackend> self, bool resume,
+          [](base::WeakPtr<CodexBackend> self,
              base::expected<base::Value, std::string> result) {
             if (!self) {
               return;
             }
             if (!result.has_value()) {
-              // 旧的 thread 接不上（被删了、换了机器）：开一个新的。
-              if (resume) {
-                self->thread_id_.clear();
-                self->OpenThread();
-                return;
-              }
               self->Finish(StopReason::kFailed, KindFor(result.error()),
                            result.error());
               return;
@@ -390,7 +375,6 @@ void CodexBackend::OpenThread() {
               if (const base::DictValue* thread = value.FindDict("thread")) {
                 if (const std::string* id = thread->FindString("id")) {
                   self->thread_id_ = *id;
-                  self->delegate_->OnSession(*id);
                 }
               }
               if (const std::string* model = value.FindString("model")) {
@@ -408,7 +392,7 @@ void CodexBackend::OpenThread() {
               }
             }
           },
-          weak_factory_.GetWeakPtr(), resume));
+          weak_factory_.GetWeakPtr()));
 }
 
 void CodexBackend::StartTurn(Message message) {
@@ -788,6 +772,7 @@ void CodexBackend::ItemCompleted(const base::DictValue& item) {
 
 void CodexBackend::Exited(int status, std::string errors) {
   process_.reset();
+  thread_id_.clear();
   ready_ = false;
   pending_inputs_.clear();
   kill_timer_.Stop();

@@ -48,8 +48,8 @@ struct Settings;
 // Host，Host 只把显示着的那个对话的转给网页。
 //
 // 一轮结束、做事的过程中隔一会儿，存进聊天记录（assistant::History）；从聊天记录打开的
-// 接着聊：OpenAI 兼容服务带上前文，本机智能体有原来的会话就接上（--resume、
-// thread/resume），没有就把前文写进第一条。
+// 接着聊：OpenAI 兼容服务带上前文，Claude Code 有原来的会话就接上（--resume），
+// Codex 或没有原会话的 Claude Code 把前文写进第一条。
 class AssistantConversation : public assistant::Backend::Delegate,
                               public agent::ToolRunner::Delegate,
                               public agent::ConnectionOwner {
@@ -247,8 +247,7 @@ class AssistantConversation : public assistant::Backend::Delegate,
   std::string active_model_;
   // 本机智能体的令牌（AgentService）。
   std::string token_;
-  // 本机智能体的会话：后端 → 会话 ID（接着聊时用）。
-  std::map<std::string, std::string> sessions_;
+  std::string claude_session_id_;
   // 从聊天记录打开、还没发过消息：第一次发时让模型接上前文。
   bool restored_ = false;
   // 后端自己问的问题（Codex 的 request_user_input）：对话里的 id → 后端的 id。

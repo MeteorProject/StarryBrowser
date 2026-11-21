@@ -111,7 +111,6 @@ void OrganizerModel::StartLocal(assistant::LocalLaunch launch) {
     config.environment = std::move(launch.environment);
     config.disabled_features = std::move(launch.disabled_features);
     config.disabled_servers = std::move(launch.disabled_servers);
-    config.ephemeral = true;
     backend_ =
         std::make_unique<assistant::CodexBackend>(std::move(config), this);
   }
