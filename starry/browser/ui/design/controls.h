@@ -24,8 +24,8 @@ namespace starry {
 enum class ButtonVariant { kFilled, kSecondary, kTertiary, kGhost, kDanger };
 
 // 图标按钮右上角的状态角标：kActivity 为智能体渐变（助手运行中），
-// kAttention 为警示色（等待用户回应）。
-enum class IconBadge { kNone, kActivity, kAttention };
+// kAttention 为警示色（等待用户回应），kAccent 为主题强调色（软件更新提醒）。
+enum class IconBadge { kNone, kActivity, kAttention, kAccent };
 
 // 图标按钮：悬停时底色淡入，按下时在合成器线程缩放到 0.96。默认 28 × 28、图标 14、ghost。
 class IconButton : public views::Button {

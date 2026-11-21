@@ -55,6 +55,7 @@
 #include "starry/browser/ui/webui/new_tab_handler.h"
 #include "starry/browser/ui/webui/page_handler.h"
 #include "starry/browser/ui/webui/settings_handler.h"
+#include "starry/browser/ui/webui/update_handler.h"
 #include "starry/browser/ui/webui/welcome_handler.h"
 #include "starry/common/internal_urls.h"
 #include "url/gurl.h"
@@ -351,6 +352,8 @@ StarryPageUI::StarryPageUI(content::WebUI* web_ui, StarryPage page)
       web_ui->AddMessageHandler(std::make_unique<ContentBlockingHandler>());
       // 通用 › 导入浏览器数据。
       web_ui->AddMessageHandler(std::make_unique<ImportHandler>(profile));
+      // 通用 › 软件更新。
+      web_ui->AddMessageHandler(std::make_unique<UpdateHandler>());
       break;
     case StarryPage::kAssistant:
       web_ui->AddMessageHandler(std::make_unique<AssistantHandler>());

@@ -99,6 +99,7 @@
 #include "starry/browser/ui/toolbar/compact_toolbar.h"
 #include "starry/browser/ui/toolbar/page_color.h"
 #include "starry/browser/ui/toolbar/toolbar_parts.h"
+#include "starry/browser/ui/update/update_toast.h"
 #include "starry/browser/ui/webui/starry_pages.h"
 #include "third_party/blink/public/common/page/page_zoom.h"
 #include "ui/actions/actions.h"
@@ -479,6 +480,7 @@ StarryBrowserView::StarryBrowserView(BrowserWindowInterface* browser)
   download_launch_ =
       AddChildView(std::make_unique<DownloadLaunchView>(browser));
   archive_toast_ = AddChildView(std::make_unique<ArchiveToastHost>(browser));
+  update_toast_ = AddChildView(std::make_unique<UpdateToastHost>(browser));
   downloads_panel_ =
       AddChildView(std::make_unique<DownloadsPanelHost>(browser));
   downloads_panel_subscription_ =
@@ -694,23 +696,29 @@ void StarryBrowserView::OverrideActions() {
   if (!actions || !actions->root_action_item()) {
     return;
   }
+  const auto open_settings = [](BrowserWindowInterface* browser,
+                                std::string_view pane, actions::ActionItem*,
+                                actions::ActionInvocationContext) {
+    // 小窗口里的 ⌘, / 关于在浏览器窗口里打开设置。
+    if (mini_window::IsMiniWindow(browser)) {
+      browser = mini_window::BrowserWindowFor(browser->GetProfile());
+      if (!browser) {
+        return;
+      }
+      browser->GetWindow()->Show();
+      browser->GetWindow()->Activate();
+    }
+    OpenStarrySettings(browser, pane);
+  };
   if (actions::ActionItem* settings = actions::ActionManager::Get().FindAction(
           kActionOptions, actions->root_action_item())) {
-    settings->SetInvokeActionCallback(base::BindRepeating(
-        [](BrowserWindowInterface* browser, actions::ActionItem* item,
-           actions::ActionInvocationContext context) {
-          // 小窗口里的 ⌘, 在浏览器窗口里打开设置。
-          if (mini_window::IsMiniWindow(browser)) {
-            browser = mini_window::BrowserWindowFor(browser->GetProfile());
-            if (!browser) {
-              return;
-            }
-            browser->GetWindow()->Show();
-            browser->GetWindow()->Activate();
-          }
-          OpenStarrySettings(browser);
-        },
-        browser()));
+    settings->SetInvokeActionCallback(
+        base::BindRepeating(open_settings, browser(), std::string_view()));
+  }
+  if (actions::ActionItem* about = actions::ActionManager::Get().FindAction(
+          kActionAbout, actions->root_action_item())) {
+    about->SetInvokeActionCallback(
+        base::BindRepeating(open_settings, browser(), "general"));
   }
 }
 
@@ -1558,6 +1566,7 @@ void StarryBrowserView::AddedToWidget() {
     }
     ReorderChildView(download_launch_, children().size());
     ReorderChildView(archive_toast_, children().size());
+    ReorderChildView(update_toast_, children().size());
     ReorderChildView(downloads_panel_, children().size());
     ReorderChildView(popover_host_, children().size());
     ReorderChildView(command_bar_, children().size());
@@ -1806,6 +1815,7 @@ void StarryBrowserView::ApplyTheme(const Theme& theme) {
   downloads_panel_->SetTheme(theme_);
   download_launch_->SetTheme(theme_);
   archive_toast_->SetTheme(theme_);
+  update_toast_->SetTheme(theme_);
   popover_host_->SetTheme(theme_);
   split_overlay_->SetTheme(theme_);
   tab_preview_->SetTheme(theme_);
@@ -1872,9 +1882,12 @@ std::vector<gfx::Rect> StarryBrowserView::MediaObstacles() {
       add(agent_overlay_, rect);
     }
   }
-  // 自动整理的提示条（内容卡片左下角）：岛在左下角时往上让。
+  // 自动整理与更新提示条（内容卡片左下角）：岛在左下角时往上让。
   if (archive_toast_) {
     add(archive_toast_, archive_toast_->ToastRect());
+  }
+  if (update_toast_) {
+    add(update_toast_, update_toast_->ToastRect());
   }
   // 桌面的画中画小窗浮在所有窗口上面：盖到这个窗口时也让开（默认都在右下角）。
   if (MediaPip* pip = MediaPip::Current()) {
@@ -1889,6 +1902,9 @@ std::vector<gfx::Rect> StarryBrowserView::MediaObstacles() {
 }
 
 void StarryBrowserView::MediaObstaclesChanged() {
+  if (update_toast_) {
+    update_toast_->InvalidateLayout();
+  }
   if (media_island_) {
     media_island_->UpdateAvoidance();
   }

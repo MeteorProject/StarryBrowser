@@ -527,6 +527,8 @@ UtilityButtons::UtilityButtons(BrowserWindowInterface* browser,
   slots_[static_cast<size_t>(UtilityButton::kLayout)]->button->SetIcon(
       layout_.tab_strip() ? icons::kRectangleTopthirdInsetFilled
                           : icons::kSidebarLeft);
+  updater_observation_.Observe(updater::UpdaterService::Get());
+  UpdateSettingsBadge();
   Update(/*animated=*/false);
 }
 
@@ -629,6 +631,32 @@ void UtilityButtons::SetAssistantBadge(IconBadge badge) {
   if (const std::unique_ptr<Slot>& slot =
           slots_[static_cast<size_t>(UtilityButton::kAssistant)]) {
     slot->button->SetBadge(badge);
+  }
+}
+
+void UtilityButtons::OnUpdateStateChanged() {
+  UpdateSettingsBadge();
+}
+
+void UtilityButtons::UpdateSettingsBadge() {
+  const std::unique_ptr<Slot>& slot =
+      slots_[static_cast<size_t>(UtilityButton::kSettings)];
+  if (!slot || !slot->button) {
+    return;
+  }
+  updater::UpdaterService* updater = updater::UpdaterService::Get();
+  const bool attention = updater->HasAttention();
+  slot->button->SetBadge(attention ? IconBadge::kAccent : IconBadge::kNone);
+  if (attention) {
+    const updater::UpdaterService::StateSnapshot s = updater->Snapshot();
+    slot->button->SetTooltipText(
+        s.status == updater::UpdateStatus::kReady
+            ? L("updates.badge.readyTooltip",
+                {{"version", s.available_version}})
+            : L("updates.badge.availableTooltip",
+                {{"version", s.available_version}}));
+  } else {
+    slot->button->SetTooltipText(TooltipFor(UtilityButton::kSettings));
   }
 }
 

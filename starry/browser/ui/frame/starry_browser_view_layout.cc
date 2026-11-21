@@ -23,6 +23,7 @@
 #include "chrome/browser/ui/views/side_panel/side_panel.h"
 #include "chrome/browser/ui/views/tabs/organizer/organizer_tray_view.h"
 #include "starry/browser/ui/archive/archive_toast.h"
+#include "starry/browser/ui/update/update_toast.h"
 #include "starry/browser/ui/assistant/agent_overlay.h"
 #include "starry/browser/ui/assistant/assistant_island.h"
 #include "starry/browser/ui/design/metrics.h"
@@ -470,9 +471,12 @@ StarryBrowserViewLayout::CalculateProposedLayout(
     layout.AddChild(views().infobar_container, infobar_bounds, infobar_visible);
   }
 
-  // 自动整理的提示条：铺满内容卡片，提示条在它左下角，只有提示条接鼠标。
+  // 自动整理与软件更新提示条：铺满内容卡片，提示条在左下角，只有提示条接鼠标。
   if (views::View* const archive_toast = browser_view_->archive_toast()) {
     layout.AddChild(archive_toast, card, !content_only);
+  }
+  if (views::View* const update_toast = browser_view_->update_toast()) {
+    layout.AddChild(update_toast, card, !content_only);
   }
 
   auto* peek = browser_view_->pinned_peek();

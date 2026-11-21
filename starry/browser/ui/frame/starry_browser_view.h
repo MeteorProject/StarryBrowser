@@ -54,6 +54,7 @@ class SplitOverlay;
 class SwipeIndicator;
 class TabPreview;
 class TopTabStrip;
+class UpdateToastHost;
 class UtilityButtons;
 class WindowBackgroundView;
 class WindowControlsView;
@@ -112,6 +113,8 @@ class StarryBrowserView : public BrowserView {
   // 自动整理后在内容卡片左下角显示的提示，可撤销这一批。
   ArchiveNotice* archive_notice() { return archive_notice_.get(); }
   ArchiveToastHost* archive_toast() { return archive_toast_; }
+  // 软件更新就绪或有新版本时在内容卡片左下角显示的提示条。
+  UpdateToastHost* update_toast() { return update_toast_; }
   // 窗口里的小弹出框（加书签、缩放）。
   PopoverHost* popover_host() { return popover_host_; }
   // 分屏的分隔线、把手、描边和拖标签时的落点预览。
@@ -317,6 +320,7 @@ class StarryBrowserView : public BrowserView {
   raw_ptr<DownloadsPanelHost> downloads_panel_ = nullptr;
   raw_ptr<DownloadLaunchView> download_launch_ = nullptr;
   raw_ptr<ArchiveToastHost> archive_toast_ = nullptr;
+  raw_ptr<UpdateToastHost> update_toast_ = nullptr;
   raw_ptr<PopoverHost> popover_host_ = nullptr;
   raw_ptr<PinnedPeek> pinned_peek_ = nullptr;
   raw_ptr<SplitOverlay> split_overlay_ = nullptr;

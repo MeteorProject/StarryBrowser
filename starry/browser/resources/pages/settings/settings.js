@@ -7,6 +7,7 @@
 import {html, LitElement, nothing, repeat} from 'chrome://resources/lit/v3_0/lit.rollup.js';
 
 import {addWebUiListener, confirm, copyText, openUrl, sendWithPromise, showDialog, showMenu} from './common/browser.js';
+import {bytes} from './common/format.js';
 import {joinList, L, language, locale} from './common/l10n.js';
 import {emptyState, icon, searchField} from './common/library.js';
 import {Motion, reduceMotion, reveal} from './common/motion.js';
@@ -257,6 +258,9 @@ class StarrySettings extends LitElement {
     import_: {state: true},
     importSource_: {state: true},
     importItems_: {state: true},
+    update_: {state: true},
+    mirrorDraft_: {state: true},
+    mirrorError_: {state: true},
   };
 
   constructor() {
@@ -280,6 +284,9 @@ class StarrySettings extends LitElement {
     this.import_ = null;
     this.importSource_ = '';
     this.importItems_ = {};
+    this.update_ = null;
+    this.mirrorDraft_ = null;
+    this.mirrorError_ = '';
     const fromPath = location.pathname.replace(/^\/+|\/+$/g, '');
     let saved = null;
     try {
@@ -317,6 +324,10 @@ class StarrySettings extends LitElement {
     addWebUiListener('import-changed', (state) => {
       this.import_ = state;
     });
+    addWebUiListener('update-changed', (state) => {
+      this.update_ = state;
+    });
+    sendWithPromise('getUpdateState').then((state) => this.update_ = state);
     // 系统的深浅变了：外观是「跟随系统」时预览跟着变。
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => this.requestUpdate());
     if (this.pane_ === 'importData') {
@@ -847,7 +858,185 @@ class StarrySettings extends LitElement {
               detailButton(L('settings.general.onboarding.button'), '', () => chrome.send('startOnboarding')),
               {detail: L('settings.general.onboarding.detail'), keywords: L('settings.general.onboarding.keywords')}),
       ]),
+      ...this.updatesGroup_(s),
     ];
+  }
+
+  // 软件更新分组：通过 GitHub Releases 检查与下载，内置中国大陆多级镜像自动回退。
+  updatesGroup_(s) {
+    const u = this.update_;
+    if (!u) {
+      return [];
+    }
+    const keywords = L('settings.general.updates.keywords');
+    const isLinuxPkg = u.installKind === 'linuxDeb' || u.installKind === 'linuxRpm';
+    const routeTag = u.activeRouteHost && u.activeRouteHost !== 'github.com'
+        ? L('settings.general.updates.viaMirror', {host: u.activeRouteHost})
+        : '';
+    const lastCheckedText = u.lastChecked
+        ? L('settings.general.updates.lastChecked', {time: relativeTime(u.lastChecked)})
+        : '';
+
+    let leading = 'arrow.triangle.2.circlepath';
+    let tone = '';
+    let title = L('settings.general.updates.version', {version: u.currentVersion || s.version});
+    let detail = [lastCheckedText, routeTag].filter(Boolean).join(' · ');
+    let control = detailButton(L('settings.general.updates.check'), 'arrow.clockwise',
+                               () => chrome.send('checkForUpdates'));
+
+    switch (u.status) {
+      case 'checking':
+        title = L('settings.general.updates.checking');
+        detail = [L('settings.general.updates.currentVersion', {version: u.currentVersion}), routeTag]
+            .filter(Boolean).join(' · ');
+        control = html`<span class="spinner" aria-hidden="true"></span>`;
+        break;
+      case 'upToDate':
+        leading = 'checkmark.circle.fill';
+        tone = 'success';
+        title = L('settings.general.updates.upToDate');
+        detail = [L('settings.general.updates.currentVersion', {version: u.currentVersion}),
+                  lastCheckedText, routeTag].filter(Boolean).join(' · ');
+        break;
+      case 'available':
+        leading = 'arrow.down.circle';
+        title = L('settings.general.updates.available', {version: u.availableVersion});
+        if (u.installKind === 'macReadOnly') {
+          detail = L('settings.general.updates.macReadOnly');
+        } else if (!u.canAutoInstall) {
+          detail = L('settings.general.updates.manualDetail');
+        } else {
+          detail = [L('settings.general.updates.currentVersion', {version: u.currentVersion}), routeTag]
+              .filter(Boolean).join(' · ');
+        }
+        control = u.canAutoInstall ? html`
+          <div class="inline-controls">
+            ${detailButton(L('settings.general.updates.releasePage'), 'arrow.up.right.square',
+                           () => openUrl(u.releaseUrl, 'foreground'))}
+            ${detailButton(L('settings.general.updates.download'), 'arrow.down.circle',
+                           () => chrome.send('downloadUpdate'), {prominent: true})}
+          </div>` :
+          detailButton(L('settings.general.updates.openDownload'), 'arrow.up.right.square',
+                       () => openUrl(u.releaseUrl, 'foreground'), {prominent: true});
+        break;
+      case 'downloading': {
+        leading = 'arrow.down.circle';
+        title = L('settings.general.updates.downloading', {version: u.availableVersion});
+        const percent = u.totalBytes > 0 ? Math.min(100, Math.round(u.bytesReceived / u.totalBytes * 100)) : null;
+        const transferred = u.totalBytes > 0 ? `${bytes(u.bytesReceived)} / ${bytes(u.totalBytes)}` :
+                                               bytes(u.bytesReceived);
+        detail = [transferred, percent !== null ? `${percent}%` : '', routeTag].filter(Boolean).join(' · ');
+        control = detailButton(L('common.cancel'), '', () => chrome.send('cancelUpdateDownload'));
+        break;
+      }
+      case 'verifying':
+        title = L('settings.general.updates.verifying');
+        detail = L('settings.general.updates.version', {version: u.availableVersion});
+        control = html`<span class="spinner" aria-hidden="true"></span>`;
+        break;
+      case 'ready':
+        leading = 'checkmark.circle.fill';
+        tone = 'success';
+        title = L('settings.general.updates.ready', {version: u.availableVersion});
+        detail = isLinuxPkg ? L('settings.general.updates.readyLinuxDetail') :
+                              L('settings.general.updates.readyDetail');
+        control = html`
+          <div class="inline-controls">
+            ${isLinuxPkg ? detailButton(L('settings.general.updates.reveal'), 'folder',
+                                        () => chrome.send('revealUpdatePackage')) : nothing}
+            ${detailButton(isLinuxPkg ? L('updates.action.install') : L('updates.action.relaunch'),
+                           isLinuxPkg ? 'arrow.down.circle' : 'arrow.clockwise',
+                           () => chrome.send('applyUpdate'), {prominent: true})}
+          </div>`;
+        break;
+      case 'error':
+        leading = 'exclamationmark.triangle.fill';
+        tone = 'warning';
+        title = L('settings.general.updates.failed');
+        detail = u.error || '';
+        control = html`
+          <div class="inline-controls">
+            ${u.releaseUrl ? detailButton(L('settings.general.updates.releasePage'), 'arrow.up.right.square',
+                                          () => openUrl(u.releaseUrl, 'foreground')) : nothing}
+            ${detailButton(L('settings.general.updates.check'), 'arrow.clockwise',
+                           () => chrome.send('checkForUpdates'))}
+          </div>`;
+        break;
+    }
+
+    const entries = [
+      entry('updateStatus', title, control, {detail, leading, tone, keywords}),
+    ];
+
+    if (u.status === 'downloading' || u.status === 'verifying') {
+      const indeterminate = u.status === 'verifying' || !(u.totalBytes > 0);
+      const ratio = indeterminate ? 0 : Math.min(1, Math.max(0, u.bytesReceived / u.totalBytes));
+      entries.push(entry('updateProgress', '', html`
+        <div class="update-progress ${indeterminate ? 'indeterminate' : ''}">
+          <div class="update-progress-fill" style="--progress: ${ratio}"></div>
+        </div>`, {layout: 'block'}));
+    }
+
+    if (u.releaseNotes && (u.status === 'available' || u.status === 'downloading' ||
+                           u.status === 'verifying' || u.status === 'ready')) {
+      entries.push(entry('updateNotes', L('settings.general.updates.notesTitle'), html`
+        <div class="update-notes">${u.releaseNotes}</div>`,
+        {layout: 'block', keywords}));
+    }
+
+    const modeDetails = {
+      auto: L('settings.general.updates.mode.autoDetail'),
+      notify: L('settings.general.updates.mode.notifyDetail'),
+      off: L('settings.general.updates.mode.offDetail'),
+    };
+    entries.push(entry('autoUpdateMode', L('settings.general.updates.mode.title'),
+                       menuControl(u.mode, [
+                         {value: 'auto', title: L('settings.general.updates.mode.auto')},
+                         {value: 'notify', title: L('settings.general.updates.mode.notify')},
+                         {value: 'off', title: L('settings.general.updates.mode.off')},
+                       ], (value) => {
+                         this.update_ = {...u, mode: value};
+                         chrome.send('setAutoUpdateMode', [value]);
+                       }),
+                       {detail: modeDetails[u.mode] || '', keywords}));
+
+    const mirrorValue = this.mirrorDraft_ !== null ? this.mirrorDraft_ : (u.customMirror || '');
+    const commitMirror = async (raw) => {
+      const result = await sendWithPromise('setUpdateMirror', raw.trim());
+      if (result && result.error) {
+        this.mirrorError_ = result.error;
+      } else {
+        this.mirrorError_ = '';
+        this.mirrorDraft_ = null;
+      }
+    };
+    entries.push(entry('updateMirror', L('settings.general.updates.mirror.title'), html`
+      <div class="inline-controls">
+        <input class="text-input" type="url" .value=${mirrorValue}
+            placeholder=${L('settings.general.updates.mirror.placeholder')}
+            spellcheck="false" autocomplete="off"
+            @input=${(event) => {
+              this.mirrorDraft_ = event.target.value;
+              this.mirrorError_ = '';
+            }}
+            @change=${(event) => commitMirror(event.target.value)}
+            @keydown=${(event) => event.key === 'Enter' && event.target.blur()}>
+        ${mirrorValue ? detailButton(L('common.clear'), '', () => commitMirror('')) : nothing}
+      </div>`,
+      {detail: this.mirrorError_ || L('settings.general.updates.mirror.detail'),
+       tone: this.mirrorError_ ? 'warning' : '',
+       keywords: `${keywords} ${L('settings.general.updates.mirror.keywords')}`}));
+
+    return [group('updates', L('settings.general.updates.title'), entries,
+                  {footer: L('settings.general.updates.footer')})];
+  }
+
+  async openUpdates_() {
+    await this.select_('general');
+    const target = this.querySelector('[data-key="updates"]');
+    if (target) {
+      target.scrollIntoView({behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start'});
+    }
   }
 
   appearance_(s) {
@@ -2169,7 +2358,10 @@ class StarrySettings extends LitElement {
         <div class="rail-title">${L('common.settings')}</div>
         ${this.renderSearchField_()}
         <div class="rail-list"><div class="rail-highlight"></div>${items}</div>
-        <div class="rail-footer">Starry Browser · ${this.settings_?.version || ''}</div>
+        <button class="rail-footer" @click=${() => this.openUpdates_()}>
+          <span>Starry Browser · ${this.settings_?.version || ''}</span>
+          ${this.update_?.hasAttention ? html`<span class="update-dot" aria-hidden="true"></span>` : nothing}
+        </button>
       </nav>`;
   }
 

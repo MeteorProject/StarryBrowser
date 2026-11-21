@@ -30,6 +30,7 @@ class StarryBrowserMainExtraParts : public ChromeBrowserMainExtraParts {
   void PostProfileInit(Profile* profile, bool is_initial_profile) override;
   void PostBrowserStart() override;
   void PostMainMessageLoopRun() override;
+  void PostDestroyThreads() override;
 
 #if defined(STARRY_DEVTOOLS)
  private:

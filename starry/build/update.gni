@@ -1,0 +1,10 @@
+# Copyright 2026 The Starry Browser Authors
+
+declare_args() {
+  # 检查与下载更新用的 GitHub 仓库（<owner>/<name>）。
+  starry_update_repo = "MeteorProject/StarryBrowser"
+
+  # 可选：以逗号分隔的自定义 HTTPS GitHub Release 镜像前缀，
+  # 非空时排在内置国内镜像之前（例如 "https://updates.example.com/"）。
+  starry_update_mirrors = ""
+}

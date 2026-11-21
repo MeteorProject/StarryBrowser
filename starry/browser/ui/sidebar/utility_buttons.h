@@ -10,11 +10,13 @@
 
 #include "base/functional/callback.h"
 #include "base/memory/raw_ptr.h"
+#include "base/scoped_observation.h"
 #include "components/prefs/pref_change_registrar.h"
 #include "starry/browser/ui/design/theme.h"
 #include "starry/browser/ui/frame/chrome_layout.h"
 #include "starry/browser/ui/internal_pages.h"
 #include "starry/browser/ui/motion/layer_motion.h"
+#include "starry/browser/updater/updater_service.h"
 #include "ui/base/metadata/metadata_header_macros.h"
 #include "ui/menus/simple_menu_model.h"
 #include "ui/views/context_menu_controller.h"
@@ -60,7 +62,8 @@ const char* UtilityButtonKey(UtilityButton button);
 class UtilityButtons : public views::View,
                        public views::ContextMenuController,
                        public views::ViewTargeterDelegate,
-                       public ui::SimpleMenuModel::Delegate {
+                       public ui::SimpleMenuModel::Delegate,
+                       public updater::UpdaterService::Observer {
   METADATA_HEADER(UtilityButtons, views::View)
 
  public:
@@ -122,7 +125,11 @@ class UtilityButtons : public views::View,
   bool IsCommandIdEnabled(int command_id) const override;
   void ExecuteCommand(int command_id, int event_flags) override;
 
+  // updater::UpdaterService::Observer:
+  void OnUpdateStateChanged() override;
+
  private:
+  void UpdateSettingsBadge();
   struct Slot {
     UtilityButton kind;
     raw_ptr<IconButton> button = nullptr;
@@ -155,6 +162,9 @@ class UtilityButtons : public views::View,
   bool assistant_open_ = false;
   base::RepeatingClosure content_changed_;
   PrefChangeRegistrar prefs_;
+  base::ScopedObservation<updater::UpdaterService,
+                          updater::UpdaterService::Observer>
+      updater_observation_{this};
   std::unique_ptr<ui::SimpleMenuModel> menu_;
 };
 

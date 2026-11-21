@@ -19,6 +19,7 @@
 #include "starry/browser/ui/swipe/overscroll_navigation.h"
 #include "starry/browser/ui/task_manager/task_manager_window.h"
 #include "starry/browser/ui/webui/starry_pages.h"
+#include "starry/browser/updater/updater_service.h"
 #include "starry/browser/web_time_zone.h"
 #include "ui/base/resource/resource_bundle.h"
 
@@ -117,6 +118,8 @@ void StarryBrowserMainExtraParts::PostProfileInit(Profile* profile,
 void StarryBrowserMainExtraParts::PostBrowserStart() {
   // 小窗口（其他 App 里点的链接）出现时把浏览器窗口留在后面：从现在起听应用激活。
   mini_window::StartTrackingActivation();
+  // 自动更新：加载持久化状态与已就绪包，按配置启动定时检查。
+  updater::UpdaterService::Get()->Start();
 #if defined(STARRY_DEVTOOLS)
   devtools::OnBrowserStart(initial_profile_);
 #endif
@@ -131,6 +134,11 @@ void StarryBrowserMainExtraParts::PostMainMessageLoopRun() {
   // 断开智能体的连接，删掉套接字文件。
   agent::AgentService::Get()->Shutdown();
   content_blocking::ContentBlockingService::Get()->Shutdown();
+  updater::UpdaterService::Get()->Shutdown();
+}
+
+void StarryBrowserMainExtraParts::PostDestroyThreads() {
+  updater::UpdaterService::Get()->OnPostDestroyThreads();
 }
 
 }  // namespace starry

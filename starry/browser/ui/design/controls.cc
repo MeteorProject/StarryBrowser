@@ -160,6 +160,9 @@ void IconButton::PaintButtonContents(gfx::Canvas* canvas) {
     if (badge_shown_ == IconBadge::kAttention) {
       flags.setAntiAlias(true);
       flags.setColor(theme_.warning());
+    } else if (badge_shown_ == IconBadge::kAccent) {
+      flags.setAntiAlias(true);
+      flags.setColor(theme_.accent);
     } else {
       flags = AgentGradient(gfx::RectF(center.x() - 3, center.y() - 3, 6, 6));
     }

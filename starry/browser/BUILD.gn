@@ -8,8 +8,14 @@
 # 后两处调用的函数声明在 starry_hooks.h。
 
 import("//starry/build/devtools.gni")
+import("//starry/build/update.gni")
 
 source_set("browser") {
+  defines = [
+    "STARRY_UPDATE_REPO=\"$starry_update_repo\"",
+    "STARRY_UPDATE_MIRRORS=\"$starry_update_mirrors\"",
+  ]
+
   sources = [
     "../common/internal_urls.h",
     "../common/web_time_zone.h",
@@ -333,6 +339,8 @@ source_set("browser") {
     "ui/toolbar/page_color.h",
     "ui/toolbar/toolbar_parts.cc",
     "ui/toolbar/toolbar_parts.h",
+    "ui/update/update_toast.cc",
+    "ui/update/update_toast.h",
     "ui/webui/archive_handler.cc",
     "ui/webui/archive_handler.h",
     "ui/webui/assistant_handler.cc",
@@ -359,8 +367,18 @@ source_set("browser") {
     "ui/webui/settings_handler.h",
     "ui/webui/starry_pages.cc",
     "ui/webui/starry_pages.h",
+    "ui/webui/update_handler.cc",
+    "ui/webui/update_handler.h",
     "ui/webui/welcome_handler.cc",
     "ui/webui/welcome_handler.h",
+    "updater/platform_updater.cc",
+    "updater/platform_updater.h",
+    "updater/release_sources.cc",
+    "updater/release_sources.h",
+    "updater/semver.cc",
+    "updater/semver.h",
+    "updater/updater_service.cc",
+    "updater/updater_service.h",
     "web_time_zone.cc",
     "web_time_zone.h",
   ]
@@ -378,6 +396,7 @@ source_set("browser") {
       "ui/swipe/history_swiper_mac.mm",
       "ui/task_manager/gpu_usage_mac.cc",
       "ui/task_manager/task_manager_window_mac.mm",
+      "updater/platform_updater_mac.cc",
     ]
     frameworks = [
       "AppKit.framework",
@@ -394,6 +413,15 @@ source_set("browser") {
     ]
   }
   if (is_win) {
+    # Embed the helper in the browser so running from a portable ZIP needs
+    # no separately installed script. read_file tracks it as a GN input.
+    write_file("$target_gen_dir/updater/apply_portable_update.inc",
+               [
+                 "constexpr char kApplyPortableUpdate[] = R\"ps(",
+                 read_file("updater/apply_portable_update.ps1", "string"),
+                 ")ps\";",
+               ])
+
     # 导入别的浏览器的密码：DPAPI（CryptUnprotectData）。
     sources += [
       "agent/agent_bridge_win.cc",
@@ -403,6 +431,7 @@ source_set("browser") {
       "assistant/line_process_win.cc",
       "assistant/local_agent_win.cc",
       "importer/chromium_passwords_win.cc",
+      "updater/platform_updater_win.cc",
     ]
     libs = [ "crypt32.lib" ]
   } else {
@@ -413,6 +442,10 @@ source_set("browser") {
       "assistant/line_process_posix.cc",
       "assistant/local_agent_posix.cc",
     ]
+  }
+
+  if (is_linux) {
+    sources += [ "updater/platform_updater_linux.cc" ]
   }
 
   public_deps = [
@@ -529,6 +562,7 @@ source_set("browser") {
     "//starry/browser/ui/design:theme",
     "//starry/browser/ui/glass",
     "//starry/browser/ui/motion",
+    "//starry/common:branding",
     "//starry/common:version",
     "//starry/components/content_filter",
     "//starry/components/content_filter/mojom",
@@ -558,6 +592,7 @@ source_set("browser") {
     deps += [
       "//chrome/browser/win:chrome_process_finder",
       "//mojo/public/cpp/platform",
+      "//third_party/zlib/google:zip",
     ]
   }
 
@@ -574,7 +609,7 @@ source_set("browser") {
 
   if (starry_devtools) {
     import("//starry_internal/browser/devtools.gni")
-    defines = [ "STARRY_DEVTOOLS=1" ]
+    defines += [ "STARRY_DEVTOOLS=1" ]
     sources += starry_devtools_sources
     deps += starry_devtools_deps
   }
