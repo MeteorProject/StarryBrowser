@@ -571,6 +571,11 @@ void SidebarView::Peek() {
                        &SidebarView::CheckPointer);
 }
 
+void SidebarView::PeekFor(base::TimeDelta duration) {
+  hold_peek_until_ = base::TimeTicks::Now() + duration;
+  Peek();
+}
+
 void SidebarView::Unpeek() {
   if (!peeking_) {
     return;
@@ -597,7 +602,8 @@ void SidebarView::CheckPointer() {
 
 bool SidebarView::ShouldStayOpen() const {
   if (hold_peek_for_testing_ || tabs_->is_dragging() ||
-      resize_handle_->is_dragging()) {
+      resize_handle_->is_dragging() ||
+      base::TimeTicks::Now() < hold_peek_until_) {
     return true;
   }
   if (StarryBrowserView* view = StarryBrowserView::From(browser_)) {

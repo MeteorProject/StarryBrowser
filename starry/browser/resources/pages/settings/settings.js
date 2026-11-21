@@ -822,6 +822,9 @@ class StarrySettings extends LitElement {
         entry('importData', L('settings.import.title'),
               detailButton(L('settings.import.open'), 'square.and.arrow.down', () => this.select_('importData')),
               {detail: L('settings.general.import.detail'), keywords: L('settings.general.import.keywords')}),
+        entry('onboarding', L('settings.general.onboarding.title'),
+              detailButton(L('settings.general.onboarding.button'), '', () => chrome.send('startOnboarding')),
+              {detail: L('settings.general.onboarding.detail'), keywords: L('settings.general.onboarding.keywords')}),
       ]),
     ];
   }

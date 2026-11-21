@@ -21,6 +21,8 @@ enum class InternalPage {
   kSettings,
   // 已归档的标签页（starry://archive）。
   kArchive,
+  // 设置向导（starry://welcome）。
+  kWelcome,
 };
 
 InternalPage InternalPageForUrl(const GURL& url);

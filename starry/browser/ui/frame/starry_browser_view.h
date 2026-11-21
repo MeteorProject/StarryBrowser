@@ -43,6 +43,7 @@ class CompactToolbar;
 class DownloadLaunchView;
 class DownloadsPanelHost;
 class FindBarView;
+class FrameMotion;
 enum class IconBadge;
 class MediaIsland;
 class MiniWindowToolbar;
@@ -158,6 +159,14 @@ class StarryBrowserView : public BrowserView {
   // 网页全屏（只显示网页）：紧凑地址栏不占位置。
   void SetContentOnly(bool content_only);
 
+  // 设置向导（onboarding/onboarding.h）：隐藏浏览器外框，内容卡片铺满窗口；
+  // presence 0…1 在结束时由弹簧从 1 过渡到 0。
+  bool in_onboarding() const { return onboarding_active_; }
+  double onboarding_presence() const;
+  views::View* onboarding_drag_bar() { return onboarding_drag_; }
+  void StartOnboarding();
+  void FinishOnboarding(content::WebContents* contents);
+
   // AI 助手的岛（⌘E、侧栏的 ✦）。
   AssistantIsland* assistant_island() { return assistant_island_; }
   // 媒体岛（有媒体在放时内容卡片右下角的一块）。
@@ -205,6 +214,7 @@ class StarryBrowserView : public BrowserView {
   const Theme& theme() const { return theme_; }
 
   // BrowserView:
+  void Show() override;
   void SetFocusToLocationBar(bool is_user_initiated) override;
   // 小窗口是弹出窗口，Chrome 的地址栏不显示：⌘L 照样打开命令栏。
   bool IsLocationBarVisible() const override;
@@ -253,6 +263,8 @@ class StarryBrowserView : public BrowserView {
   void OverrideActions();
   // 当前标签的缩放变了：Starry 的缩放提示（Chrome 的缩放气泡关掉）。
   void OnZoomChanged(bool can_show_bubble);
+  void KeepOnboardingTab();
+  void ReplaceWelcomeTab(base::WeakPtr<content::WebContents> contents);
 
   Theme theme_ = Theme::DarkBase();
   // 不跟网页时的主题（深浅跟着系统和 Chrome 的设置）。
@@ -322,6 +334,11 @@ class StarryBrowserView : public BrowserView {
   // 等侧栏滑出、按钮出现后再弹出下载列表。
   base::OneShotTimer downloads_panel_timer_;
   raw_ptr<MenuHostView> menu_host_ = nullptr;
+  bool onboarding_checked_ = false;
+  bool onboarding_active_ = false;
+  base::WeakPtr<content::WebContents> onboarding_contents_;
+  std::unique_ptr<FrameMotion> onboarding_motion_;
+  raw_ptr<views::View> onboarding_drag_ = nullptr;
   base::WeakPtrFactory<StarryBrowserView> weak_factory_{this};
 };
 

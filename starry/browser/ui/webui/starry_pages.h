@@ -34,9 +34,12 @@ enum class StarryPage {
   // AI 助手的岛里的网页（不是标签页）。
   kAssistant,
   kArchive,
+  kWelcome,
 };
 
 inline constexpr char kStarrySettingsHost[] = "starry-settings";
+// 公开地址是 starry://welcome（不用 Chrome 自己的 chrome://welcome）。
+inline constexpr char kStarryWelcomeHost[] = "starry-welcome";
 // Chrome 没有这个页面，公开地址就是 starry://archive。
 inline constexpr char kStarryArchiveHost[] = "archive";
 inline constexpr char kStarryAssistantHost[] = "starry-assistant";

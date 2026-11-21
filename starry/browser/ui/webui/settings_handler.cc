@@ -47,6 +47,7 @@
 #include "starry/browser/tab_organizer/tab_archive.h"
 #include "starry/browser/ui/design/metrics.h"
 #include "starry/browser/ui/frame/chrome_layout.h"
+#include "starry/browser/ui/frame/starry_browser_view.h"
 #include "starry/browser/ui/frame/window_controls.h"
 #include "starry/browser/ui/sidebar/utility_buttons.h"
 #include "starry/browser/ui/tabs/pin_folders.h"
@@ -160,6 +161,7 @@ void SettingsHandler::RegisterMessages() {
   add("setDefaultBrowser", &SettingsHandler::HandleSetDefaultBrowser);
   add("relaunch", &SettingsHandler::HandleRelaunch);
   add("chooseDownloadFolder", &SettingsHandler::HandleChooseDownloadFolder);
+  add("startOnboarding", &SettingsHandler::HandleStartOnboarding);
 }
 
 void SettingsHandler::OnJavascriptAllowed() {
@@ -840,6 +842,18 @@ void SettingsHandler::HandleOpenArchive(const base::ListValue& args) {
 void SettingsHandler::HandleRelaunch(const base::ListValue& args) {
   // 同 Chrome 设置页的「重新启动」：恢复窗口和标签页。
   chrome::AttemptRestart();
+}
+
+void SettingsHandler::HandleStartOnboarding(const base::ListValue& args) {
+  tabs::TabInterface* tab =
+      tabs::TabInterface::MaybeGetFromContents(web_ui()->GetWebContents());
+  StarryBrowserView* view =
+      tab && tab->GetBrowserWindowInterface()
+          ? StarryBrowserView::From(tab->GetBrowserWindowInterface())
+          : nullptr;
+  if (view) {
+    view->StartOnboarding();
+  }
 }
 
 void SettingsHandler::HandleCheckDefaultBrowser(const base::ListValue& args) {

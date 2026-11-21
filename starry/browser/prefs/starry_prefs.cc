@@ -107,6 +107,8 @@ class StarryPrefsFactory : public ProfileKeyedServiceFactory {
     registry->RegisterBooleanPref(kDownloadAutoRetry, true);
     registry->RegisterBooleanPref(kDownloadResumeOnLaunch, true);
     registry->RegisterBooleanPref(kDownloadNotifyOnCompletion, true);
+    registry->RegisterBooleanPref(kOnboardingPending, false);
+    registry->RegisterIntegerPref(kOnboardingVersion, 0);
   }
 };
 

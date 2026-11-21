@@ -970,6 +970,11 @@ bool HandleCloseTabCommand(BrowserWindowInterface* browser) {
   if (browser->GetType() != BrowserWindowInterface::TYPE_NORMAL) {
     return false;
   }
+  // 设置向导里 ⌘W 不关向导页（向导不能跳过）。
+  if (StarryBrowserView* view = StarryBrowserView::From(browser);
+      view && view->in_onboarding()) {
+    return true;
+  }
   tabs::TabInterface* tab = browser->GetActiveTabInterface();
   if (!tab) {
     return false;

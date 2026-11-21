@@ -151,6 +151,10 @@ inline constexpr char kAgentAllowUploads[] = "starry.agent.allow_uploads";
 inline constexpr char kAgentAllowPrivateTabs[] =
     "starry.agent.allow_private_tabs";
 
+// 设置向导（starry/browser/onboarding/onboarding.h）：是否待完成及已完成的版本号（0 表示未完成）。
+inline constexpr char kOnboardingPending[] = "starry.onboarding.pending";
+inline constexpr char kOnboardingVersion[] = "starry.onboarding.version";
+
 // Starry 分段下载设置（见 starry/browser/downloads/download_service.h）：
 // 多线程下载（默认开）、每个文件的连接数（2、4、
 // 8、16，默认 8）、同时下载的文件数（1、2、3、5、10，默认 3）、限速（KB/s，0 是不限速，

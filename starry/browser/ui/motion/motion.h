@@ -95,6 +95,10 @@ inline constexpr Spring kSplitLayout{0.42, 0.86};
 inline constexpr Spring kSplitDropPreview{0.26, 0.84};
 inline constexpr Spring kSplitHandle{0.3, 0.8};
 inline constexpr Spring kSplitCollapseArm = kLift;
+// 设置向导结束：内容卡片缩回原位（同分屏布局），随后切换标签页并在浮动侧栏模式下提示（秒）。
+inline constexpr Spring kOnboardingFinish = kSplitLayout;
+inline constexpr double kOnboardingSwapDelay = 0.56;
+inline constexpr double kOnboardingSidebarHint = 1.5;
 inline constexpr Spring kDialogIn{0.34, 0.84};
 // 右键菜单打开：从打开的那个角轻微放大。
 inline constexpr Spring kMenuOpen{0.22, 0.84};

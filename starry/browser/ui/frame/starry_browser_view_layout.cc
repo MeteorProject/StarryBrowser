@@ -47,6 +47,7 @@
 #include "starry/browser/ui/tabs/top_tab_strip.h"
 #include "starry/browser/ui/toolbar/browser_toolbar.h"
 #include "ui/compositor/layer.h"
+#include "ui/gfx/animation/tween.h"
 #include "ui/gfx/geometry/insets.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/rounded_corners_f.h"
@@ -55,6 +56,13 @@
 #include "ui/views/view.h"
 
 namespace starry {
+
+namespace {
+
+// 向导铺满窗口时的顶部拖动条高度。
+constexpr int kOnboardingDragHeight = 56;
+
+}  // namespace
 
 StarryBrowserViewLayout::StarryBrowserViewLayout(
     std::unique_ptr<BrowserViewLayoutDelegate> delegate,
@@ -284,15 +292,29 @@ StarryBrowserViewLayout::CalculateProposedLayout(
   const bool content_only = IsContentOnly();
   layout.AddChild(browser_view_->background_view(), area);
 
+  // 设置向导：卡片铺满窗口并隐藏外框；结束时随 presence 1→0 缩回原位并推入各栏。
+  const double onboarding =
+      content_only ? 0
+                   : std::clamp(browser_view_->onboarding_presence(), 0.0, 1.0);
+  const bool onboarding_only = onboarding > 0.999;
+
   // 侧栏：固定、浮动时占一列；自动隐藏时盖在卡片上（收起时不显示，左边缘是感应条）。
   // 在动的时候（切换样子、调宽度）每一帧重新排。
   SidebarView* const sidebar = browser_view_->sidebar();
   const SidebarView::Placement placement = sidebar->ComputePlacement(area);
-  layout.AddChild(sidebar, content_only ? gfx::Rect() : placement.bounds,
-                  !content_only && placement.visible);
+  gfx::Rect sidebar_bounds = placement.bounds;
+  if (onboarding > 0) {
+    sidebar_bounds.Offset(
+        -static_cast<int>(
+            std::lround((placement.content_left - area.x()) * onboarding)),
+        0);
+  }
+  layout.AddChild(sidebar, content_only ? gfx::Rect() : sidebar_bounds,
+                  !content_only && placement.visible && !onboarding_only);
   views::View* const edge = browser_view_->sidebar_edge();
-  layout.AddChild(edge, placement.edge_trigger,
-                  !content_only && !placement.edge_trigger.IsEmpty());
+  layout.AddChild(
+      edge, placement.edge_trigger,
+      !content_only && !placement.edge_trigger.IsEmpty() && onboarding <= 0);
 
   // 标签行（顶部标签布局）：从顶边移入并淡入。Windows 自绘系统控件或 Linux 窗口边框
   // 按钮位于这一行右侧，布局时让开它们。
@@ -313,6 +335,13 @@ StarryBrowserViewLayout::CalculateProposedLayout(
   const double strip = std::clamp(browser_view_->strip_presence(), 0.0, 1.0);
   const int strip_shown =
       static_cast<int>(std::lround(metrics::kTabStripHeight * strip));
+  const double toolbar =
+      std::clamp(browser_view_->toolbar_presence(), 0.0, 1.0);
+  // 向导结束时，标签行与工具栏随卡片顶边自上方推入。
+  const int chrome_slide = static_cast<int>(std::lround(
+      (strip_shown +
+       (placement.panel_inset + metrics::kToolbarHeight) * toolbar) *
+      onboarding));
   TopTabStrip* const tab_strip = browser_view_->tab_strip();
   if (starry_controls) {
     tab_strip->SetInsets(metrics::kContentInset,
@@ -328,15 +357,14 @@ StarryBrowserViewLayout::CalculateProposedLayout(
         metrics::kContentInset + caption_width);
 #endif
   }
-  layout.AddChild(
-      tab_strip,
-      gfx::Rect(area.x(), area.y() + strip_shown - metrics::kTabStripHeight,
-                area.width(), metrics::kTabStripHeight),
-      !content_only && strip > 0.001);
+  layout.AddChild(tab_strip,
+                  gfx::Rect(area.x(),
+                            area.y() + strip_shown - metrics::kTabStripHeight -
+                                chrome_slide,
+                            area.width(), metrics::kTabStripHeight),
+                  !content_only && strip > 0.001 && !onboarding_only);
 
   // 工具栏：和内容卡片左右对齐，浮动侧栏时跟面板一起下移；淡入淡出。
-  const double toolbar =
-      std::clamp(browser_view_->toolbar_presence(), 0.0, 1.0);
   const int card_left = content_only ? area.x() : placement.content_left;
   // 助手停在右边时，卡片给它让出一列（工具栏还是通到右边）。
   const int dock = content_only ? 0
@@ -346,10 +374,11 @@ StarryBrowserViewLayout::CalculateProposedLayout(
   const int toolbar_right = strip > 0.001 ? right : right - caption_width;
   layout.AddChild(
       browser_view_->toolbar(),
-      gfx::Rect(card_left, area.y() + strip_shown + placement.panel_inset,
+      gfx::Rect(card_left,
+                area.y() + strip_shown + placement.panel_inset - chrome_slide,
                 std::max(0, toolbar_right - card_left),
                 metrics::kToolbarHeight),
-      !content_only && toolbar > 0.001);
+      !content_only && toolbar > 0.001 && !onboarding_only);
 
   // Windows 纤细顶檐模式：纯侧栏无顶栏时在内容卡片上方保留 30px 拖动栏。
   const double rail = std::clamp(browser_view_->rail_presence(), 0.0, 1.0);
@@ -357,11 +386,11 @@ StarryBrowserViewLayout::CalculateProposedLayout(
       static_cast<int>(std::lround(metrics::kWindowRailHeight * rail));
   if (rail_view) {
     const int rail_right = area.right() - controls_reserve - 4;
-    layout.AddChild(rail_view,
-                    gfx::Rect(card_left, area.y(),
-                              std::max(0, rail_right - card_left),
-                              metrics::kWindowRailHeight),
-                    !content_only && rail > 0.001);
+    layout.AddChild(
+        rail_view,
+        gfx::Rect(card_left, area.y(), std::max(0, rail_right - card_left),
+                  metrics::kWindowRailHeight),
+        !content_only && rail > 0.001 && !onboarding_only);
   }
 
   // 内容卡片：位于标签行、工具栏下方。悬浮玻璃胶囊模式下纯侧栏时直接顶至 8px；
@@ -381,7 +410,14 @@ StarryBrowserViewLayout::CalculateProposedLayout(
     }
     card = gfx::Rect(card_left, top, std::max(0, right - dock - card_left),
                      std::max(0, area.bottom() - metrics::kContentInset - top));
+    if (onboarding > 0) {
+      card = gfx::Tween::RectValueBetween(onboarding, card, area);
+    }
   }
+  layout.AddChild(
+      browser_view_->onboarding_drag_bar(),
+      gfx::Rect(area.x(), area.y(), area.width(), kOnboardingDragHeight),
+      !content_only && browser_view_->in_onboarding());
 
   // 紧凑栏里的按钮要等每个分屏的实际位置确定以后再排（UpdateChromeGeometry）。
   if (controls && controls->presentation() !=
@@ -520,10 +556,16 @@ void StarryBrowserViewLayout::DoPostLayoutVisualAdjustments(
                   contents->parent(), browser_view_.get(), contents->bounds()));
     return;
   }
+  // 设置向导铺满窗口时卡片没有圆角，缩回去的路上长出来。
+  const double onboarding =
+      content_only ? 0
+                   : std::clamp(browser_view_->onboarding_presence(), 0.0, 1.0);
+  const float card_radius = radius * static_cast<float>(1 - onboarding);
   // 紧凑地址栏时网页的上边不圆：细栏自己画卡片上边的圆角。
-  contents->SetBackgroundRadii(browser_view_->compact_inset() > 0
-                                   ? gfx::RoundedCornersF(0, 0, radius, radius)
-                                   : gfx::RoundedCornersF(radius));
+  contents->SetBackgroundRadii(
+      browser_view_->compact_inset() > 0
+          ? gfx::RoundedCornersF(0, 0, card_radius, card_radius)
+          : gfx::RoundedCornersF(card_radius));
   // 分屏时每一格的圆角是自己设的（见
   // OverrideSplitPaneDecorations）：开关紧凑地址栏时跟 上。
   if (contents->IsInSplitView()) {
@@ -536,14 +578,17 @@ void StarryBrowserViewLayout::DoPostLayoutVisualAdjustments(
   browser_view_->UpdateChromeGeometry();
   browser_view_->find_bar_view()->SetCardBounds(
       browser_view_->BoundsBelowWindowControls(browser_view_->PageBounds()));
-  // 标签行、工具栏、顶檐淡入淡出。
-  browser_view_->tab_strip()->layer()->SetOpacity(static_cast<float>(
-      std::clamp(browser_view_->strip_presence(), 0.0, 1.0)));
+  // 标签行、工具栏、顶檐淡入淡出（设置向导走完时也跟着淡入）。
+  browser_view_->tab_strip()->layer()->SetOpacity(
+      static_cast<float>(std::clamp(browser_view_->strip_presence(), 0.0, 1.0) *
+                         (1 - onboarding)));
   browser_view_->toolbar()->layer()->SetOpacity(static_cast<float>(
-      std::clamp(browser_view_->toolbar_presence(), 0.0, 1.0)));
+      std::clamp(browser_view_->toolbar_presence(), 0.0, 1.0) *
+      (1 - onboarding)));
   if (WindowRailView* rail_view = browser_view_->window_rail()) {
     rail_view->layer()->SetOpacity(static_cast<float>(
-        std::clamp(browser_view_->rail_presence(), 0.0, 1.0)));
+        std::clamp(browser_view_->rail_presence(), 0.0, 1.0) *
+        (1 - onboarding)));
   }
   WindowBackgroundView* const background = browser_view_->background_view();
   // 窗口底上的卡片（分屏时每格一张）、分屏的把手和描边。

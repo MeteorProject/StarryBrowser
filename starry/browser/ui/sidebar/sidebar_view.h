@@ -114,6 +114,8 @@ class SidebarView : public views::View, public views::ViewTargeterDelegate {
   // 自动隐藏时滑出来 / 收回去。
   void Peek();
   void Unpeek();
+  // 滑出侧栏，并在 duration 内保持展开（不受鼠标位置影响）。
+  void PeekFor(base::TimeDelta duration);
   // 调试用：滑出来以后不管鼠标在哪都不收回。
   void set_hold_peek_for_testing(bool hold) { hold_peek_for_testing_ = hold; }
   // 调试用：当作鼠标在这里（窗口坐标），不动真的鼠标。
@@ -219,6 +221,7 @@ class SidebarView : public views::View, public views::ViewTargeterDelegate {
   LayerMotion shadow_motion_;
   bool content_only_ = false;
   bool hold_peek_for_testing_ = false;
+  base::TimeTicks hold_peek_until_;
   std::optional<gfx::Point> pointer_for_testing_;
 
   raw_ptr<SidebarShadow> shadow_ = nullptr;

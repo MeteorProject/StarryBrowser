@@ -24,7 +24,7 @@ class Profile;
 
 namespace starry {
 
-// 设置页（pages/settings/）的数据。设置项都是 Chrome 自己的设置（搜索引擎、启动、Cookie、
+// 设置页（pages/settings/）和设置向导（pages/welcome/）的数据。设置项都是 Chrome 自己的设置（搜索引擎、启动、Cookie、
 // 下载位置……）或者 Starry 的（starry/browser/prefs/）。界面语言和网页时区重启后生效。
 // 无痕窗口里打开的也是原来那个用户资料的设置。
 //
@@ -33,6 +33,7 @@ namespace starry {
 //   checkDefaultBrowser()、setDefaultBrowser()：查、设默认浏览器，结果在 settings-changed 里。
 //   chooseDownloadFolder()：系统的选文件夹对话框。
 //   relaunch()：重新启动（改了界面语言或网页时区之后），恢复窗口和标签页。
+//   startOnboarding()：在当前窗口运行设置向导。
 //   setOrganizerException(site, add)、clearArchive()：标签管理的不整理的网站、清除归档。
 //   setOrganizerRule(site, folder)、forgetOrganizerMemory()：按网站的规则（folder 空的
 //   是拿掉）、忘掉学到的整理习惯。
@@ -79,6 +80,7 @@ class SettingsHandler : public content::WebUIMessageHandler,
   void HandleSetDefaultBrowser(const base::ListValue& args);
   void HandleRelaunch(const base::ListValue& args);
   void HandleChooseDownloadFolder(const base::ListValue& args);
+  void HandleStartOnboarding(const base::ListValue& args);
   void OnDefaultBrowserState(shell_integration::DefaultWebClientState state);
 
   const raw_ptr<Profile> profile_;

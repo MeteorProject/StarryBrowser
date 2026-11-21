@@ -110,6 +110,8 @@ source_set("browser") {
     "media/media_hub.h",
     "media/media_levels.cc",
     "media/media_levels.h",
+    "onboarding/onboarding.cc",
+    "onboarding/onboarding.h",
     "prefs/starry_prefs.cc",
     "prefs/starry_prefs.h",
 
@@ -347,6 +349,8 @@ source_set("browser") {
     "ui/webui/settings_handler.h",
     "ui/webui/starry_pages.cc",
     "ui/webui/starry_pages.h",
+    "ui/webui/welcome_handler.cc",
+    "ui/webui/welcome_handler.h",
     "web_time_zone.cc",
     "web_time_zone.h",
   ]

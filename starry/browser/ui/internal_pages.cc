@@ -37,6 +37,9 @@ InternalPage InternalPageForUrl(const GURL& visible_url) {
   if (host == "archive") {
     return InternalPage::kArchive;
   }
+  if (host == "starry-welcome") {
+    return InternalPage::kWelcome;
+  }
   return InternalPage::kNone;
 }
 
@@ -55,6 +58,8 @@ const gfx::VectorIcon* InternalPageIcon(InternalPage page) {
       return &vector_icons::kSettingsIcon;
     case InternalPage::kArchive:
       return &icons::kArchivebox;
+    case InternalPage::kWelcome:
+      return &icons::kSparkle;
     case InternalPage::kNone:
       return nullptr;
   }

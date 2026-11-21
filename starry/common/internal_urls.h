@@ -31,6 +31,8 @@ inline GURL ToStarryURL(const GURL& url) {
     replacements.SetHostStr("browser-settings");
   } else if (url.host() == "starry-assistant") {
     replacements.SetHostStr("assistant");
+  } else if (url.host() == "starry-welcome") {
+    replacements.SetHostStr("welcome");
   } else if (url.host() == "chrome-urls") {
     replacements.SetHostStr("starry-urls");
   }
@@ -54,6 +56,8 @@ inline GURL ToChromeURL(const GURL& url) {
     replacements.SetHostStr("settings");
   } else if (url.host() == "assistant") {
     replacements.SetHostStr("starry-assistant");
+  } else if (url.host() == "welcome") {
+    replacements.SetHostStr("starry-welcome");
   } else if (url.host() == "starry-urls") {
     replacements.SetHostStr("chrome-urls");
   }

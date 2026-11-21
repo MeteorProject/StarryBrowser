@@ -1,0 +1,1552 @@
+/* Copyright 2026 The Starry Browser Authors */
+
+/* 设置向导（starry://welcome）：铺满窗口的夜空（同应用图标：深紫的天、星光、珊瑚色的地平线），
+   中间一栏是这一步的内容。颜色不跟窗口的主题，只有走完时淡成卡片的底色（--surface-panel）。 */
+
+@property --pv-surface { syntax: '<color>'; inherits: true; initial-value: #101014; }
+@property --pv-fill { syntax: '<color>'; inherits: true; initial-value: rgb(228 228 231 / 0.08); }
+@property --pv-fill2 { syntax: '<color>'; inherits: true; initial-value: rgb(228 228 231 / 0.14); }
+
+:root {
+  --on: #fff;
+  --onv: rgb(232 226 255 / 0.68);
+  --fill: rgb(255 255 255 / 0.075);
+  --fill2: rgb(255 255 255 / 0.13);
+  --line: rgb(255 255 255 / 0.12);
+  --acc: #fff;
+  --onacc: #1d1648;
+  --knob: #2b2160;
+  --ok: #4ade80;
+  --warn: #f5b94e;
+  --layout-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+starry-welcome {
+  display: block;
+  height: 100%;
+}
+
+button {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ---------------- 夜空 ---------------- */
+
+.stage {
+  background: radial-gradient(90% 60% at 50% 0%, #241b56 0%, transparent 70%),
+              linear-gradient(#0e0b26 0%, #171238 45%, #221a4d 100%);
+  color: var(--on);
+  inset: 0;
+  overflow: hidden;
+  position: fixed;
+}
+
+.stars {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.5s;
+}
+
+.stars i {
+  animation: twinkle 3.6s ease-in-out infinite;
+  background: #fff;
+  border-radius: 50%;
+  opacity: var(--o);
+  position: absolute;
+}
+
+@keyframes twinkle {
+  50% { opacity: calc(var(--o) * 0.3); }
+}
+
+.horizon {
+  background: radial-gradient(closest-side, #fe7971 97%, transparent 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 14px rgb(177 77 121 / 0.75), 0 -30px 120px 30px rgb(254 121 113 / 0.38);
+  height: 3000px;
+  left: 50%;
+  margin-left: -1500px;
+  pointer-events: none;
+  position: absolute;
+  top: calc(100% - 64px);
+  transition: transform 0.9s var(--layout-ease), opacity 0.6s;
+  width: 3000px;
+}
+
+/* 进入设置以后地平线沉下去，只留一道光。 */
+.stage:not(.at-welcome) .horizon {
+  transform: translateY(46px);
+}
+
+.stage.intro .stars {
+  opacity: 0;
+}
+
+.stage.intro .horizon {
+  transform: translateY(160px);
+}
+
+/* 走完：内容淡出，整片淡成卡片的底色（窗口这时在把卡片缩回原位）。 */
+.fill {
+  background: var(--surface-panel);
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 10;
+}
+
+.stage.leaving .fill {
+  opacity: 1;
+  transition: opacity 0.36s ease 0.14s;
+}
+
+.stage.leaving :is(.top, .pages, .foot) {
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+
+/* ---------------- 进度、内容、底栏 ---------------- */
+
+.top {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 22px;
+  transition: opacity 0.3s;
+  z-index: 3;
+}
+
+.stage.at-welcome :is(.top, .foot) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pseg {
+  align-items: center;
+  border-radius: 13px;
+  color: var(--onv);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px;
+  transition: background-color 0.3s, color 0.3s;
+  white-space: nowrap;
+}
+
+.pseg::before {
+  background: currentColor;
+  border-radius: 3px;
+  content: '';
+  height: 6px;
+  opacity: 0.55;
+  width: 6px;
+}
+
+.pseg.done {
+  color: var(--on);
+}
+
+.pseg.cur {
+  background: var(--fill2);
+  color: var(--on);
+  font-weight: 600;
+}
+
+.pseg:is(.done, .cur)::before {
+  opacity: 1;
+}
+
+.pages {
+  bottom: 84px;
+  display: grid;
+  left: 0;
+  overflow: hidden auto;
+  padding: 0 24px;
+  place-items: center;
+  position: absolute;
+  right: 0;
+  top: 72px;
+}
+
+.stage.at-welcome .pages {
+  bottom: 40px;
+  top: 0;
+}
+
+.step {
+  max-width: 100%;
+  padding: 16px 0;
+  width: 600px;
+}
+
+.step.wide {
+  width: 1040px;
+}
+
+/* 换一步时旧的一页：盖在原处淡出（welcome.js 拷一份过来）。 */
+.ghosts {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.ghosts > .step {
+  position: absolute;
+}
+
+.foot {
+  bottom: 30px;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: 0 24px;
+  position: absolute;
+  right: 0;
+  transition: opacity 0.3s;
+  z-index: 3;
+}
+
+.foot .in {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+  width: 600px;
+}
+
+.foot .in.wide {
+  width: 1040px;
+}
+
+.sp {
+  flex: 1;
+}
+
+/* ---------------- 部件 ---------------- */
+
+h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.sub {
+  color: var(--onv);
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+
+.sec {
+  color: var(--onv);
+  font-size: 12.5px;
+  font-weight: 600;
+  margin: 20px 0 10px 2px;
+}
+
+.btn {
+  align-items: center;
+  background: var(--acc);
+  border-radius: 17px;
+  color: var(--onacc);
+  display: inline-flex;
+  flex: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  gap: 6px;
+  height: 34px;
+  justify-content: center;
+  padding: 0 18px;
+  transition: transform 0.12s, opacity 0.18s;
+  white-space: nowrap;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.btn:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.btn.lg {
+  border-radius: 21px;
+  font-size: 15px;
+  height: 42px;
+  padding: 0 26px;
+}
+
+.btn.secondary {
+  background: var(--fill2);
+  color: var(--on);
+}
+
+.btn.text {
+  background: transparent;
+  color: var(--onv);
+  font-weight: 500;
+  padding: 0 10px;
+}
+
+.btn.text:hover:not(:disabled) {
+  color: var(--on);
+}
+
+.btn:focus-visible,
+.opt:focus-visible,
+.line:focus-visible,
+.switch:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.note {
+  align-items: flex-start;
+  color: var(--onv);
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  line-height: 1.55;
+  margin-top: 14px;
+}
+
+.note .icon {
+  margin-top: 2px;
+}
+
+.note.warn {
+  color: var(--warn);
+}
+
+.link {
+  color: var(--on);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+}
+
+/* 视觉单选：选中框用 Motion.selection 滑过去（位置在 welcome.js 里放）。 */
+.pick {
+  display: flex;
+  gap: 10px;
+  position: relative;
+}
+
+.pick.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.opt {
+  background: var(--fill);
+  border-radius: 12px;
+  color: inherit;
+  flex: 1;
+  min-width: 0;
+  padding: 7px 7px 9px;
+  position: relative;
+  text-align: center;
+  transition: background-color 0.18s;
+}
+
+.opt:hover {
+  background: var(--fill2);
+}
+
+.opt:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.opt:disabled:hover {
+  background: var(--fill);
+}
+
+.opt-t {
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 8px;
+  white-space: nowrap;
+}
+
+.ring {
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px var(--acc);
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transition: transform var(--duration-selection) var(--ease-selection),
+              width var(--duration-selection) var(--ease-selection),
+              height var(--duration-selection) var(--ease-selection);
+  z-index: 2;
+}
+
+.ring.noanim {
+  transition: none;
+}
+
+.lines {
+  background: var(--fill);
+  border-radius: 12px;
+  margin-top: 14px;
+}
+
+.line {
+  align-items: center;
+  color: inherit;
+  display: flex;
+  gap: 12px;
+  min-height: 52px;
+  padding: 11px 14px;
+  text-align: start;
+  width: 100%;
+}
+
+.line + .line {
+  border-top: 1px solid var(--line);
+}
+
+.line.off {
+  opacity: 0.45;
+}
+
+.lead {
+  align-items: center;
+  background: var(--fill2);
+  border-radius: 8px;
+  display: flex;
+  flex: none;
+  height: 28px;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+  width: 28px;
+}
+
+.lead.on {
+  background: var(--acc);
+  color: var(--onacc);
+}
+
+.labels {
+  flex: 1;
+  min-width: 0;
+}
+
+.labels b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.labels span {
+  color: var(--onv);
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
+.switch {
+  background: var(--fill2);
+  border-radius: 10px;
+  flex: none;
+  height: 20px;
+  position: relative;
+  transition: background-color 0.2s;
+  width: 34px;
+}
+
+.switch::after {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  content: '';
+  height: 16px;
+  left: 2px;
+  position: absolute;
+  top: 2px;
+  transition: transform 0.26s cubic-bezier(0.3, 1.4, 0.5, 1), background-color 0.2s;
+  width: 16px;
+}
+
+.switch.on {
+  background: var(--acc);
+}
+
+.switch.on::after {
+  background: var(--knob);
+  transform: translateX(14px);
+}
+
+.switch:disabled {
+  cursor: default;
+}
+
+.radio {
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1.5px var(--onv);
+  flex: none;
+  height: 18px;
+  transition: box-shadow 0.22s;
+  width: 18px;
+}
+
+.sel .radio,
+.radio.on {
+  box-shadow: inset 0 0 0 5.5px var(--acc);
+}
+
+.status {
+  align-items: center;
+  color: var(--onv);
+  display: flex;
+  flex: none;
+  font-size: 12px;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.status.ok {
+  color: var(--ok);
+}
+
+.status.warn {
+  color: var(--warn);
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+  border: 2px solid var(--fill2);
+  border-radius: 50%;
+  border-top-color: var(--on);
+  flex: none;
+  height: 12px;
+  width: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.pop {
+  animation: pop 0.42s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.5); }
+}
+
+/* 选中的一项下面展开（Motion.fold）。 */
+.fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--duration-fold) var(--ease-fold), opacity 0.2s;
+}
+
+.fold > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fold.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.input {
+  background: var(--fill2);
+  border: 0;
+  border-radius: 8px;
+  color: var(--on);
+  font-size: 12.5px;
+  height: 32px;
+  min-width: 0;
+  outline: none;
+  padding: 0 10px;
+}
+
+.input::placeholder {
+  color: var(--onv);
+}
+
+.input:focus {
+  box-shadow: 0 0 0 2px var(--acc);
+}
+
+.menu-button {
+  align-items: center;
+  background: var(--fill2);
+  border-radius: 8px;
+  color: var(--on);
+  display: inline-flex;
+  flex: none;
+  font-size: 12.5px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+}
+
+/* ---------------- 欢迎 ---------------- */
+
+.welcome {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.welcome .app-icon {
+  display: block;
+  filter: drop-shadow(0 18px 30px rgb(0 0 0 / 0.35));
+  height: 148px;
+  margin: -14px;
+  transition: opacity 0.5s, transform 0.9s cubic-bezier(0.3, 1.25, 0.5, 1), filter 0.5s;
+  width: 148px;
+}
+
+.stage.intro .welcome .app-icon {
+  filter: blur(8px);
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.welcome h1 {
+  font-size: 44px;
+  margin-top: 26px;
+}
+
+.welcome .actions {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 36px;
+}
+
+.language-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 26px;
+}
+
+.language {
+  align-items: center;
+  background: var(--fill);
+  border-radius: 14px;
+  color: var(--onv);
+  display: inline-flex;
+  font-size: 12.5px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+}
+
+.language:hover {
+  color: var(--on);
+}
+
+.language.relaunch {
+  background: var(--fill2);
+  color: var(--on);
+}
+
+.welcome .note {
+  justify-content: center;
+}
+
+/* ---------------- 导入 ---------------- */
+
+.list {
+  background: var(--fill);
+  border-radius: 14px;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.item + .item {
+  border-top: 1px solid var(--line);
+}
+
+.browser {
+  align-items: center;
+  background: var(--fill2);
+  border-radius: 9px;
+  display: flex;
+  flex: none;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 14px 58px;
+}
+
+.chip {
+  align-items: center;
+  background: var(--fill2);
+  border-radius: 13px;
+  color: var(--on);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  white-space: nowrap;
+}
+
+.chip.off {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--onv);
+}
+
+.chip:disabled {
+  cursor: default;
+}
+
+/* ---------------- 外观 ---------------- */
+
+.two {
+  align-items: center;
+  display: flex;
+  gap: 48px;
+}
+
+.two > .col {
+  flex: none;
+  width: 440px;
+}
+
+.preview {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.preview-caption {
+  align-items: center;
+  color: var(--onv);
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+/* 设置里那种小窗口示意图。 */
+.thumb {
+  aspect-ratio: 16 / 10;
+  position: relative;
+}
+
+.th {
+  --ts: #111115;
+  --tc: #2a2a30;
+  --tb: rgb(255 255 255 / 0.16);
+  --tb2: rgb(255 255 255 / 0.3);
+  background: var(--ts);
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+}
+
+.th.light {
+  --ts: #e7e7ea;
+  --tc: #fff;
+  --tb: rgb(0 0 0 / 0.1);
+  --tb2: rgb(0 0 0 / 0.22);
+}
+
+.th > div {
+  position: absolute;
+  transition: all 0.32s var(--layout-ease);
+}
+
+.th-side {
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6%;
+  left: 0;
+  padding: 14% 7% 0;
+  top: 0;
+  width: 27%;
+}
+
+.th-side i,
+.th-top i {
+  background: var(--tb);
+  border-radius: 3px;
+  display: block;
+  flex: none;
+  height: 5px;
+}
+
+.th-side i.s,
+.th-top i.s {
+  background: var(--tb2);
+}
+
+.th-top {
+  align-items: center;
+  display: flex;
+  gap: 3%;
+  height: 13%;
+  left: 4%;
+  opacity: 0;
+  right: 4%;
+  top: 0;
+}
+
+.th-top i {
+  height: 34%;
+  width: 18%;
+}
+
+.th-bar {
+  background: var(--tb);
+  border-radius: 3px;
+  height: 7%;
+  left: 5%;
+  opacity: 0;
+  right: 5%;
+  top: 15%;
+}
+
+.th-card {
+  background: var(--tc);
+  border-radius: 4px;
+  bottom: 6%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+  left: 27%;
+  overflow: hidden;
+  padding: 9% 8%;
+  right: 4%;
+  top: 5%;
+}
+
+.th-card b {
+  background: var(--tb2);
+  border-radius: 4px;
+  display: block;
+  height: 7px;
+  margin-bottom: 7%;
+  width: 55%;
+}
+
+.th-card u {
+  background: var(--tb);
+  border-radius: 2px;
+  display: block;
+  height: 4px;
+  margin-bottom: 5%;
+}
+
+.th-card u:last-child {
+  width: 60%;
+}
+
+.th.floating .th-card {
+  left: 4%;
+}
+
+.th.floating .th-side {
+  background: color-mix(in srgb, var(--ts) 80%, transparent);
+  border-radius: 4px;
+  bottom: 10%;
+  box-shadow: 0 0 0 0.5px var(--tb2), 0 4px 12px rgb(0 0 0 / 0.35);
+  left: 6%;
+  padding-top: 8%;
+  top: 10%;
+  width: 26%;
+  z-index: 2;
+}
+
+.th.top .th-side {
+  opacity: 0;
+  transform: translateX(-30%);
+}
+
+.th.top :is(.th-top, .th-bar) {
+  opacity: 1;
+}
+
+.th.top .th-card {
+  left: 4%;
+  top: 25%;
+}
+
+/* 地址栏：侧栏里是第一行；放在顶部时是卡片上面的一条（顶部标签时在标签行下面），紧凑时是卡片顶上的
+   细栏。hl：「地址栏放在哪」里把它标成紫色。 */
+.th-side i:first-child {
+  transition: opacity 0.32s var(--layout-ease);
+}
+
+.th.hl .th-side i:first-child,
+.th.hl .th-bar,
+.th.hl .th-card s::after {
+  background: #a78bfa;
+}
+
+.th:not(.top):is(.addr-top, .addr-compact) .th-side i:first-child {
+  opacity: 0;
+}
+
+.th:not(.top).addr-top .th-bar {
+  left: 27%;
+  opacity: 1;
+  right: 4%;
+  top: 5%;
+}
+
+.th.floating.addr-top .th-bar {
+  left: 4%;
+}
+
+.th:not(.top).addr-top .th-card {
+  top: 16%;
+}
+
+.th.top.addr-compact .th-bar {
+  opacity: 0;
+}
+
+.th.top.addr-compact .th-card {
+  top: 15%;
+}
+
+.th-card s {
+  border-bottom: 1px solid var(--tb);
+  height: 10px;
+  left: 0;
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transform: translateY(-100%);
+  transition: opacity 0.32s var(--layout-ease), transform 0.32s var(--layout-ease);
+}
+
+.th-card s::after {
+  background: var(--tb);
+  border-radius: 2px;
+  content: '';
+  height: 4px;
+  left: 24%;
+  position: absolute;
+  right: 24%;
+  top: 3px;
+}
+
+.th.addr-compact .th-card {
+  padding-top: calc(9% + 9px);
+}
+
+.th.addr-compact .th-card s {
+  opacity: 1;
+  transform: none;
+}
+
+.th-split {
+  inset: 0;
+  position: absolute;
+}
+
+.th-split > .th:last-child {
+  clip-path: polygon(55% 0, 100% 0, 100% 100%, 45% 100%);
+}
+
+/* 右边的预览窗口：按窗口的样子画，缩到 0.45；换布局、换深浅色的过渡同真窗口。 */
+.pv {
+  --pv-surface: #101014;
+  --pv-fill: rgb(228 228 231 / 0.08);
+  --pv-fill2: rgb(228 228 231 / 0.14);
+  background: var(--pv-surface);
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16), 0 40px 90px rgb(0 0 0 / 0.5);
+  flex: none;
+  height: 760px;
+  overflow: hidden;
+  position: relative;
+  transition: --pv-surface 0.8s ease-in-out, --pv-fill 0.8s ease-in-out,
+              --pv-fill2 0.8s ease-in-out;
+  width: 1200px;
+  zoom: 0.45;
+}
+
+.pv.light {
+  --pv-surface: #f6f6f6;
+  --pv-fill: rgb(24 24 27 / 0.06);
+  --pv-fill2: rgb(24 24 27 / 0.1);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.14), 0 40px 90px rgb(0 0 0 / 0.5);
+}
+
+.pv > div {
+  position: absolute;
+  transition: transform 0.32s var(--layout-ease), opacity 0.32s var(--layout-ease),
+              left 0.32s var(--layout-ease), top 0.32s var(--layout-ease),
+              bottom 0.32s var(--layout-ease), border-radius 0.32s var(--layout-ease);
+}
+
+.pv-lights {
+  display: flex;
+  gap: 8px;
+}
+
+.pv-lights i {
+  background: #ff5f57;
+  border-radius: 6px;
+  height: 12px;
+  width: 12px;
+}
+
+.pv-lights i:nth-child(2) {
+  background: #febc2e;
+}
+
+.pv-lights i:nth-child(3) {
+  background: #28c840;
+}
+
+.pv-side {
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  left: 0;
+  padding: 16px 10px;
+  top: 0;
+  width: 248px;
+  z-index: 3;
+}
+
+.pv-side .pv-lights {
+  margin: 0 6px 10px;
+}
+
+.pv-bar {
+  background: var(--pv-fill);
+  border-radius: 9px;
+  flex: none;
+  height: 34px;
+}
+
+.pv-tiles {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 4px 0;
+}
+
+.pv-tiles i {
+  background: var(--pv-fill);
+  border-radius: 9px;
+  height: 40px;
+}
+
+.pv-tab {
+  border-radius: 9px;
+  flex: none;
+  height: 34px;
+  position: relative;
+}
+
+.pv-tab::after {
+  background: var(--pv-fill2);
+  border-radius: 5px;
+  content: '';
+  height: 10px;
+  left: 14px;
+  position: absolute;
+  right: 50px;
+  top: 12px;
+}
+
+.pv-tab.sel {
+  background: var(--pv-fill2);
+}
+
+.pv-strip,
+.pv-tool {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  left: 0;
+  opacity: 0;
+  padding: 0 16px;
+  pointer-events: none;
+  right: 0;
+  z-index: 3;
+}
+
+.pv-strip {
+  height: 40px;
+  top: 0;
+  transform: translateY(-14px);
+}
+
+.pv-strip .pv-lights {
+  margin-right: 14px;
+}
+
+.pv-strip .pv-tab {
+  height: 30px;
+  width: 200px;
+}
+
+.pv-strip .pv-tab::after {
+  top: 10px;
+}
+
+.pv-tool {
+  height: 44px;
+  top: 40px;
+  transform: translateY(-10px);
+}
+
+.pv-tool .pv-bar {
+  flex: 1;
+  height: 32px;
+}
+
+.pv-card {
+  background: #fff;
+  border-radius: 10px;
+  bottom: 8px;
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.4), 0 2px 10px rgb(0 0 0 / 0.22);
+  left: 248px;
+  overflow: hidden;
+  right: 8px;
+  top: 8px;
+  z-index: 1;
+}
+
+.pv.top .pv-side {
+  opacity: 0;
+  transform: translateX(-40px);
+}
+
+.pv.top :is(.pv-strip, .pv-tool) {
+  opacity: 1;
+  transform: none;
+}
+
+.pv.top .pv-card {
+  left: 8px;
+  top: 84px;
+}
+
+.pv.floating .pv-card {
+  left: 8px;
+}
+
+.pv.floating .pv-side {
+  backdrop-filter: blur(24px) saturate(1.6);
+  background: color-mix(in srgb, var(--pv-surface) 74%, transparent);
+  border-radius: 12px;
+  bottom: 8px;
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 18px 44px rgb(0 0 0 / 0.42);
+  left: 8px;
+  top: 8px;
+}
+
+/* 地址栏放在顶部：侧栏里的收起来（下面的东西挪上去），工具栏在卡片上面；紧凑：卡片顶上 36 的细栏从上边
+   移入，网页跟着往下挪。 */
+.pv-side .pv-bar {
+  transition: height 0.32s var(--layout-ease), margin 0.32s var(--layout-ease),
+              opacity 0.32s var(--layout-ease);
+}
+
+.pv:not(.top):is(.addr-top, .addr-compact) .pv-side .pv-bar {
+  height: 0;
+  margin-bottom: -8px;
+  opacity: 0;
+}
+
+.pv:not(.top).addr-top .pv-tool {
+  left: 248px;
+  opacity: 1;
+  padding: 0 8px;
+  top: 4px;
+  transform: none;
+}
+
+.pv.floating.addr-top .pv-tool {
+  left: 0;
+  padding: 0 16px;
+}
+
+.pv:not(.top).addr-top .pv-card {
+  top: 52px;
+}
+
+.pv.top.addr-compact .pv-tool {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.pv.top.addr-compact .pv-card {
+  top: 48px;
+}
+
+.pv-compact {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f2;
+  display: flex;
+  gap: 16px;
+  height: 36px;
+  left: 0;
+  opacity: 0;
+  padding: 0 14px;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transform: translateY(-100%);
+  transition: opacity 0.32s var(--layout-ease), transform 0.32s var(--layout-ease);
+  z-index: 1;
+}
+
+.pv-nav {
+  display: flex;
+  gap: 10px;
+}
+
+.pv-nav i {
+  background: #e4e4e7;
+  border-radius: 4px;
+  height: 14px;
+  width: 14px;
+}
+
+.pv-compact .pv-bar {
+  background: #f0f0f2;
+  border-radius: 7px;
+  height: 24px;
+  width: 340px;
+}
+
+.pv-page {
+  transition: transform 0.32s var(--layout-ease);
+}
+
+.pv.addr-compact .pv-compact {
+  opacity: 1;
+  transform: none;
+}
+
+.pv.addr-compact .pv-page {
+  transform: translateY(36px);
+}
+
+/* 示例网页（不跟主题，网页自己是亮的）。 */
+.site-nav {
+  align-items: center;
+  border-bottom: 1px solid #f0f0f2;
+  display: flex;
+  gap: 22px;
+  height: 54px;
+  padding: 0 28px;
+}
+
+.site-logo {
+  background: linear-gradient(140deg, #3b2a7a, #7c5cff 60%, #ff8a65);
+  border-radius: 6px;
+  height: 22px;
+  width: 22px;
+}
+
+.site-nav i {
+  background: #e4e4e7;
+  border-radius: 5px;
+  height: 9px;
+  width: 52px;
+}
+
+.site-body {
+  max-width: 760px;
+  padding: 34px 48px;
+}
+
+.site-body b {
+  background: #27272a;
+  border-radius: 7px;
+  display: block;
+  height: 26px;
+  margin-bottom: 18px;
+  width: 62%;
+}
+
+.site-body u {
+  background: #e4e4e7;
+  border-radius: 5px;
+  display: block;
+  height: 10px;
+  margin: 10px 0;
+}
+
+.site-body em {
+  background: linear-gradient(140deg, #fde2c8, #f6a6a0 50%, #8b7cf6);
+  border-radius: 12px;
+  display: block;
+  height: 200px;
+  margin: 22px 0;
+}
+
+/* ---------------- 隐私 ---------------- */
+
+.preset {
+  background: var(--fill);
+  border-radius: 14px;
+  color: inherit;
+  /* 按钮默认把内容竖着居中：三张卡片一样高，内容都从上面排。 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 15px 15px 14px;
+  position: relative;
+  text-align: start;
+  transition: background-color 0.18s;
+}
+
+.preset:hover {
+  background: var(--fill2);
+}
+
+.preset-head {
+  align-items: center;
+  display: flex;
+  font-size: 15px;
+  font-weight: 600;
+  gap: 8px;
+}
+
+.badge {
+  align-items: center;
+  background: var(--fill2);
+  border-radius: 10px;
+  color: var(--onv);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  height: 19px;
+  padding: 0 7px;
+}
+
+.points {
+  color: var(--onv);
+  font-size: 12.5px;
+  line-height: 1.5;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.points li {
+  display: flex;
+  gap: 7px;
+  margin-top: 6px;
+}
+
+.points li .icon {
+  margin-top: 3px;
+}
+
+.points li.yes .icon {
+  color: var(--on);
+}
+
+.points li.warn {
+  color: var(--warn);
+}
+
+.engines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.engine {
+  align-items: center;
+  background: var(--fill);
+  border-radius: 18px;
+  color: inherit;
+  display: inline-flex;
+  font-size: 13px;
+  height: 36px;
+  padding: 0 14px;
+  transition: background-color 0.18s, box-shadow 0.15s;
+}
+
+.engine:hover {
+  background: var(--fill2);
+}
+
+.engine.sel {
+  box-shadow: inset 0 0 0 2px var(--acc);
+}
+
+/* ---------------- AI 助手 ---------------- */
+
+.ai-mark {
+  align-items: center;
+  background: linear-gradient(135deg, #7c5cff, #38bdf8);
+  border-radius: 8px;
+  color: #fff;
+  display: flex;
+  flex: none;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.title-row {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.choice {
+  background: var(--fill);
+  border-radius: 12px;
+  position: relative;
+  transition: background-color 0.18s, box-shadow 0.15s;
+}
+
+.choice.sel {
+  box-shadow: inset 0 0 0 2px var(--acc);
+}
+
+.choice:not(.disabled):hover {
+  background: var(--fill2);
+}
+
+.choice.disabled {
+  opacity: 0.5;
+}
+
+.choice > .line {
+  min-height: 0;
+}
+
+.choice-more {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px 54px;
+}
+
+.choice-more .input {
+  flex: 1;
+}
+
+/* ---------------- 完成 ---------------- */
+
+.default-browser {
+  align-items: center;
+  background: var(--fill);
+  border-radius: 14px;
+  display: flex;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 14px 16px;
+}
+
+.default-browser img {
+  height: 50px;
+  margin: -5px;
+  width: 50px;
+}
+
+.keys {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.key {
+  align-items: center;
+  background: var(--fill);
+  border-radius: 10px;
+  display: flex;
+  font-size: 12.5px;
+  justify-content: space-between;
+  padding: 9px 12px;
+}
+
+.kbd {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.kbd i {
+  align-items: center;
+  background: var(--fill2);
+  border-radius: 5px;
+  display: inline-flex;
+  font-size: 11.5px;
+  font-style: normal;
+  height: 20px;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 5px;
+}
+
+.key .gesture {
+  color: var(--onv);
+}
+
+/* 窄窗口：外观不画预览，一栏排下来。 */
+@media (max-width: 1100px) {
+  .step.wide,
+  .foot .in.wide {
+    width: 600px;
+  }
+
+  .two > .col {
+    width: 100%;
+  }
+
+  .preview {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stars i {
+    animation: none;
+  }
+}

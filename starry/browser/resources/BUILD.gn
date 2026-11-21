@@ -34,6 +34,10 @@ page_files = [
   "pages/settings/index.html",
   "pages/settings/settings.css",
   "pages/settings/settings.js",
+  "pages/welcome/icon.svg",
+  "pages/welcome/index.html",
+  "pages/welcome/welcome.css",
+  "pages/welcome/welcome.js",
 ]
 
 action("page_resources") {

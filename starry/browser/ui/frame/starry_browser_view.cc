@@ -26,7 +26,10 @@
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface_iterator.h"
 #include "chrome/browser/ui/immersive/immersive_mode_controller.h"
+#include "chrome/browser/ui/navigator/browser_navigator.h"
+#include "chrome/browser/ui/navigator/browser_navigator_params.h"
 #include "chrome/browser/ui/singleton_tabs.h"
+#include "chrome/browser/ui/tabs/tab_enums.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
 #include "chrome/browser/ui/unload_controller.h"
@@ -38,13 +41,16 @@
 #include "chrome/browser/ui/views/location_bar/zoom_bubble_coordinator.h"
 #include "chrome/browser/ui/zoom/browser_window_zoom_observer.h"
 #include "chrome/common/pref_names.h"
+#include "chrome/common/webui_url_constants.h"
 #include "components/prefs/pref_service.h"
 #include "components/tabs/public/tab_interface.h"
 #include "content/public/browser/download_manager.h"
+#include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "starry/browser/downloads/download_service.h"
 #include "starry/browser/l10n/l10n.h"
+#include "starry/browser/onboarding/onboarding.h"
 #include "starry/browser/prefs/starry_prefs.h"
 #include "starry/browser/starry_hooks.h"
 #include "starry/browser/ui/archive/archive_notice.h"
@@ -71,6 +77,7 @@
 #include "starry/browser/ui/mini_window/mini_window.h"
 #include "starry/browser/ui/mini_window/mini_window_activation.h"
 #include "starry/browser/ui/mini_window/mini_window_toolbar.h"
+#include "starry/browser/ui/motion/frame_motion.h"
 #include "starry/browser/ui/motion/motion.h"
 #include "starry/browser/ui/popover/bookmark_editor.h"
 #include "starry/browser/ui/popover/popover_host.h"
@@ -94,6 +101,8 @@
 #include "ui/actions/actions.h"
 #include "ui/base/hit_test.h"
 #include "ui/base/metadata/metadata_impl_macros.h"
+#include "ui/base/page_transition_types.h"
+#include "ui/base/window_open_disposition.h"
 #include "ui/color/color_id.h"
 #include "ui/color/color_provider.h"
 #include "ui/compositor/layer.h"
@@ -350,6 +359,9 @@ bool ShowStarrySettings(Profile* profile, BrowserWindowInterface* browser) {
 
 bool HandleNewTabCommand(BrowserWindowInterface* browser) {
   StarryBrowserView* view = StarryBrowserView::From(browser);
+  if (view && view->in_onboarding()) {
+    return true;
+  }
   if (view && view->is_mini_window()) {
     // 小窗口中的 ⌘T 切回普通浏览器窗口处理（小窗口内仅响应 ⌘L）。
     BrowserWindowInterface* target =
@@ -481,6 +493,9 @@ StarryBrowserView::StarryBrowserView(BrowserWindowInterface* browser)
   popover_host_ = AddChildView(std::make_unique<PopoverHost>());
   dialog_host_ = AddChildView(std::make_unique<DialogHostView>());
   menu_host_ = AddChildView(std::make_unique<MenuHostView>());
+  onboarding_drag_ = AddChildView(std::make_unique<views::View>());
+  SetWindowDraggable(onboarding_drag_, true);
+  onboarding_drag_->SetVisible(false);
   ApplyChromeDefaults();
 
   // 布局设置变更时同步更新所有窗口，并播放布局过渡动画。
@@ -807,11 +822,13 @@ void StarryBrowserView::ApplyChromeLayout(bool animated) {
 }
 
 int StarryBrowserView::compact_inset() const {
-  // 网页全屏时只有网页。
+  // 网页全屏与向导铺满窗口时不留紧凑栏高度，向导结束时随进度展开。
   if (!layout_.compact || !sidebar_ || content_only_) {
     return 0;
   }
-  return metrics::kCompactToolbarHeight;
+  const double onboarding = std::clamp(onboarding_presence(), 0.0, 1.0);
+  return static_cast<int>(
+      std::lround(metrics::kCompactToolbarHeight * (1 - onboarding)));
 }
 
 void StarryBrowserView::SetContentOnly(bool content_only) {
@@ -973,6 +990,7 @@ void StarryBrowserView::UpdateForActiveTab() {
   if (!sidebar_) {
     return;
   }
+  KeepOnboardingTab();
   tabs::TabInterface* tab = browser()->GetActiveTabInterface();
   const InternalPage page =
       tab ? InternalPageForUrl(tab->GetContents()->GetVisibleURL())
@@ -1046,12 +1064,16 @@ void StarryBrowserView::UpdateWindowButtons(bool animated) {
   if (!sidebar_ || !GetWidget()) {
     return;
   }
-  SetWindowButtonsPlacement(
-      GetWidget(),
-      WindowsControlsEnabled()
-          ? std::nullopt
-          : layout_.WindowButtonsOrigin(sidebar_->is_peeking()),
-      animated && window_buttons_placed_);
+  std::optional<gfx::Point> origin;
+  if (!WindowsControlsEnabled()) {
+    // 设置向导里：红绿灯在固定侧栏顶栏的位置（向导页左上角留着这块地方），走完以后
+    // 再挪到这个布局的位置。
+    origin = onboarding_active_
+                 ? ChromeLayout().WindowButtonsOrigin(/*peeking=*/false)
+                 : layout_.WindowButtonsOrigin(sidebar_->is_peeking());
+  }
+  SetWindowButtonsPlacement(GetWidget(), origin,
+                            animated && window_buttons_placed_);
   window_buttons_placed_ = true;
 }
 
@@ -1060,7 +1082,8 @@ void StarryBrowserView::UpdateChromeGeometry() {
     return;
   }
   MultiContentsView* contents = multi_contents_view();
-  const double presence = std::clamp(compact_presence_.value(), 0.0, 1.0);
+  const double presence = std::clamp(compact_presence_.value(), 0.0, 1.0) *
+                          (1 - std::clamp(onboarding_presence(), 0.0, 1.0));
   const bool split = contents && contents->IsInSplitView();
   tabs::TabInterface* active = browser()->GetActiveTabInterface();
   const bool shown = presence > 0.001 && compact_inset() > 0;
@@ -1168,7 +1191,7 @@ StarryBrowserView* StarryBrowserView::From(BrowserWindowInterface* browser) {
 }
 
 void StarryBrowserView::OpenCommandBar(CommandBarView::Mode mode) {
-  if (command_bar_) {
+  if (command_bar_ && !onboarding_active_) {
     command_bar_->Open(mode);
   }
 }
@@ -1181,6 +1204,165 @@ void StarryBrowserView::SetFocusToLocationBar(bool is_user_initiated) {
   // Chrome 给新标签页聚焦地址栏时也会走这里：只有用户要的（⌘L）才打开命令栏。
   if (is_user_initiated) {
     OpenCommandBar(CommandBarView::Mode::kEdit);
+  }
+}
+
+void StarryBrowserView::Show() {
+  if (sidebar_ && !onboarding_checked_) {
+    onboarding_checked_ = true;
+    if (onboarding::ShouldShow(browser()->GetProfile())) {
+      StartOnboarding();
+    }
+  }
+  BrowserView::Show();
+}
+
+double StarryBrowserView::onboarding_presence() const {
+  return onboarding_motion_ ? onboarding_motion_->value() : 0;
+}
+
+void StarryBrowserView::StartOnboarding() {
+  if (!sidebar_ || onboarding_active_) {
+    return;
+  }
+  TabStripModel* model = browser()->GetTabStripModel();
+  int index = TabStripModel::kNoTab;
+  for (int i = 0; i < model->count(); ++i) {
+    if (onboarding::IsWelcomeURL(model->GetWebContentsAt(i)->GetVisibleURL())) {
+      index = i;
+      break;
+    }
+  }
+  if (index == TabStripModel::kNoTab) {
+    NavigateParams params(browser(), onboarding::WelcomeURL(),
+                          ui::PAGE_TRANSITION_AUTO_TOPLEVEL);
+    params.disposition = WindowOpenDisposition::NEW_FOREGROUND_TAB;
+    params.tabstrip_index = 0;
+    params.tabstrip_add_types =
+        AddTabTypes::ADD_ACTIVE | AddTabTypes::ADD_FORCE_INDEX;
+    Navigate(&params);
+    if (params.navigated_or_inserted_contents) {
+      index =
+          model->GetIndexOfWebContents(params.navigated_or_inserted_contents);
+    }
+  }
+  if (index == TabStripModel::kNoTab) {
+    return;
+  }
+  onboarding_contents_ = model->GetWebContentsAt(index)->GetWeakPtr();
+  onboarding_active_ = true;
+  model->ActivateTabAt(index);
+  if (!onboarding_motion_) {
+    onboarding_motion_ = std::make_unique<FrameMotion>(
+        0, base::BindRepeating(&StarryBrowserView::RelayoutChrome,
+                               base::Unretained(this)));
+  }
+  onboarding_motion_->SetValue(1);
+  RelayoutChrome();
+  UpdateWindowButtons(/*animated=*/false);
+}
+
+void StarryBrowserView::FinishOnboarding(content::WebContents* contents) {
+  onboarding::MarkFinished(browser()->GetProfile());
+  const bool animate = onboarding_active_ && onboarding_motion_ && GetWidget();
+  onboarding_active_ = false;
+  onboarding_contents_.reset();
+  if (onboarding_drag_) {
+    onboarding_drag_->SetVisible(false);
+  }
+  if (animate) {
+    onboarding_motion_->AnimateTo(GetWidget()->GetCompositor(), 0,
+                                  MotionCurve::Of(motion::kOnboardingFinish));
+    UpdateWindowButtons(/*animated=*/true);
+    // 浮动侧栏模式下，收起动画结束后短暂滑出侧栏提示位置。
+    if (layout_.overlay_sidebar()) {
+      base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
+          FROM_HERE,
+          base::BindOnce(
+              [](base::WeakPtr<StarryBrowserView> view) {
+                if (view && view->sidebar_ && !view->onboarding_active_) {
+                  view->sidebar_->PeekFor(
+                      base::Seconds(motion::kOnboardingSidebarHint));
+                }
+              },
+              weak_factory_.GetWeakPtr()),
+          base::Seconds(motion::kOnboardingSwapDelay));
+    }
+  } else if (onboarding_motion_) {
+    onboarding_motion_->SetValue(0);
+    RelayoutChrome();
+    UpdateWindowButtons(/*animated=*/false);
+  }
+  // WebUI handler 随页面销毁，需异步替换或关闭标签。
+  base::SequencedTaskRunner::GetCurrentDefault()->PostDelayedTask(
+      FROM_HERE,
+      base::BindOnce(&StarryBrowserView::ReplaceWelcomeTab,
+                     weak_factory_.GetWeakPtr(), contents->GetWeakPtr()),
+      animate ? base::Seconds(motion::kOnboardingSwapDelay)
+              : base::TimeDelta());
+}
+
+void StarryBrowserView::ReplaceWelcomeTab(
+    base::WeakPtr<content::WebContents> contents) {
+  if (!contents) {
+    return;
+  }
+  TabStripModel* model = browser()->GetTabStripModel();
+  const int index = model->GetIndexOfWebContents(contents.get());
+  if (index == TabStripModel::kNoTab) {
+    return;
+  }
+  // 还有其他标签时直接关闭向导，露出原有标签。
+  if (model->count() > 1) {
+    model->CloseWebContentsAt(index, TabCloseTypes::CLOSE_NONE);
+    return;
+  }
+  // 仅剩向导页时原位替换为新标签页，不留在历史记录中。
+  content::NavigationController::LoadURLParams params{
+      GURL(chrome::kChromeUINewTabURL)};
+  params.transition_type = ui::PAGE_TRANSITION_AUTO_TOPLEVEL;
+  params.should_replace_current_entry = true;
+  contents->GetController().LoadURLWithParams(params);
+}
+
+void StarryBrowserView::KeepOnboardingTab() {
+  if (!onboarding_active_) {
+    return;
+  }
+  TabStripModel* model = browser()->GetTabStripModel();
+  const int index =
+      onboarding_contents_
+          ? model->GetIndexOfWebContents(onboarding_contents_.get())
+          : TabStripModel::kNoTab;
+  if (index == TabStripModel::kNoTab) {
+    // 向导标签被外部关闭时恢复浏览器界面，保留 pending 状态以便下次启动继续。
+    onboarding_active_ = false;
+    onboarding_contents_.reset();
+    if (onboarding_motion_) {
+      onboarding_motion_->SetValue(0);
+    }
+    RelayoutChrome();
+    UpdateWindowButtons(/*animated=*/false);
+    return;
+  }
+  if (index != model->active_index()) {
+    // TabStripModel 通知回调内不能重入切换选中标签。
+    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+        FROM_HERE, base::BindOnce(
+                       [](base::WeakPtr<StarryBrowserView> view) {
+                         if (!view || !view->onboarding_active_ ||
+                             !view->onboarding_contents_) {
+                           return;
+                         }
+                         TabStripModel* model =
+                             view->browser()->GetTabStripModel();
+                         const int index = model->GetIndexOfWebContents(
+                             view->onboarding_contents_.get());
+                         if (index != TabStripModel::kNoTab) {
+                           model->ActivateTabAt(index);
+                         }
+                       },
+                       weak_factory_.GetWeakPtr()));
   }
 }
 
@@ -1257,6 +1439,7 @@ void StarryBrowserView::AddedToWidget() {
     // 没有画中画时媒体岛飞进侧栏、标签行：盖在它们上面。
     ReorderChildView(media_island_, children().size());
     ReorderChildView(tab_preview_, children().size());
+    ReorderChildView(onboarding_drag_, children().size());
     ReorderChildView(find_bar_view_, children().size());
     if (window_controls_) {
       ReorderChildView(window_controls_, children().size());

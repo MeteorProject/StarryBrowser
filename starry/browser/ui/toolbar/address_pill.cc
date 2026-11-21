@@ -105,6 +105,9 @@ AddressSummary SummarizeAddress(content::WebContents* contents) {
     case InternalPage::kArchive:
       summary.name = L("internalPage.archive");
       return summary;
+    case InternalPage::kWelcome:
+      summary.name = L("internalPage.welcome");
+      return summary;
     case InternalPage::kNone:
       break;
   }

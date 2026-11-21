@@ -50,6 +50,7 @@
 #include "starry/browser/ui/webui/import_handler.h"
 #include "starry/browser/ui/webui/page_handler.h"
 #include "starry/browser/ui/webui/settings_handler.h"
+#include "starry/browser/ui/webui/welcome_handler.h"
 #include "starry/common/internal_urls.h"
 #include "url/gurl.h"
 
@@ -71,6 +72,7 @@ constexpr PageInfo kPages[] = {
     {StarryPage::kSettings, kStarrySettingsHost, "settings"},
     {StarryPage::kAssistant, kStarryAssistantHost, "assistant"},
     {StarryPage::kArchive, kStarryArchiveHost, "archive"},
+    {StarryPage::kWelcome, kStarryWelcomeHost, "welcome"},
 };
 
 const PageInfo& InfoFor(StarryPage page) {
@@ -328,6 +330,15 @@ StarryPageUI::StarryPageUI(content::WebUI* web_ui, StarryPage page)
       break;
     case StarryPage::kArchive:
       web_ui->AddMessageHandler(std::make_unique<ArchiveHandler>(profile));
+      break;
+    case StarryPage::kWelcome:
+      // 向导里的选项改的就是设置页的那几项：用设置页的处理函数。
+      web_ui->AddMessageHandler(std::make_unique<SettingsHandler>(profile));
+      web_ui->AddMessageHandler(
+          std::make_unique<AssistantSettingsHandler>(profile));
+      web_ui->AddMessageHandler(std::make_unique<ContentBlockingHandler>());
+      web_ui->AddMessageHandler(std::make_unique<ImportHandler>(profile));
+      web_ui->AddMessageHandler(std::make_unique<WelcomeHandler>(profile));
       break;
   }
 }
