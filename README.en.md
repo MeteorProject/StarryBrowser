@@ -64,7 +64,7 @@ Built-in ad and tracker blocking powered by EasyList, AdGuard, and uBlock filter
 
 ## Building & Docs
 
-Starry currently needs to be built from source. See [Development & Building](docs/development.md) (in Chinese).
+Starry currently needs to be built from source. See [Development & Building](docs/development.md).
 
 ## License
 
