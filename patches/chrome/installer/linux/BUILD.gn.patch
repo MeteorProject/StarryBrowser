@@ -1,5 +1,5 @@
 diff --git a/chrome/installer/linux/BUILD.gn b/chrome/installer/linux/BUILD.gn
-index 2a75b4c07d..8612fe7b19 100644
+index 2a75b4c07d..343670646c 100644
 --- a/chrome/installer/linux/BUILD.gn
 +++ b/chrome/installer/linux/BUILD.gn
 @@ -14,6 +14,8 @@ import("//chrome/installer/installers.gni")
@@ -45,7 +45,7 @@ index 2a75b4c07d..8612fe7b19 100644
    }
  
    outputs = [ "$root_out_dir/${package}_${deb_arch}.deb" ]
-@@ -374,7 +390,15 @@ copy("common_packaging_files") {
+@@ -374,7 +390,17 @@ copy("common_packaging_files") {
    if (is_chrome_branded) {
      sources += [ "common/google-chrome.info" ]
    } else {
@@ -58,11 +58,13 @@ index 2a75b4c07d..8612fe7b19 100644
 +      "common/rpm.include",
 +      "common/rpmrepo.cron",
 +    ]
-+    deps = [ "//starry/build/branding:linux_packaging_files" ]
++    # Public: the generated files are inputs to the packaging actions that
++    # depend on :installer_deps.
++    public_deps = [ "//starry/build/branding:linux_packaging_files" ]
    }
  
    outputs = [ "$root_out_dir/installer/common/{{source_file_part}}" ]
-@@ -398,7 +422,6 @@ copy("deb_packaging_files") {
+@@ -398,7 +424,6 @@ copy("deb_packaging_files") {
  copy("theme_files") {
    visibility = [ ":*" ]
    sources = [
@@ -70,7 +72,7 @@ index 2a75b4c07d..8612fe7b19 100644
      "$branding_dir/linux/product_logo_128.png",
      "$branding_dir/linux/product_logo_24.png",
      "$branding_dir/linux/product_logo_256.png",
-@@ -406,6 +429,7 @@ copy("theme_files") {
+@@ -406,6 +431,7 @@ copy("theme_files") {
      "$branding_dir/linux/product_logo_64.png",
      "$branding_dir_100/linux/product_logo_16.png",
      "$branding_dir_100/linux/product_logo_32.png",
@@ -78,7 +80,7 @@ index 2a75b4c07d..8612fe7b19 100644
    ]
    if (is_chrome_branded) {
      sources += [
-@@ -564,8 +588,10 @@ template("linux_package") {
+@@ -564,8 +590,10 @@ template("linux_package") {
  
    if (is_chrome_branded) {
      package = "google-chrome"
@@ -90,7 +92,7 @@ index 2a75b4c07d..8612fe7b19 100644
    }
  
    deb_target_name = "${target_name}_deb"
-@@ -575,7 +601,7 @@ template("linux_package") {
+@@ -575,7 +603,7 @@ template("linux_package") {
      script = "debian/build.py"
  
      inputs = packaging_files
@@ -99,7 +101,7 @@ index 2a75b4c07d..8612fe7b19 100644
  
      args = [
        "-a",
-@@ -613,7 +639,7 @@ template("linux_package") {
+@@ -613,7 +641,7 @@ template("linux_package") {
        script = "rpm/build.py"
  
        inputs = packaging_files
@@ -108,7 +110,7 @@ index 2a75b4c07d..8612fe7b19 100644
  
        args = [
          "-a",
-@@ -647,7 +673,7 @@ template("linux_package") {
+@@ -647,7 +675,7 @@ template("linux_package") {
          script = "flatpak/build.py"
  
          inputs = packaging_files
