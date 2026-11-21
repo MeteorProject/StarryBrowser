@@ -1,6 +1,6 @@
 // Copyright 2026 The Starry Browser Authors
 //
-// 首次启动设置向导（starry://welcome）：欢迎 → 导入 → 外观 → 新标签页 → 隐私 → AI 助手 → 完成。
+// 首次启动设置向导（starry://welcome）：欢迎 → 导入 → 外观 →（窗口按钮）→ 新标签页 → 隐私 → AI 助手 → 完成。
 // 选项直接复用设置页 Handler 即时生效；AI 助手在点击「继续」时写入，跳过时保持不变。
 
 import {html, LitElement, nothing} from 'chrome://resources/lit/v3_0/lit.rollup.js';
@@ -10,8 +10,15 @@ import {joinList, L, locale, platform} from './common/l10n.js';
 import {icon} from './common/library.js';
 import {Motion, reduceMotion} from './common/motion.js';
 
-const STEP = {welcome: 0, import: 1, appearance: 2, newTab: 3, privacy: 4, ai: 5, done: 6};
-const STEP_COUNT = 7;
+const STEP_TITLE_KEYS = {
+  import: 'welcome.step.import',
+  appearance: 'welcome.step.appearance',
+  windowControls: 'welcome.step.windowControls',
+  newTab: 'welcome.step.newTab',
+  privacy: 'welcome.step.privacy',
+  ai: 'welcome.step.ai',
+  done: 'welcome.step.done',
+};
 const IMPORT_ITEMS = ['bookmarks', 'history', 'passwords', 'searchEngines', 'autofill'];
 
 // 隐私预设：cookies 1 = 阻止全部第三方 Cookie，2 = 仅无痕窗口阻止。
@@ -114,11 +121,32 @@ function thumb(scheme, layout, address, highlight = false) {
   return thumbOne(scheme, layout, address, highlight);
 }
 
-function previewWindow(dark, layout, address) {
-  const tabs = [true, false, false, false];
-  const lights = html`<div class="pv-lights"><i></i><i></i><i></i></div>`;
+function windowControlGlyphs() {
   return html`
-    <div class="pv ${dark ? '' : 'light'} ${layout} addr-${address}" aria-hidden="true">
+    <span class="wc-btn">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round">
+        <path d="M2.5 6h7"/>
+      </svg>
+    </span>
+    <span class="wc-btn">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.25">
+        <rect x="2.75" y="2.75" width="6.5" height="6.5" rx="1"/>
+      </svg>
+    </span>
+    <span class="wc-btn close">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round">
+        <path d="M3 3l6 6M9 3l-6 6"/>
+      </svg>
+    </span>`;
+}
+
+function previewWindow(dark, layout, address, controls = '') {
+  const tabs = [true, false, false, false];
+  const win = !!controls;
+  const lights = win ? nothing : html`<div class="pv-lights"><i></i><i></i><i></i></div>`;
+  return html`
+    <div class="pv ${dark ? '' : 'light'} ${layout} addr-${address} ${win ? `win-controls wc-${controls}` : ''}"
+        aria-hidden="true">
       <div class="pv-side">
         ${lights}<div class="pv-bar"></div>
         <div class="pv-tiles"><i></i><i></i><i></i><i></i></div>
@@ -126,6 +154,7 @@ function previewWindow(dark, layout, address) {
       </div>
       <div class="pv-strip">${lights}${tabs.map((selected) => html`<div class="pv-tab ${selected ? 'sel' : ''}"></div>`)}</div>
       <div class="pv-tool"><div class="pv-bar"></div></div>
+      ${win ? html`<div class="pv-rail"><span></span></div>` : nothing}
       <div class="pv-card">
         <div class="pv-compact"><span class="pv-nav"><i></i><i></i></span><div class="pv-bar"></div></div>
         <div class="pv-page">
@@ -133,19 +162,44 @@ function previewWindow(dark, layout, address) {
           <div class="site-body"><b></b><u></u><u></u><u style="width:80%"></u><em></em><u></u><u style="width:70%"></u></div>
         </div>
       </div>
+      ${win ? html`<div class="pv-win-hint"></div><div class="pv-win">${windowControlGlyphs()}</div>` : nothing}
     </div>`;
 }
 
-function newTabPreview(style, dark) {
+// 窗口控制按钮局部放大预览（聚焦窗口右上角，按宽 200 缩放）。
+function windowControlsPreview(mode, dark) {
+  return html`
+    <div class="wcv ${mode} ${dark ? '' : 'light'}" aria-hidden="true">
+      <div class="wcv-rail">
+        <span class="wcv-rail-title"></span>
+        <span class="wcv-rail-btns">${windowControlGlyphs()}</span>
+      </div>
+      <div class="wcv-card">
+        <div class="wcv-nav">
+          <span class="wcv-links"><i></i><i></i></span>
+          <span class="wcv-site-actions"><i></i><em class="wcv-avatar"></em></span>
+        </div>
+        <div class="wcv-body"><b></b><u></u><u class="s"></u><em></em></div>
+      </div>
+      ${mode === 'autoHide' ? html`<div class="wcv-hint"></div>` : nothing}
+      ${mode !== 'rail' ? html`<div class="wcv-capsule">${windowControlGlyphs()}</div>` : nothing}
+    </div>`;
+}
+
+function newTabPreview(style, dark, hasWindowControls = false) {
   const page = html`<div class="ntv-page"><b></b><u></u><u></u><u class="s"></u><em></em></div>`;
   return html`
-    <div class="ntv ${style} ${dark ? '' : 'light'}" aria-hidden="true">
-      <div class="ntv-side"><span class="ntv-lights"><i></i><i></i><i></i></span><i class="bar"></i><i></i><i class="s"></i><i></i><i></i></div>
+    <div class="ntv ${style} ${dark ? '' : 'light'} ${hasWindowControls ? 'win-controls' : ''}" aria-hidden="true">
+      <div class="ntv-side">
+        ${hasWindowControls ? nothing : html`<span class="ntv-lights"><i></i><i></i><i></i></span>`}
+        <i class="bar"></i><i></i><i class="s"></i><i></i><i></i>
+      </div>
       <div class="ntv-card">
         ${style === 'card' ? html`
           <div class="ntv-hello"></div><div class="ntv-pill"></div>
           <div class="ntv-grid"><i class="w"></i><i></i><i></i><i></i><i></i></div>` : page}
       </div>
+      ${hasWindowControls ? html`<div class="ntv-win"><i></i><i></i><i></i></div>` : nothing}
       ${style === 'minimal' ? html`<div class="ntv-dim"></div><div class="ntv-pill floating"></div>` : nothing}
       ${style === 'overlay' ? html`
         <div class="ntv-blur"></div><div class="ntv-pill floating"></div>
@@ -174,7 +228,7 @@ class StarryWelcome extends LitElement {
 
   constructor() {
     super();
-    this.step_ = STEP.welcome;
+    this.step_ = 0;
     this.settings_ = null;
     this.blocking_ = null;
     this.import_ = null;
@@ -198,7 +252,17 @@ class StarryWelcome extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    addWebUiListener('settings-changed', (settings) => this.settings_ = settings);
+    addWebUiListener('settings-changed', (settings) => {
+      const currentId = this.stepId_();
+      this.settings_ = settings;
+      const steps = this.steps_();
+      const index = steps.indexOf(currentId);
+      if (index >= 0) {
+        this.step_ = index;
+      } else if (this.step_ >= steps.length) {
+        this.step_ = steps.length - 1;
+      }
+    });
     addWebUiListener('content-blocking-changed', (state) => this.blocking_ = state);
     addWebUiListener('import-changed', (state) => this.import_ = state);
     addWebUiListener('assistant-settings-changed', (state) => this.assistant_ = state);
@@ -245,10 +309,25 @@ class StarryWelcome extends LitElement {
     this.focusPrimary_();
   }
 
+  steps_() {
+    const steps = ['welcome', 'import', 'appearance'];
+    if (this.settings_?.hasWindowControls) {
+      steps.push('windowControls');
+    }
+    steps.push('newTab', 'privacy', 'ai', 'done');
+    return steps;
+  }
+
+  stepId_() {
+    const steps = this.steps_();
+    return steps[this.step_] || steps[0];
+  }
+
   // 换页：旧的一页拷一份盖在原处淡出，新的一页里的块错开 28 ms 弹进来（kListEdit）。
   go_(direction) {
+    const steps = this.steps_();
     const next = this.step_ + direction;
-    if (next < 0 || next >= STEP_COUNT || this.leaving_) {
+    if (next < 0 || next >= steps.length || this.leaving_) {
       return;
     }
     const page = this.querySelector('.step');
@@ -337,6 +416,23 @@ class StarryWelcome extends LitElement {
       this.set_('addressBarOnTop', position !== 'sidebar');
     }
     this.set_('compactAddressBar', position === 'compact');
+  }
+
+  windowControlsChoice_() {
+    const s = this.settings_;
+    if (s.windowsControlsStyle === 'rail') {
+      return 'rail';
+    }
+    return s.windowsControlsAutoHide ? 'autoHide' : 'glass';
+  }
+
+  setWindowControlsChoice_(choice) {
+    if (choice === 'rail') {
+      this.set_('windowsControlsStyle', 'rail');
+      return;
+    }
+    this.set_('windowsControlsStyle', 'glass');
+    this.set_('windowsControlsAutoHide', choice === 'autoHide');
   }
 
   // 现在的设置是哪一档（自己在设置里调过、对不上的算标准）。
@@ -512,8 +608,10 @@ class StarryWelcome extends LitElement {
   // ---- 显示 ----
 
   render() {
-    const atWelcome = this.step_ === STEP.welcome;
-    const wide = this.step_ === STEP.appearance;
+    const steps = this.steps_();
+    const stepId = this.stepId_();
+    const atWelcome = stepId === 'welcome';
+    const wide = stepId === 'appearance';
     return html`
       <div class="stage ${atWelcome ? 'at-welcome' : ''} ${this.intro_ ? 'intro' : ''} ${this.leaving_ ? 'leaving' : ''}">
         <div class="stars" aria-hidden="true">
@@ -523,8 +621,8 @@ class StarryWelcome extends LitElement {
         <div class="top" aria-hidden=${atWelcome ? 'true' : 'false'}>${this.renderProgress_()}</div>
         <main class="pages">
           ${this.settings_ ? html`
-            <div class="step ${wide ? 'wide' : ''}" data-step=${this.step_}
-                aria-label=${L('welcome.stepLabel', {step: this.step_, count: STEP_COUNT - 1})}>
+            <div class="step ${wide ? 'wide' : ''}" data-step=${stepId}
+                aria-label=${L('welcome.stepLabel', {step: this.step_, count: steps.length - 1})}>
               ${this.renderStep_()}
             </div>` : nothing}
         </main>
@@ -535,37 +633,39 @@ class StarryWelcome extends LitElement {
   }
 
   renderProgress_() {
-    const titles = [L('welcome.step.import'), L('welcome.step.appearance'), L('welcome.step.newTab'),
-                    L('welcome.step.privacy'), L('welcome.step.ai'), L('welcome.step.done')];
-    return titles.map((title, index) => {
+    const steps = this.steps_().slice(1);
+    return steps.map((id, index) => {
       const step = index + 1;
       const state = step < this.step_ ? 'done' : step === this.step_ ? 'cur' : '';
-      return html`<div class="pseg ${state}">${title}</div>`;
+      return html`<div class="pseg ${state}">${L(STEP_TITLE_KEYS[id])}</div>`;
     });
   }
 
   renderStep_() {
-    switch (this.step_) {
-      case STEP.welcome:
+    switch (this.stepId_()) {
+      case 'welcome':
         return this.renderWelcome_();
-      case STEP.import:
+      case 'import':
         return this.renderImport_();
-      case STEP.appearance:
+      case 'appearance':
         return this.renderAppearance_();
-      case STEP.newTab:
+      case 'windowControls':
+        return this.renderWindowControls_();
+      case 'newTab':
         return this.renderNewTab_();
-      case STEP.privacy:
+      case 'privacy':
         return this.renderPrivacy_();
-      case STEP.ai:
+      case 'ai':
         return this.renderAi_();
-      case STEP.done:
+      case 'done':
         return this.renderDone_();
     }
     return nothing;
   }
 
   renderFoot_() {
-    if (this.step_ === STEP.welcome) {
+    const stepId = this.stepId_();
+    if (stepId === 'welcome') {
       return nothing;
     }
     const back = html`
@@ -574,8 +674,8 @@ class StarryWelcome extends LitElement {
       <button class="btn primary" ?disabled=${disabled} @click=${action}>${label}</button>`;
     const skip = html`<button class="btn text" @click=${() => this.go_(1)}>${L('welcome.skip')}</button>`;
     let trailing;
-    switch (this.step_) {
-      case STEP.import: {
+    switch (stepId) {
+      case 'import': {
         const state = this.import_;
         const job = state && state.job;
         const selected = this.importSelection_();
@@ -590,13 +690,13 @@ class StarryWelcome extends LitElement {
         }
         break;
       }
-      case STEP.ai:
+      case 'ai':
         trailing = html`${skip}${next(L('welcome.continue'), () => {
           this.commitAi_();
           this.go_(1);
         }, !this.aiChoice_)}`;
         break;
-      case STEP.done:
+      case 'done':
         trailing = next(L('welcome.finish'), () => this.finish_());
         break;
       default:
@@ -817,9 +917,49 @@ class StarryWelcome extends LitElement {
           </div>
         </div>
         <div class="preview st">
-          ${previewWindow(dark, s.sidebarLayout, address)}
+          ${previewWindow(dark, s.sidebarLayout, address, s.hasWindowControls ? this.windowControlsChoice_() : '')}
           <div class="preview-caption">${icon('eye', 12)}${L('welcome.appearance.preview')}</div>
         </div>
+      </div>`;
+  }
+
+  renderWindowControls_() {
+    const s = this.settings_;
+    const dark = this.isDark_();
+    const current = this.windowControlsChoice_();
+    const sidebarOnly = s.sidebarLayout !== 'top' && !s.addressBarOnTop;
+    const choices = [
+      {value: 'glass', title: L('welcome.windowControls.glass.title'),
+       badge: L('welcome.privacy.recommended'),
+       detail: L('welcome.windowControls.glass.detail')},
+      {value: 'autoHide', title: L('welcome.windowControls.autoHide.title'),
+       detail: L('welcome.windowControls.autoHide.detail')},
+      {value: 'rail', title: L('welcome.windowControls.rail.title'),
+       detail: L('welcome.windowControls.rail.detail')},
+    ];
+    return html`
+      <h1 class="st">${L('welcome.windowControls.title')}</h1>
+      <div class="sub st">${L('welcome.windowControls.subtitle')}</div>
+      <div class="st" style="margin-top:20px">
+        <div class="pick grid3" role="radiogroup" aria-label=${L('welcome.windowControls.title')}
+            data-pick="windowControls">
+          <div class="ring" style="border-radius:14px"></div>
+          ${choices.map((choice) => html`
+            <button class="preset wcv-option ${current === choice.value ? 'sel' : ''}" role="radio"
+                aria-checked=${current === choice.value ? 'true' : 'false'} data-value=${choice.value}
+                @click=${() => this.setWindowControlsChoice_(choice.value)}>
+              ${windowControlsPreview(choice.value, dark)}
+              <div class="preset-head">
+                ${choice.title}
+                ${choice.badge ? html`<span class="badge">${choice.badge}</span>` : nothing}
+              </div>
+              <div class="ntp-detail">${choice.detail}</div>
+            </button>`)}
+        </div>
+      </div>
+      <div class="note st">
+        ${icon('info.circle', 13)}
+        <span>${sidebarOnly ? L('welcome.windowControls.note') : L('welcome.windowControls.noteBarLayout')}</span>
       </div>`;
   }
 
@@ -842,7 +982,7 @@ class StarryWelcome extends LitElement {
             <button class="preset ntp-option ${current === style.value ? 'sel' : ''}" role="radio"
                 aria-checked=${current === style.value ? 'true' : 'false'} data-value=${style.value}
                 @click=${() => this.set_('newTabStyle', style.value)}>
-              ${newTabPreview(style.value, dark)}
+              ${newTabPreview(style.value, dark, s.hasWindowControls)}
               <div class="preset-head">${style.title}</div>
               <div class="ntp-detail">${style.detail}</div>
             </button>`)}

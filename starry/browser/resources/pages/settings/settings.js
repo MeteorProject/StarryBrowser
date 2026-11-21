@@ -1120,7 +1120,7 @@ class StarrySettings extends LitElement {
               {layout: 'block', disabled: !sidebar,
                detail: sidebar ? L('settings.appearance.sidebarWidth.detail') : L('settings.appearance.sidebarOnly'),
                keywords: L('settings.appearance.sidebarWidth.keywords')}),
-        ...(s.isWindows ? [
+        ...(s.hasWindowControls ? [
           entry('windowsControlsStyle', L('settings.appearance.windowControls.title'),
                 menuControl(s.windowsControlsStyle, [
                   {value: 'glass', title: L('settings.appearance.windowControls.glass')},

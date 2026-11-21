@@ -27,7 +27,7 @@ namespace starry {
 
 class GlassView;
 
-// Windows 系统控制按钮样式（只在 Windows 上显示于「设置 › 外观」）：
+// 非 macOS 平台（Windows / Linux）自绘窗口控制按钮样式（显示于向导与「设置 › 外观」）：
 // - kGlass（默认，悬浮玻璃胶囊模式）：纯侧栏无顶栏时内容卡片顶至 8px，右上角浮一枚
 //   Liquid Glass 胶囊，磁吸高亮底在三枚按钮间滑动；切到横栏（顶栏/标签行/紧凑栏）时
 //   胶囊淡出融入。
@@ -38,7 +38,7 @@ enum class WindowsControlsStyle {
   kRail,
 };
 
-// 当前窗口是否由 Starry 自绘 Windows 风格系统控件（Windows 平台默认启用）。
+// 当前平台是否启用 Starry 自绘窗口控制按钮（Windows / Linux 默认启用）。
 bool WindowsControlsEnabled();
 WindowsControlsStyle WindowsControlsStyleFromPrefs(const PrefService* prefs);
 bool WindowsControlsAutoHideFromPrefs(const PrefService* prefs);

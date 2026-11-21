@@ -223,7 +223,7 @@ export function renderAppearance(s, {mockWindow, set, toggleButton}) {
             })}
           `)}
 
-          ${s.isWindows ? html`
+          ${s.hasWindowControls ? html`
             ${rowWithLead({
               key: 'windowsControlsStyle',
               iconName: 'macwindow',

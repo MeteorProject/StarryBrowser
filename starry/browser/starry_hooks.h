@@ -286,9 +286,10 @@ bool HandleOpenFileCommand(BrowserWindowInterface* browser);
 //   弹出窗口没有标签栏，红绿灯就挤在顶上）。不是小窗口时返回 0，照 Chrome 的算。
 bool UsesStarryWindowFrame(BrowserView* browser_view);
 int StarryTitlebarHeight(BrowserView* browser_view);
-// chrome/browser/ui/views/frame/browser_frame_view_win.cc：Windows 上由 Starry
-// 自己画窗口控制按钮（最小化、最大化/还原、关闭），隐藏上游的
-// caption_button_container_、去掉非客户区排除区和原生按钮命中测试。
+// chrome/browser/ui/views/frame/browser_frame_view_win.cc、
+// opaque_browser_frame_view.cc、browser_native_widget_aura_linux.cc：
+// Windows 与 Linux 上由 Starry 自己画窗口控制按钮（最小化、最大化/还原、关闭），
+// 隐藏上游自带控制按钮与标题栏元素、去掉非客户区排除区，小窗口也启用自定义边框。
 bool UsesStarryWindowControls(BrowserView* browser_view);
 
 }  // namespace starry

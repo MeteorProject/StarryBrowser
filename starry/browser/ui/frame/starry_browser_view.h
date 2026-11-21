@@ -98,8 +98,16 @@ class StarryBrowserView : public BrowserView {
   void WillMoveToBrowser();
   bool moving_to_browser() const { return moving_to_browser_; }
   WindowBackgroundView* background_view() { return background_view_; }
-  WindowControlsView* window_controls() { return window_controls_; }
-  WindowRailView* window_rail() { return window_rail_; }
+  // 当前窗口是否启用 Starry 自绘窗口控制按钮（Linux 切到系统标题栏时关闭）。
+  bool UsesCustomWindowControls() const;
+  WindowControlsView* window_controls() {
+    return UsesCustomWindowControls() ? window_controls_.get() : nullptr;
+  }
+  WindowRailView* window_rail() {
+    return UsesCustomWindowControls() ? window_rail_.get() : nullptr;
+  }
+  WindowControlsView* raw_window_controls() { return window_controls_; }
+  WindowRailView* raw_window_rail() { return window_rail_; }
   double rail_presence() const { return rail_presence_.value(); }
   SidebarView* sidebar() { return sidebar_; }
   // 自动隐藏的侧栏收起时窗口左边缘的感应条。
@@ -294,6 +302,8 @@ class StarryBrowserView : public BrowserView {
   ChromeLayout layout_;
   WindowsControlsStyle windows_controls_style_;
   bool windows_controls_auto_hide_ = false;
+  bool custom_controls_active_ = false;
+  bool controls_onboarding_ = false;
   bool layout_applied_ = false;
   bool assistant_shown_ = false;
   bool assistant_open_ = false;

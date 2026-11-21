@@ -14,6 +14,7 @@
 #include "base/strings/strcat.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/task/sequenced_task_runner.h"
+#include "build/build_config.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/download/download_core_service.h"
 #include "chrome/browser/download/download_core_service_factory.h"
@@ -33,6 +34,10 @@
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
 #include "chrome/browser/ui/unload_controller.h"
+#if BUILDFLAG(IS_LINUX)
+#include "chrome/browser/ui/views/frame/browser_native_widget.h"
+#include "chrome/browser/ui/views/frame/browser_widget.h"
+#endif
 #include "chrome/browser/ui/views/frame/contents_container_view.h"
 #include "chrome/browser/ui/views/frame/contents_web_view.h"
 #include "chrome/browser/ui/views/frame/layout/browser_view_layout.h"
@@ -570,6 +575,43 @@ void StarryBrowserView::ApplyChromeDefaults() {
   layout_prefs_.Add(starry::prefs::kTintFromWebsite,
                     base::BindRepeating(&StarryBrowserView::UpdateTheme,
                                         base::Unretained(this)));
+#if BUILDFLAG(IS_LINUX)
+  layout_prefs_.Add(
+      ::prefs::kUseCustomChromeFrame,
+      base::BindRepeating(
+          [](base::WeakPtr<StarryBrowserView> view) {
+            // 等 BrowserNativeWidgetAuraLinux 先更新自己的 PrefMember 再重排。
+            base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+                FROM_HERE,
+                base::BindOnce(
+                    [](base::WeakPtr<StarryBrowserView> view) {
+                      if (!view) {
+                        return;
+                      }
+                      if (view->sidebar_) {
+                        view->ApplyChromeLayout(/*animated=*/false);
+                      } else if (view->mini_toolbar_) {
+                        view->InvalidateLayout();
+                      }
+                    },
+                    view));
+          },
+          weak_factory_.GetWeakPtr()));
+#endif
+}
+
+bool StarryBrowserView::UsesCustomWindowControls() const {
+  if (!window_controls_) {
+    return false;
+  }
+#if BUILDFLAG(IS_LINUX)
+  if (BrowserWidget* widget = browser_widget()) {
+    if (BrowserNativeWidget* native = widget->browser_native_widget()) {
+      return native->UseCustomFrame();
+    }
+  }
+#endif
+  return true;
 }
 
 void StarryBrowserView::WillMoveToBrowser() {
@@ -765,9 +807,12 @@ void StarryBrowserView::ApplyChromeLayout(bool animated) {
   const WindowsControlsStyle controls_style =
       WindowsControlsStyleFromPrefs(prefs);
   const bool controls_auto_hide = WindowsControlsAutoHideFromPrefs(prefs);
+  const bool custom_controls = UsesCustomWindowControls();
   if (layout_applied_ && layout == layout_ && assistant == assistant_shown_ &&
       controls_style == windows_controls_style_ &&
-      controls_auto_hide == windows_controls_auto_hide_) {
+      controls_auto_hide == windows_controls_auto_hide_ &&
+      custom_controls == custom_controls_active_ &&
+      onboarding_active_ == controls_onboarding_) {
     return;
   }
   animated = animated && layout_applied_ && GetWidget();
@@ -779,6 +824,8 @@ void StarryBrowserView::ApplyChromeLayout(bool animated) {
   assistant_shown_ = assistant;
   windows_controls_style_ = controls_style;
   windows_controls_auto_hide_ = controls_auto_hide;
+  custom_controls_active_ = custom_controls;
+  controls_onboarding_ = onboarding_active_;
   const MotionCurve curve = motion::ChromeLayout();
   const auto set = [&](ValueMotion& motion, double value) {
     if (animated) {
@@ -789,7 +836,7 @@ void StarryBrowserView::ApplyChromeLayout(bool animated) {
   };
   const bool sidebar_only =
       !layout.tab_strip() && !layout.toolbar() && !layout.compact;
-  const bool wants_rail = window_rail_ && sidebar_only &&
+  const bool wants_rail = window_rail_ && custom_controls && sidebar_only &&
                           controls_style == WindowsControlsStyle::kRail;
   set(strip_presence_, layout.tab_strip() ? 1 : 0);
   set(toolbar_presence_, layout.toolbar() ? 1 : 0);
@@ -797,19 +844,29 @@ void StarryBrowserView::ApplyChromeLayout(bool animated) {
   set(top_inset_, layout.content_top_inset());
   set(rail_presence_, wants_rail ? 1 : 0);
   if (window_controls_) {
-    WindowControlsView::Presentation presentation =
-        WindowControlsView::Presentation::kInlineBar;
-    if (layout.tab_strip() || layout.toolbar()) {
-      presentation = WindowControlsView::Presentation::kInlineBar;
-    } else if (layout.compact) {
-      presentation = WindowControlsView::Presentation::kCompactBar;
-    } else if (controls_style == WindowsControlsStyle::kRail) {
-      presentation = WindowControlsView::Presentation::kSlimRail;
+    if (!custom_controls) {
+      window_controls_->SetVisible(false);
     } else {
-      presentation = WindowControlsView::Presentation::kFloatingGlass;
+      WindowControlsView::Presentation presentation =
+          WindowControlsView::Presentation::kInlineBar;
+      if (onboarding_active_) {
+        // 设置向导隐藏了所有外框栏，始终按用户选择的样式展示于右上角：
+        // 既避免紧凑栏下按钮消失，也方便在「窗口控制按钮」一步直接试用。
+        presentation = controls_style == WindowsControlsStyle::kRail
+                           ? WindowControlsView::Presentation::kSlimRail
+                           : WindowControlsView::Presentation::kFloatingGlass;
+      } else if (layout.tab_strip() || layout.toolbar()) {
+        presentation = WindowControlsView::Presentation::kInlineBar;
+      } else if (layout.compact) {
+        presentation = WindowControlsView::Presentation::kCompactBar;
+      } else if (controls_style == WindowsControlsStyle::kRail) {
+        presentation = WindowControlsView::Presentation::kSlimRail;
+      } else {
+        presentation = WindowControlsView::Presentation::kFloatingGlass;
+      }
+      window_controls_->SetPresentation(presentation, animated);
+      window_controls_->SetAutoHide(controls_auto_hide);
     }
-    window_controls_->SetPresentation(presentation, animated);
-    window_controls_->SetAutoHide(controls_auto_hide);
   }
   sidebar_->SetChromeLayout(layout, animated);
   toolbar_->SetChromeLayout(layout, assistant, animated);
@@ -871,7 +928,7 @@ gfx::Rect StarryBrowserView::PageBounds() {
 }
 
 gfx::Rect StarryBrowserView::BoundsBelowWindowControls(gfx::Rect bounds) const {
-  if (window_controls_ && window_controls_->GetVisible() &&
+  if (UsesCustomWindowControls() && window_controls_->GetVisible() &&
       bounds.Intersects(window_controls_->bounds())) {
     const int inset = window_controls_->bounds().bottom() - bounds.y();
     bounds.Inset(gfx::Insets::TLBR(inset, 0, 0, 0));
@@ -1030,11 +1087,18 @@ void StarryBrowserView::UpdateWindowRailTitle() {
 }
 
 void StarryBrowserView::UpdateWindowControlsTheme() {
-  if (!window_controls_) {
+  WindowControlsView* controls = window_controls();
+  if (!controls) {
+    return;
+  }
+  // 设置向导页始终是深色夜空，即便用户选了浅色主题也保持亮色图标与深色玻璃。
+  if (onboarding_active_) {
+    controls->SetGlassDark(true);
+    controls->SetTheme(Theme::DarkBase());
     return;
   }
   // 紧凑地址栏模式：跟随最右侧紧凑栏的网页取色主题，图标深浅自动反转。
-  if (window_controls_->presentation() ==
+  if (controls->presentation() ==
       WindowControlsView::Presentation::kCompactBar) {
     CompactToolbar* rightmost = nullptr;
     for (CompactToolbar* bar : compact_toolbars_) {
@@ -1044,13 +1108,13 @@ void StarryBrowserView::UpdateWindowControlsTheme() {
       }
     }
     if (rightmost) {
-      window_controls_->SetTheme(rightmost->style().theme);
+      controls->SetTheme(rightmost->style().theme);
       return;
     }
   }
   // 悬浮玻璃胶囊模式：感知当前网页顶边亮度自动切亮/暗玻璃，防止亮网页出现黑坨或
   // 暗网页发灰。
-  if (window_controls_->presentation() ==
+  if (controls->presentation() ==
       WindowControlsView::Presentation::kFloatingGlass) {
     tabs::TabInterface* tab = browser()->GetActiveTabInterface();
     content::WebContents* contents = tab ? tab->GetContents() : nullptr;
@@ -1064,15 +1128,14 @@ void StarryBrowserView::UpdateWindowControlsTheme() {
       }
       if (color) {
         const bool light_page = RelativeLuminance(*color) > 0.5;
-        window_controls_->SetGlassDark(!light_page);
-        window_controls_->SetTheme(light_page ? Theme::LightBase()
-                                              : Theme::DarkBase());
+        controls->SetGlassDark(!light_page);
+        controls->SetTheme(light_page ? Theme::LightBase() : Theme::DarkBase());
         return;
       }
     }
   }
-  window_controls_->SetGlassDark(theme_.is_dark);
-  window_controls_->SetTheme(theme_);
+  controls->SetGlassDark(theme_.is_dark);
+  controls->SetTheme(theme_);
 }
 
 void StarryBrowserView::UpdateWindowButtons(bool animated) {
@@ -1136,10 +1199,10 @@ void StarryBrowserView::UpdateChromeGeometry() {
     bar->layer()->SetOpacity(static_cast<float>(presence));
     bar->SetVisible(true);
   }
-  // Windows 紧凑地址栏：把系统控件并入最右侧那一格的紧凑栏右端。
-  if (window_controls_) {
+  // Windows / Linux 紧凑地址栏：把系统控件并入最右侧那一格的紧凑栏右端。
+  if (WindowControlsView* controls = window_controls()) {
     CompactToolbar* rightmost = nullptr;
-    const bool in_compact = window_controls_->presentation() ==
+    const bool in_compact = controls->presentation() ==
                             WindowControlsView::Presentation::kCompactBar;
     if (in_compact && !content_only_) {
       for (CompactToolbar* bar : compact_toolbars_) {
@@ -1150,17 +1213,17 @@ void StarryBrowserView::UpdateChromeGeometry() {
         }
       }
     }
-    const int reserve = in_compact ? window_controls_->ReservedBarWidth() : 0;
+    const int reserve = in_compact ? controls->ReservedBarWidth() : 0;
     for (CompactToolbar* bar : compact_toolbars_) {
       if (bar) {
         bar->SetTrailingInset(bar == rightmost ? reserve : 0);
       }
     }
     if (in_compact) {
-      window_controls_->SetVisible(rightmost != nullptr);
+      controls->SetVisible(rightmost != nullptr);
     }
     if (rightmost) {
-      const gfx::Size visual = window_controls_->VisualSize();
+      const gfx::Size visual = controls->VisualSize();
       const bool maximized = GetWidget() && GetWidget()->IsMaximized();
       const int visual_right = rightmost->bounds().right() - 6;
       const int visual_y =
@@ -1174,13 +1237,18 @@ void StarryBrowserView::UpdateChromeGeometry() {
               ? gfx::Insets::TLBR(std::max(0, visual_y), 0, 0,
                                   std::max(0, width() - visual_right))
               : gfx::Insets();
-      window_controls_->SetHitPadding(pad);
-      window_controls_->SetBounds(visual_right - visual.width(),
-                                  visual_y - pad.top(),
-                                  visual.width() + pad.right(),
-                                  visual.height() + pad.top());
+      controls->SetHitPadding(pad);
+      controls->SetBounds(visual_right - visual.width(), visual_y - pad.top(),
+                          visual.width() + pad.right(),
+                          visual.height() + pad.top());
     }
     UpdateWindowControlsTheme();
+  } else if (window_controls_) {
+    for (CompactToolbar* bar : compact_toolbars_) {
+      if (bar) {
+        bar->SetTrailingInset(0);
+      }
+    }
   }
   UpdateWindowButtons(/*animated=*/true);
 }
@@ -1378,7 +1446,9 @@ void StarryBrowserView::StartOnboarding() {
                                base::Unretained(this)));
   }
   onboarding_motion_->SetValue(1);
+  ApplyChromeLayout(/*animated=*/false);
   RelayoutChrome();
+  UpdateWindowControlsTheme();
   UpdateWindowButtons(/*animated=*/false);
 }
 
@@ -1390,6 +1460,8 @@ void StarryBrowserView::FinishOnboarding(content::WebContents* contents) {
   if (onboarding_drag_) {
     onboarding_drag_->SetVisible(false);
   }
+  ApplyChromeLayout(/*animated=*/animate);
+  UpdateWindowControlsTheme();
   if (animate) {
     onboarding_motion_->AnimateTo(GetWidget()->GetCompositor(), 0,
                                   MotionCurve::Of(motion::kOnboardingFinish));
@@ -1461,7 +1533,9 @@ void StarryBrowserView::KeepOnboardingTab() {
     if (onboarding_motion_) {
       onboarding_motion_->SetValue(0);
     }
+    ApplyChromeLayout(/*animated=*/false);
     RelayoutChrome();
+    UpdateWindowControlsTheme();
     UpdateWindowButtons(/*animated=*/false);
     return;
   }
@@ -1572,6 +1646,9 @@ void StarryBrowserView::AddedToWidget() {
     ReorderChildView(command_bar_, children().size());
     ReorderChildView(dialog_host_, children().size());
     ReorderChildView(menu_host_, children().size());
+#if BUILDFLAG(IS_LINUX)
+    ApplyChromeLayout(/*animated=*/false);
+#endif
   }
 }
 
@@ -1703,8 +1780,9 @@ int StarryBrowserView::NonClientHitTest(const gfx::Point& point) {
   }
   gfx::Point local(point);
   views::View::ConvertPointToTarget(parent(), this, &local);
-  if (window_controls_ && window_controls_->GetVisible() &&
-      window_controls_->GetMirroredBounds().Contains(local)) {
+  if (WindowControlsView* controls = window_controls();
+      controls && controls->GetVisible() &&
+      controls->GetMirroredBounds().Contains(local)) {
     // 从整个窗口按 Views 的层级命中，菜单、对话框盖在按钮上时由它们接收点击。
     gfx::Point in_widget(point);
     views::View::ConvertPointToWidget(parent(), &in_widget);
@@ -1868,8 +1946,9 @@ std::vector<gfx::Rect> StarryBrowserView::MediaObstacles() {
       rects.push_back(views::View::ConvertRectToTarget(view, this, rect));
     }
   };
-  if (window_controls_ && window_controls_->GetVisible()) {
-    add(window_controls_, window_controls_->GetLocalBounds());
+  if (WindowControlsView* controls = window_controls();
+      controls && controls->GetVisible()) {
+    add(controls, controls->GetLocalBounds());
   }
   if (assistant_island_) {
     add(assistant_island_, assistant_island_->FloatingRect());

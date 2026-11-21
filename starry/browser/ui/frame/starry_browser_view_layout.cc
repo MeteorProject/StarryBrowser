@@ -189,7 +189,8 @@ StarryBrowserViewLayout::CalculateMiniWindowLayout(
       delegate().GetBrowserWindowState() == WindowState::kMaximized;
   layout.AddChild(browser_view_->background_view(), area);
   // 工具栏在上方，下方是内容卡片。
-  if (WindowControlsView* const controls = browser_view_->window_controls()) {
+  WindowControlsView* const controls = browser_view_->window_controls();
+  if (controls) {
     browser_view_->mini_toolbar()->SetTrailingInset(
         controls->ReservedBarWidth());
     const gfx::Size visual = controls->VisualSize();
@@ -208,6 +209,12 @@ StarryBrowserViewLayout::CalculateMiniWindowLayout(
                               visual.width() + pad.right(),
                               visual.height() + pad.top()),
                     !content_only);
+  } else {
+    browser_view_->mini_toolbar()->SetTrailingInset(0);
+    if (WindowControlsView* const raw_controls =
+            browser_view_->raw_window_controls()) {
+      layout.AddChild(raw_controls, gfx::Rect(), false);
+    }
   }
   layout.AddChild(
       browser_view_->mini_toolbar(),
@@ -381,7 +388,7 @@ StarryBrowserViewLayout::CalculateProposedLayout(
                 metrics::kToolbarHeight),
       !content_only && toolbar > 0.001 && !onboarding_only);
 
-  // Windows 纤细顶檐模式：纯侧栏无顶栏时在内容卡片上方保留 30px 拖动栏。
+  // 纤细顶檐模式（Windows / Linux）：纯侧栏无顶栏时在内容卡片上方保留 30px 拖动栏。
   const double rail = std::clamp(browser_view_->rail_presence(), 0.0, 1.0);
   const int rail_shown =
       static_cast<int>(std::lround(metrics::kWindowRailHeight * rail));
@@ -392,6 +399,9 @@ StarryBrowserViewLayout::CalculateProposedLayout(
         gfx::Rect(card_left, area.y(), std::max(0, rail_right - card_left),
                   metrics::kWindowRailHeight),
         !content_only && rail > 0.001 && !onboarding_only);
+  } else if (WindowRailView* const raw_rail =
+                 browser_view_->raw_window_rail()) {
+    layout.AddChild(raw_rail, gfx::Rect(), false);
   }
 
   // 内容卡片：位于标签行、工具栏下方。悬浮玻璃胶囊模式下纯侧栏时直接顶至 8px；
@@ -456,6 +466,10 @@ StarryBrowserViewLayout::CalculateProposedLayout(
                               visual.width() + pad.right(),
                               visual.height() + pad.top()),
                     !content_only);
+  } else if (WindowControlsView* const raw_controls =
+                 browser_view_->raw_window_controls();
+             raw_controls && !controls) {
+    layout.AddChild(raw_controls, gfx::Rect(), false);
   }
 
   // 信息栏在卡片上面。

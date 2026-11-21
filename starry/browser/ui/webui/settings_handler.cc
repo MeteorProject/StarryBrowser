@@ -16,6 +16,7 @@
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "build/build_config.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/lifetime/application_lifetime.h"
 #include "chrome/browser/prefs/session_startup_pref.h"
@@ -178,6 +179,9 @@ void SettingsHandler::OnJavascriptAllowed() {
            ::prefs::kPromptForDownload,
            ::prefs::kEnableDoNotTrack,
            ::prefs::kCookieControlsMode,
+#if BUILDFLAG(IS_LINUX)
+           ::prefs::kUseCustomChromeFrame,
+#endif
            language::prefs::kAcceptLanguages,
            starry::prefs::kWebTimeZone,
            starry::prefs::kExternalLinks,
@@ -459,7 +463,23 @@ base::DictValue SettingsHandler::State() {
             prefs->GetBoolean(starry::prefs::kCompactAddressBar));
   state.Set("tintFromWebsite",
             prefs->GetBoolean(starry::prefs::kTintFromWebsite));
-  state.Set("isWindows", WindowsControlsEnabled());
+  bool has_window_controls = WindowsControlsEnabled();
+#if BUILDFLAG(IS_LINUX)
+  if (has_window_controls && web_ui()) {
+    if (content::WebContents* contents = web_ui()->GetWebContents()) {
+      if (tabs::TabInterface* tab =
+              tabs::TabInterface::MaybeGetFromContents(contents)) {
+        if (BrowserWindowInterface* browser =
+                tab->GetBrowserWindowInterface()) {
+          if (StarryBrowserView* view = StarryBrowserView::From(browser)) {
+            has_window_controls = view->UsesCustomWindowControls();
+          }
+        }
+      }
+    }
+  }
+#endif
+  state.Set("hasWindowControls", has_window_controls);
   const std::string controls_style =
       prefs->GetString(starry::prefs::kWindowsControlsStyle);
   state.Set("windowsControlsStyle",

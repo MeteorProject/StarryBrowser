@@ -1,0 +1,61 @@
+diff --git a/chrome/browser/ui/views/frame/opaque_browser_frame_view.cc b/chrome/browser/ui/views/frame/opaque_browser_frame_view.cc
+index 62f69255e0..e07a99caef 100644
+--- a/chrome/browser/ui/views/frame/opaque_browser_frame_view.cc
++++ b/chrome/browser/ui/views/frame/opaque_browser_frame_view.cc
+@@ -27,6 +27,7 @@
+ #include "chrome/grit/theme_resources.h"
+ #include "components/strings/grit/components_strings.h"
+ #include "content/public/browser/web_contents.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "third_party/skia/include/core/SkPath.h"
+ #include "ui/accessibility/ax_enums.mojom.h"
+ #include "ui/base/hit_test.h"
+@@ -495,6 +496,9 @@ ui::ImageModel OpaqueBrowserFrameView::GetFaviconForTabIconView() {
+ // OpaqueBrowserFrameView, OpaqueBrowserFrameViewLayoutDelegate implementation:
+ 
+ bool OpaqueBrowserFrameView::ShouldShowWindowIcon() const {
++  if (starry::UsesStarryWindowControls(GetBrowserView())) {
++    return false;
++  }
+   views::WidgetDelegate* delegate = browser_widget()->widget_delegate();
+   return GetShowWindowTitleBar() && delegate &&
+          delegate->ShouldShowWindowIcon() &&
+@@ -502,6 +506,9 @@ bool OpaqueBrowserFrameView::ShouldShowWindowIcon() const {
+ }
+ 
+ bool OpaqueBrowserFrameView::ShouldShowWindowTitle() const {
++  if (starry::UsesStarryWindowControls(GetBrowserView())) {
++    return false;
++  }
+   // |delegate| may be null if called from callback of InputMethodChanged while
+   // a window is being destroyed.
+   // See more discussion at http://crosbug.com/8958
+@@ -531,6 +538,9 @@ gfx::Size OpaqueBrowserFrameView::GetBrowserViewMinimumSize() const {
+ }
+ 
+ bool OpaqueBrowserFrameView::ShouldShowCaptionButtons() const {
++  if (starry::UsesStarryWindowControls(GetBrowserView())) {
++    return false;
++  }
+   return GetShowWindowTitleBar();
+ }
+ 
+@@ -559,7 +569,8 @@ bool OpaqueBrowserFrameView::IsFullscreen() const {
+ }
+ 
+ bool OpaqueBrowserFrameView::IsTabStripVisible() const {
+-  return GetBrowserView()->GetTabStripVisible();
++  return GetBrowserView()->GetTabStripVisible() ||
++         starry::UsesStarryWindowControls(GetBrowserView());
+ }
+ 
+ bool OpaqueBrowserFrameView::GetUnframedModeEnabled() const {
+@@ -591,7 +602,7 @@ bool OpaqueBrowserFrameView::UseCustomFrame() const {
+ }
+ 
+ bool OpaqueBrowserFrameView::IsFrameCondensed() const {
+-  return BrowserFrameView::IsFrameCondensed() || !ShouldShowCaptionButtons();
++  return BrowserFrameView::IsFrameCondensed() || !GetShowWindowTitleBar();
+ }
+ 
+ OpaqueBrowserFrameView::FrameButtonStyle

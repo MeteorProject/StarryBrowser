@@ -127,7 +127,7 @@ SkColor Darken(SkColor color, float amount) {
 }  // namespace
 
 bool WindowsControlsEnabled() {
-#if BUILDFLAG(IS_WIN)
+#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_LINUX)
   return true;
 #elif defined(STARRY_DEVTOOLS)
   return devtools::HasForcedWindowControls();

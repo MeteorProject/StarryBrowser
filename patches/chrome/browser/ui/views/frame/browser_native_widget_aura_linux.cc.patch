@@ -1,0 +1,23 @@
+diff --git a/chrome/browser/ui/views/frame/browser_native_widget_aura_linux.cc b/chrome/browser/ui/views/frame/browser_native_widget_aura_linux.cc
+index f8737ba6c7..3d5959d5be 100644
+--- a/chrome/browser/ui/views/frame/browser_native_widget_aura_linux.cc
++++ b/chrome/browser/ui/views/frame/browser_native_widget_aura_linux.cc
+@@ -14,6 +14,7 @@
+ #include "chrome/browser/ui/views/frame/browser_view.h"
+ #include "chrome/browser/ui/views/frame/browser_widget.h"
+ #include "chrome/common/pref_names.h"
++#include "starry/browser/starry_hooks.h"  // nogncheck
+ #include "ui/ozone/public/ozone_platform.h"
+ #include "ui/views/widget/widget.h"
+ 
+@@ -91,7 +92,9 @@ bool BrowserNativeWidgetAuraLinux::UseCustomFrame() const {
+   }
+ 
+   // Normal browser windows get a custom frame (per the user's preference).
+-  if (use_custom_frame_pref_.GetValue() && browser_view()->GetIsNormalType()) {
++  if (use_custom_frame_pref_.GetValue() &&
++      (browser_view()->GetIsNormalType() ||
++       starry::UsesStarryWindowControls(browser_view()))) {
+     return true;
+   }
+ 
