@@ -19,6 +19,39 @@
 
 namespace starry::assistant {
 
+namespace {
+
+// Use the same config parser as app-server, including for inline tables and
+// quoted keys. Older CLIs may not support the JSON listing.
+std::optional<std::vector<std::string>> ListCodexMcpServers(
+    const base::FilePath& executable,
+    const std::vector<std::string>& disabled_features) {
+  std::vector<std::string> args = {"mcp", "list", "--json"};
+  for (const auto& feature : disabled_features) {
+    args.insert(args.end(), {"--disable", feature});
+  }
+  auto output = RunShort(executable, args, base::Seconds(10));
+  if (!output || output->status != 0) {
+    return std::nullopt;
+  }
+  auto servers = base::JSONReader::ReadList(output->text, base::JSON_PARSE_RFC);
+  if (!servers) {
+    return std::nullopt;
+  }
+  std::vector<std::string> names;
+  for (const auto& server : *servers) {
+    const std::string* name =
+        server.is_dict() ? server.GetDict().FindString("name") : nullptr;
+    if (!name) {
+      return std::nullopt;
+    }
+    names.push_back(*name);
+  }
+  return names;
+}
+
+}  // namespace
+
 BrowserMcpServer::BrowserMcpServer() = default;
 BrowserMcpServer::BrowserMcpServer(const BrowserMcpServer&) = default;
 BrowserMcpServer& BrowserMcpServer::operator=(const BrowserMcpServer&) =
@@ -175,9 +208,14 @@ LocalLaunch PrepareLocalLaunch(LocalAgentKind kind,
         launch.disabled_features.push_back(feature);
       }
     }
-    std::string config;
-    if (base::ReadFileToString(CodexConfigFile(), &config)) {
-      launch.disabled_servers = CodexMcpServers(config);
+    if (auto names =
+            ListCodexMcpServers(launch.executable, launch.disabled_features)) {
+      launch.disabled_servers = std::move(*names);
+    } else {
+      std::string config;
+      if (base::ReadFileToString(CodexConfigFile(), &config)) {
+        launch.disabled_servers = CodexMcpServers(config);
+      }
     }
   }
   return launch;

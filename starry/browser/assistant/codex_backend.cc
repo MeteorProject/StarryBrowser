@@ -121,19 +121,27 @@ std::vector<std::string> CodexBackend::Arguments(const Config& config) {
   }
   arguments.insert(arguments.end(), {"-c", "web_search=\"disabled\"", "-c",
                                      "include_apply_patch_tool=false"});
+  // Codex validates the transport even for disabled servers. Only disable
+  // entries already in the user's config (openai/codex#29396). Put their
+  // names in a TOML table since Codex splits -c paths at every dot.
+  std::vector<std::string> disabled;
   for (const std::string& name : config.disabled_servers) {
-    if (name != kBrowserMcpServerName) {
-      arguments.insert(arguments.end(),
-                       {"-c", base::StrCat({"mcp_servers.", TomlKey(name),
-                                            ".enabled=false"})});
+    if (!config.server || name != kBrowserMcpServerName) {
+      disabled.push_back(
+          base::StrCat({TomlKey(name), " = { enabled = false }"}));
     }
+  }
+  if (!disabled.empty()) {
+    arguments.insert(arguments.end(),
+                     {"-c", base::StrCat({"mcp_servers={",
+                                          base::JoinString(disabled, ", "),
+                                          "}"})});
+  }
+  if (!config.server) {
+    return arguments;
   }
   const std::string prefix =
       base::StrCat({"mcp_servers.", kBrowserMcpServerName});
-  if (!config.server) {
-    arguments.insert(arguments.end(), {"-c", prefix + ".enabled=false"});
-    return arguments;
-  }
   std::vector<std::string> args;
   for (const std::string& arg : config.server->arguments) {
     args.push_back(TomlString(arg));
