@@ -2021,11 +2021,83 @@ class StarrySettings extends LitElement {
   }
 
   developer_(s) {
+    const u = this.update_;
+    const version = (u && u.currentVersion) || s.version || '';
+    const versionText = version ? L('settings.general.updates.version', {version}) : '';
+    const isLinuxPkg = u && (u.installKind === 'linuxDeb' || u.installKind === 'linuxRpm');
+
+    let browserDetail = versionText;
+    let browserTone = '';
+    let browserControl = detailButton(L('settings.general.updates.check'), 'arrow.clockwise',
+                                      () => chrome.send('checkForUpdates'));
+    if (u) {
+      switch (u.status) {
+        case 'checking':
+          browserDetail = [versionText, L('settings.general.updates.checking')].filter(Boolean).join(' · ');
+          browserControl = html`<span class="spinner" aria-hidden="true"></span>`;
+          break;
+        case 'upToDate':
+          browserDetail = [versionText, L('settings.general.updates.upToDate')].filter(Boolean).join(' · ');
+          break;
+        case 'available':
+          browserDetail = [versionText, L('settings.general.updates.available', {version: u.availableVersion})]
+              .filter(Boolean).join(' · ');
+          browserControl = html`
+            <div class="inline-controls">
+              ${detailButton(L('updates.toast.view'), '', () => this.openUpdates_())}
+              ${u.canAutoInstall
+                  ? detailButton(L('settings.general.updates.download'), 'arrow.down.circle',
+                                 () => chrome.send('downloadUpdate'), {prominent: true})
+                  : detailButton(L('settings.general.updates.openDownload'), 'arrow.up.right.square',
+                                 () => openUrl(u.releaseUrl, 'foreground'), {prominent: true})}
+            </div>`;
+          break;
+        case 'downloading': {
+          const percent = u.totalBytes > 0 ? Math.min(100, Math.round(u.bytesReceived / u.totalBytes * 100)) : null;
+          browserDetail = [versionText, L('settings.general.updates.downloading', {version: u.availableVersion}),
+                           percent !== null ? `${percent}%` : ''].filter(Boolean).join(' · ');
+          browserControl = html`
+            <div class="inline-controls">
+              ${detailButton(L('updates.toast.view'), '', () => this.openUpdates_())}
+              ${detailButton(L('common.cancel'), '', () => chrome.send('cancelUpdateDownload'))}
+            </div>`;
+          break;
+        }
+        case 'verifying':
+          browserDetail = [versionText, L('settings.general.updates.verifying')].filter(Boolean).join(' · ');
+          browserControl = html`<span class="spinner" aria-hidden="true"></span>`;
+          break;
+        case 'ready':
+          browserDetail = [versionText, L('settings.general.updates.ready', {version: u.availableVersion})]
+              .filter(Boolean).join(' · ');
+          browserControl = html`
+            <div class="inline-controls">
+              ${isLinuxPkg
+                  ? detailButton(L('settings.general.updates.reveal'), 'folder',
+                                 () => chrome.send('revealUpdatePackage'))
+                  : nothing}
+              ${detailButton(isLinuxPkg ? L('updates.action.install') : L('updates.action.relaunch'),
+                             isLinuxPkg ? 'arrow.down.circle' : 'arrow.clockwise',
+                             () => chrome.send('applyUpdate'), {prominent: true})}
+            </div>`;
+          break;
+        case 'error':
+          browserTone = 'warning';
+          browserDetail = [versionText, u.error || L('settings.general.updates.failed')].filter(Boolean).join(' · ');
+          break;
+      }
+    }
+
     return [
-      group('engine', L('settings.developer.engine.title'), [
+      group('version', L('settings.developer.version.title'), [
+        entry('browserVersion', L('settings.developer.version.browser'), browserControl,
+              {detail: browserDetail, tone: browserTone,
+               keywords: L('settings.developer.version.browserKeywords')}),
         entry('engineVersion', L('settings.developer.engine.version'),
-              html`<span class="value-text">${s.engineVersion ? `Chromium ${s.engineVersion}` : ''}</span>`,
-              {keywords: L('settings.developer.engine.keywords')}),
+              html`<span class="value-text">${s.engineVersion || ''}</span>`,
+              {keywords: `${L('settings.developer.engine.keywords')} ${s.engineVersion || ''}`.trim()}),
+      ]),
+      group('engine', L('settings.developer.engine.title'), [
         entry('flags', L('settings.developer.flags.title'),
               detailButton(L('common.openEllipsis'), '', () => openUrl('starry://flags', 'foreground')),
               {detail: L('settings.developer.flags.detail'), keywords: L('settings.developer.flags.keywords')}),
