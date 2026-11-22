@@ -659,35 +659,39 @@ class StarryDownloads extends LitElement {
 
   renderFinishedRow_(item) {
     const failed = isFailed(item);
+    const hasFile = item.state === 'complete' && item.fileExists;
     return html`
       <div class="download-row finished-row" data-key=${item.id} title=${item.url}
-          draggable=${item.state === 'complete' && item.fileExists ? 'true' : 'false'}
-          @dragstart=${(event) => {
-            // 交由浏览器发起原生文件拖拽，而非网页默认的 URL 拖拽。
-            event.preventDefault();
-            this.act_('drag', item);
-          }}
-          @dblclick=${() => item.state === 'complete' && item.fileExists && this.act_('open', item)}
           @contextmenu=${(event) => this.showItemMenu_(event, item)}>
-        ${this.renderIcon_(item, 30)}
-        <div class="row-text">
-          <div class="filename ellipsis ${item.state === 'complete' && !item.fileExists ? 'missing' : ''}
-              ${item.state === 'cancelled' ? 'dim' : ''}">${item.filename}</div>
-          <div class="status ellipsis ${item.state === 'interrupted' ? 'danger' : ''}">${statusText(item)}</div>
+        <div class="finished-file" draggable=${hasFile ? 'true' : 'false'}
+            @dragstart=${(event) => {
+              // 交由浏览器发起原生文件拖拽，而非网页默认的 URL 拖拽。
+              event.preventDefault();
+              if (hasFile) {
+                this.act_('drag', item);
+              }
+            }}
+            @dblclick=${() => hasFile && this.act_('open', item)}>
+          ${this.renderIcon_(item, 30)}
+          <div class="row-text">
+            <div class="filename ellipsis ${item.state === 'complete' && !hasFile ? 'missing' : ''}
+                ${item.state === 'cancelled' ? 'dim' : ''}">${item.filename}</div>
+            <div class="status ellipsis ${item.state === 'interrupted' ? 'danger' : ''}">${statusText(item)}</div>
+          </div>
         </div>
         <div class="row-trailing">
           <span class="time">${timeLabel(item.endTime || item.startTime)}</span>
           <div class="hover-actions">
             ${item.state === 'complete' ? html`
-              <button class="icon-button medium" title=${showInFolderLabel()} ?disabled=${!item.fileExists}
+              <button class="icon-button" title=${showInFolderLabel()} ?disabled=${!hasFile}
                   @click=${() => this.act_('showInFolder', item)}>
                 ${icon('magnifyingglass', 11)}
               </button>` : html`
-              <button class="icon-button medium" title=${failed && item.canResume ? L('downloads.resumeDownload') : L('downloads.redownload')}
+              <button class="icon-button" title=${failed && item.canResume ? L('downloads.resumeDownload') : L('downloads.redownload')}
                   @click=${() => this.act_('retry', item)}>
                 ${icon('arrow.clockwise', 11)}
               </button>`}
-            <button class="icon-button medium" title=${L('common.moreActions')} @click=${(event) => this.showItemMenu_(event, item)}>
+            <button class="icon-button" title=${L('common.moreActions')} @click=${(event) => this.showItemMenu_(event, item)}>
               ${icon('ellipsis', 12)}
             </button>
           </div>

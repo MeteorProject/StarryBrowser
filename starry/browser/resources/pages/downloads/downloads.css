@@ -309,8 +309,18 @@
 }
 
 .finished-row {
+  align-items: stretch;
   min-height: 52px;
-  padding: 0 10px 0 16px;
+  padding-right: 10px;
+}
+
+.finished-file {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+  padding-left: 16px;
 }
 
 .row-text {
@@ -371,16 +381,11 @@
   width: 28px;
 }
 
-.icon-button.medium {
-  height: 26px;
-  width: 26px;
-}
-
 .icon-button:disabled {
   opacity: 0.35;
 }
 
-/* 结束的行：右边平时是时间，悬停时换成操作按钮。 */
+/* 结束的行：右边平时是时间，悬停或操作按钮获得焦点时显示按钮。 */
 .row-trailing {
   align-items: center;
   display: grid;
@@ -406,11 +411,21 @@
   transition: opacity var(--hover);
 }
 
-.finished-row:hover .time {
+.hover-actions .icon-button {
+  height: 44px;
+  width: 44px;
+}
+
+.hover-actions .icon-button:active {
+  background: color-mix(in srgb, var(--on-surface) 12%, transparent);
+  transform: none;
+}
+
+.finished-row:is(:hover, :focus-within) .time {
   opacity: 0;
 }
 
-.finished-row:hover .hover-actions {
+.finished-row:is(:hover, :focus-within) .hover-actions {
   opacity: 1;
   pointer-events: auto;
 }
