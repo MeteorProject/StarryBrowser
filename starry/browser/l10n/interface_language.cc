@@ -66,7 +66,8 @@ std::optional<std::string>& OriginalLanguageVariable() {
 
 #endif
 
-// 系统的首选语言，按顺序。
+}  // namespace
+
 std::vector<std::string> SystemLanguages() {
 #if BUILDFLAG(IS_MAC)
   return AppleLanguagesIn(kCFPreferencesAnyApplication);
@@ -113,8 +114,6 @@ std::vector<std::string> SystemLanguages() {
   return languages;
 #endif
 }
-
-}  // namespace
 
 std::optional<Language> ChosenLanguage() {
 #if BUILDFLAG(IS_MAC)

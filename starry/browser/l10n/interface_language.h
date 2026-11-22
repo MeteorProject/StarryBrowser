@@ -4,6 +4,8 @@
 #define STARRY_BROWSER_L10N_INTERFACE_LANGUAGE_H_
 
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "starry/browser/l10n/l10n.h"
 
@@ -23,6 +25,8 @@ void SetChosenLanguage(std::optional<Language> language);
 
 // 跟随系统时会用的语言：系统的首选语言里的第一个，Starry 不支持时是英文。
 Language SystemLanguage();
+
+std::vector<std::string> SystemLanguages();
 
 }  // namespace starry::l10n
 

@@ -2,7 +2,6 @@
 
 #include "starry/components/content_filter/filter_list.h"
 
-#include <cctype>
 #include <vector>
 
 #include "base/strings/string_number_conversions.h"
@@ -16,6 +15,10 @@ constexpr std::string_view kInclude = "!#include";
 
 std::string_view Trim(std::string_view text) {
   return base::TrimWhitespaceASCII(text, base::TRIM_ALL);
+}
+
+std::string_view StripUtf8Bom(std::string_view text) {
+  return text.starts_with("\xEF\xBB\xBF") ? text.substr(3) : text;
 }
 
 // 一行一行（`\n`、`\r\n`、`\r` 都算换行）。
@@ -143,6 +146,7 @@ bool EvaluatePreprocessorCondition(std::string_view condition) {
 
 FilterListMetadata ParseMetadata(std::string_view text) {
   FilterListMetadata metadata;
+  text = StripUtf8Bom(text);
   int lines = 0;
   ForEachLine(text, [&](std::string_view raw) {
     if (++lines > 200) {
@@ -180,13 +184,8 @@ FilterListMetadata ParseMetadata(std::string_view text) {
 }
 
 bool LooksLikeFilterList(std::string_view text) {
-  std::string_view start = text;
-  // 去掉 BOM 和开头的空白：网页（登录页、报错页）以 < 开头。
-  if (start.starts_with("\xEF\xBB\xBF")) {
-    start.remove_prefix(3);
-  }
-  start = base::TrimWhitespaceASCII(start, base::TRIM_LEADING);
-  if (start.starts_with("<")) {
+  text = StripUtf8Bom(text);
+  if (base::TrimWhitespaceASCII(text, base::TRIM_LEADING).starts_with("<")) {
     return false;
   }
   bool found = false;
@@ -196,6 +195,10 @@ bool LooksLikeFilterList(std::string_view text) {
       return false;
     }
     const std::string_view line = Trim(raw);
+    if (line.starts_with(kInclude)) {
+      found = true;
+      return false;
+    }
     if (line.empty() || line.starts_with("!") || line.starts_with("[") ||
         (line.starts_with("#") && !line.starts_with("##") &&
          !line.starts_with("#@#") && !line.starts_with("#?#"))) {

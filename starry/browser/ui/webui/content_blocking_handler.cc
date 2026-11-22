@@ -2,7 +2,6 @@
 
 #include "starry/browser/ui/webui/content_blocking_handler.h"
 
-#include <algorithm>
 #include <string>
 #include <utility>
 
@@ -17,19 +16,6 @@ namespace starry {
 namespace {
 
 using content_blocking::ContentBlockingService;
-
-const char* CategoryName(ContentBlockingService::Category category) {
-  switch (category) {
-    case ContentBlockingService::Category::kAds:
-      return "ads";
-    case ContentBlockingService::Category::kPrivacy:
-      return "privacy";
-    case ContentBlockingService::Category::kAnnoyances:
-      return "annoyances";
-    case ContentBlockingService::Category::kCustom:
-      return "custom";
-  }
-}
 
 const char* ActivityName(ContentBlockingService::Activity activity) {
   switch (activity) {
@@ -99,7 +85,13 @@ base::DictValue ContentBlockingHandler::State() const {
     if (subscription.homepage.is_valid()) {
       item.Set("homepage", subscription.homepage.spec());
     }
-    item.Set("category", CategoryName(subscription.category));
+    item.Set("category",
+             ContentBlockingService::CategoryName(subscription.category));
+    base::ListValue languages;
+    for (const std::string& code : subscription.languages) {
+      languages.Append(code);
+    }
+    item.Set("languages", std::move(languages));
     item.Set("enabled", subscription.enabled);
     item.Set("builtin", subscription.builtin || subscription.local);
     item.Set("hasText", subscription.has_text);
@@ -117,7 +109,12 @@ base::DictValue ContentBlockingHandler::State() const {
   for (const std::string& site : service->allowlist()) {
     allowlist.Append(site);
   }
+  base::ListValue user_languages;
+  for (const std::string& code : service->languages()) {
+    user_languages.Append(code);
+  }
   base::DictValue state;
+  state.Set("languages", std::move(user_languages));
   state.Set("enabled", service->enabled());
   state.Set("stripTrackingParameters", service->strip_tracking_parameters());
   state.Set("activity", ActivityName(service->activity()));

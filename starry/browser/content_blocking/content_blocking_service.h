@@ -39,7 +39,18 @@ class ListDownload;
 // `CustomRules.txt`。引擎每次启动重新建（默认三份列表几十毫秒），不存编译结果。
 class ContentBlockingService {
  public:
-  enum class Category { kAds, kPrivacy, kAnnoyances, kCustom };
+  enum class Category {
+    kAds,
+    kPrivacy,
+    kMultipurpose,
+    kCookies,
+    kSocial,
+    kAnnoyances,
+    kRegions,
+    kCustom,
+  };
+
+  static const char* CategoryName(Category category);
 
   struct Subscription {
     Subscription();
@@ -59,6 +70,7 @@ class ContentBlockingService {
     std::string title;
     std::string title_key;
     std::string summary_key;
+    std::vector<std::string> languages;
     GURL homepage;
     Category category = Category::kCustom;
     bool enabled = false;
@@ -137,6 +149,7 @@ class ContentBlockingService {
   size_t total_rules() const { return total_rules_; }
   base::Time last_build() const { return last_build_; }
   bool ready() const { return ready_; }
+  const std::vector<std::string>& languages() const { return languages_; }
 
   void AddObserver(Observer* observer);
   void RemoveObserver(Observer* observer);
@@ -184,6 +197,7 @@ class ContentBlockingService {
   bool ready_ = false;
   bool enabled_ = true;
   bool strip_tracking_parameters_ = true;
+  std::vector<std::string> languages_;
   std::vector<Subscription> subscriptions_;
   std::vector<std::string> allowlist_;
   std::string custom_rules_;

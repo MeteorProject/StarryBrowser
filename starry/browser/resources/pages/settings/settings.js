@@ -6,7 +6,7 @@
 
 import {html, LitElement, nothing, repeat} from 'chrome://resources/lit/v3_0/lit.rollup.js';
 
-import {addWebUiListener, confirm, copyText, openUrl, sendWithPromise, showDialog, showMenu} from './common/browser.js';
+import {addWebUiListener, confirm, copyText, openUrl, sendWithPromise, showMenu} from './common/browser.js';
 import {bytes} from './common/format.js';
 import {joinList, L, language, locale} from './common/l10n.js';
 import {emptyState, icon, searchField} from './common/library.js';
@@ -226,7 +226,37 @@ function importSourceName(source) {
 }
 
 // 广告与跟踪拦截过滤列表分类。
-const FILTER_CATEGORIES = ['ads', 'privacy', 'annoyances', 'custom'];
+const FILTER_CATEGORIES = ['ads', 'privacy', 'multipurpose', 'cookies', 'social', 'annoyances', 'regions', 'custom'];
+const FILTER_CATEGORIES_KEY = 'starry.settings.filterCategories';
+const DEFAULT_OPEN_FILTER_CATEGORIES = ['ads', 'privacy', 'custom'];
+const FILTER_LISTS_DIRECTORY = 'https://filterlists.com/';
+
+let languageNames = null;
+function languageName(code) {
+  if (!code) {
+    return '';
+  }
+  try {
+    languageNames = languageNames || new Intl.DisplayNames([locale], {type: 'language', fallback: 'code'});
+    return languageNames.of(code) || code;
+  } catch (e) {
+    return code;
+  }
+}
+
+function filterListLanguages(list) {
+  const all = list.languages.map(languageName);
+  const named = all.filter((name, i) => name.toLowerCase() !== list.languages[i]);
+  const names = named.length ? named : all;
+  if (names.length <= 3) {
+    return joinList(names);
+  }
+  return L('contentBlocking.list.languagesMore', {languages: joinList(names.slice(0, 3)), count: names.length});
+}
+
+function primaryLanguage(tag) {
+  return String(tag).split(/[-_]/)[0].toLowerCase();
+}
 
 // onSelect：整行是一个单选的选项（导入的来源），selected 时右边打勾。leading：左边的图标。
 function entry(id, title, control, {detail = '', keywords = '', layout = 'row', disabled = false,
@@ -250,6 +280,11 @@ class StarrySettings extends LitElement {
     modelNote_: {state: true},
     blocking_: {state: true},
     customDraft_: {state: true},
+    openCategories_: {state: true},
+    regionQuery_: {state: true},
+    addDraft_: {state: true},
+    adding_: {state: true},
+    addErrors_: {state: true},
     allowDraft_: {state: true},
     fingerprintDraft_: {state: true},
     locationDraft_: {state: true},
@@ -276,6 +311,11 @@ class StarrySettings extends LitElement {
     this.blocking_ = null;
     // 正在编辑的自定义规则（null 是没在编辑）。
     this.customDraft_ = null;
+    this.openCategories_ = this.loadOpenCategories_();
+    this.regionQuery_ = '';
+    this.addDraft_ = null;
+    this.adding_ = null;
+    this.addErrors_ = [];
     this.allowDraft_ = '';
     this.fingerprintDraft_ = '';
     this.locationDraft_ = '';
@@ -1644,7 +1684,7 @@ class StarrySettings extends LitElement {
   }
 
   filterListDetail_(list) {
-    const parts = [];
+    const parts = list.languages.length ? [filterListLanguages(list)] : [];
     if (list.lastError) {
       parts.push(L('contentBlocking.list.updateFailed.detail', {reason: list.lastError}));
     } else if (!list.hasText) {
@@ -1663,20 +1703,27 @@ class StarrySettings extends LitElement {
     return parts.filter(Boolean).join(' · ');
   }
 
-  renderFilterList_(list, enabled) {
+  userLanguages_(b) {
+    return new Set([...(b.languages || []), ...(navigator.languages || []).map(primaryLanguage)]);
+  }
+
+  renderFilterList_(list, enabled, recommended = false) {
+    const homepage = list.homepage || (list.builtin ? '' : list.url);
     return html`
       <div class="filter-list" data-key=${list.id}>
         <div class="filter-list-labels">
           <div class="filter-list-title">
-            <span>${list.title}</span>
+            <span title=${list.builtin ? '' : list.url}>${list.title}</span>
+            ${recommended ? html`<span class="soft-tag accent">${L('contentBlocking.list.recommended')}</span>` :
+                            nothing}
             ${list.lastError ? html`<span class="soft-tag warning">${L('contentBlocking.list.updateFailed.tag')}</span>` :
                                nothing}
           </div>
           <div class="filter-list-detail ${list.lastError ? 'warning' : ''}">${this.filterListDetail_(list)}</div>
         </div>
-        ${list.homepage ? html`
+        ${homepage ? html`
           <button class="icon-action" title=${L('contentBlocking.list.homepage.help')}
-              @click=${() => openUrl(list.homepage, 'foreground')}>${icon('arrow.up.right.square', 12)}</button>` :
+              @click=${() => openUrl(homepage, 'foreground')}>${icon('arrow.up.right.square', 12)}</button>` :
           nothing}
         ${list.builtin ? nothing : html`
           <button class="icon-action" title=${L('contentBlocking.list.remove.help')}
@@ -1692,22 +1739,86 @@ class StarrySettings extends LitElement {
       </div>`;
   }
 
+  loadOpenCategories_() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTER_CATEGORIES_KEY));
+      if (Array.isArray(saved)) {
+        return new Set(saved.filter((category) => FILTER_CATEGORIES.includes(category)));
+      }
+    } catch (e) {}
+    return new Set(DEFAULT_OPEN_FILTER_CATEGORIES);
+  }
+
+  setCategoryOpen_(category, open) {
+    if (this.openCategories_.has(category) === open) {
+      return;
+    }
+    const categories = new Set(this.openCategories_);
+    open ? categories.add(category) : categories.delete(category);
+    this.openCategories_ = categories;
+    try {
+      localStorage.setItem(FILTER_CATEGORIES_KEY, JSON.stringify([...categories]));
+    } catch (e) {}
+  }
+
+  regionItems_(items, languages) {
+    const query = this.regionQuery_.trim().toLocaleLowerCase(locale);
+    const shown = query ? items.filter((list) => [list.title, ...list.languages, ...list.languages.map(languageName)]
+                                                     .some((text) => text.toLocaleLowerCase(locale).includes(query))) :
+                          items;
+    const name = (list) => languageName(list.languages[0] || '');
+    return shown.map((list) => ({list, recommended: list.languages.some((code) => languages.has(code))}))
+        .sort((a, b) => (b.recommended - a.recommended) || name(a.list).localeCompare(name(b.list), locale) ||
+                        a.list.title.localeCompare(b.list.title, locale));
+  }
+
+  renderFilterCategory_(category, items, b) {
+    const open = this.openCategories_.has(category);
+    const on = items.filter((list) => list.enabled);
+    const regions = category === 'regions';
+    const rows = !open ? [] :
+        regions ? this.regionItems_(items, this.userLanguages_(b)) :
+                  items.map((list) => ({list, recommended: false}));
+    const title = L(`contentBlocking.category.${category}`);
+    return html`
+      <div class="filter-category ${open ? 'open' : ''}">
+        <button class="filter-category-header" aria-expanded=${open ? 'true' : 'false'}
+            @click=${() => this.setCategoryOpen_(category, !open)}>
+          <span class="filter-category-chevron">${icon('chevron.right', 9)}</span>
+          <span class="filter-category-title">${title}</span>
+          <span class="filter-category-summary">${open ? '' : joinList(on.map((list) => list.title))}</span>
+          <span class="filter-category-count"
+              aria-label=${L('contentBlocking.category.count', {count: on.length, total: items.length})}>
+            ${on.length}/${items.length}</span>
+        </button>
+        ${open ? html`
+          <div class="filter-category-items">
+            ${regions ? html`
+              <input class="text-input filter-search" type="search" spellcheck="false" autocomplete="off"
+                  placeholder=${L('contentBlocking.regions.search')} aria-label=${L('contentBlocking.regions.search')}
+                  .value=${this.regionQuery_} @input=${(event) => this.regionQuery_ = event.target.value}
+                  @keydown=${(event) => event.key === 'Escape' && this.regionQuery_ && (event.stopPropagation(),
+                                                                                         this.regionQuery_ = '')}>
+              ${rows.length ? nothing : html`<div class="filter-list-detail">${L('contentBlocking.regions.empty')}</div>`}` :
+              nothing}
+            ${repeat(rows, (row) => row.list.id, (row) => this.renderFilterList_(row.list, b.enabled, row.recommended))}
+          </div>` : nothing}
+      </div>`;
+  }
+
   filterListsControl_(b) {
     const busy = b.activity === 'downloading';
-    const working = busy || b.activity === 'building';
+    const working = busy || b.activity === 'building' || this.adding_ !== null;
     return html`
       <div class="filter-lists ${b.enabled ? '' : 'inactive'}">
         ${FILTER_CATEGORIES.map((category) => {
           const items = b.subscriptions.filter((list) => list.category === category);
-          return items.length ? html`
-            <div class="filter-category">
-              <div class="filter-category-title">${L(`contentBlocking.category.${category}`)}</div>
-              ${repeat(items, (list) => list.id, (list) => this.renderFilterList_(list, b.enabled))}
-            </div>` : nothing;
+          return items.length ? this.renderFilterCategory_(category, items, b) : nothing;
         })}
+        ${this.addDraft_ !== null ? this.addListsEditor_() : nothing}
         <div class="filter-actions">
-          ${detailButton(L('contentBlocking.addSubscription'), 'plus', () => this.addFilterList_(),
-                         {disabled: !b.enabled})}
+          ${this.addDraft_ === null ? detailButton(L('contentBlocking.addSubscription'), 'plus', () => this.openAddLists_(),
+                                                   {disabled: !b.enabled}) : nothing}
           ${detailButton(busy ? L('contentBlocking.updating') : L('contentBlocking.updateNow'), 'arrow.clockwise',
                          () => chrome.send('updateFilterLists'), {disabled: !b.enabled || busy})}
           ${working ? html`<span class="spinner" aria-hidden="true"></span>` : nothing}
@@ -1715,25 +1826,64 @@ class StarrySettings extends LitElement {
       </div>`;
   }
 
-  // 添加订阅：校验 URL 下载结果确为过滤列表后再加入，失败时携带原因重新弹窗。
-  async addFilterList_(input = '', error = '') {
-    const result = await showDialog({
-      icon: 'shield.lefthalf.filled',
-      tone: error ? 'warning' : 'accent',
-      title: L('contentBlocking.add.title'),
-      message: error || L('contentBlocking.add.prompt'),
-      field: input || 'https://',
-      buttons: [
-        {title: L('common.cancel'), variant: 'tertiary', cancel: true},
-        {title: L('common.add'), variant: 'filled'},
-      ],
-    });
-    if (!result || result.button !== 1 || !result.input || !result.input.trim()) {
-      return;
+  async openAddLists_() {
+    this.addDraft_ = '';
+    this.addErrors_ = [];
+    await this.updateComplete;
+    const editor = this.querySelector('.add-lists textarea');
+    if (editor) {
+      editor.focus();
     }
-    const added = await sendWithPromise('addFilterList', result.input.trim());
-    if (added && added.error) {
-      this.addFilterList_(result.input.trim(), added.error);
+  }
+
+  addListsEditor_() {
+    const adding = this.adding_;
+    return html`
+      <div class="custom-rules add-lists">
+        <div class="custom-rules-hint">${L('contentBlocking.add.hint')}</div>
+        <textarea spellcheck="false" autocomplete="off" rows="3" placeholder="https://example.com/filters.txt"
+            aria-label=${L('contentBlocking.add.title')} .value=${this.addDraft_} ?disabled=${adding !== null}
+            @input=${(event) => this.addDraft_ = event.target.value}></textarea>
+        ${this.addErrors_.length ? html`
+          <div class="add-lists-errors">
+            ${this.addErrors_.map((failure) => html`
+              <div class="add-lists-error"><code>${failure.input}</code><span>${failure.error}</span></div>`)}
+          </div>` : nothing}
+        <div class="custom-rules-actions">
+          ${detailButton(L('contentBlocking.add.directory'), 'magnifyingglass',
+                         () => openUrl(FILTER_LISTS_DIRECTORY, 'foreground'))}
+          ${adding ? html`
+            <span class="add-lists-progress">${L('contentBlocking.add.progress', adding)}</span>` : nothing}
+          ${detailButton(L('common.cancel'), '', () => {
+            this.addDraft_ = null;
+            this.addErrors_ = [];
+          }, {disabled: adding !== null})}
+          ${detailButton(L('common.add'), 'plus', () => this.addFilterLists_(),
+                         {disabled: adding !== null || !this.addDraft_.trim()})}
+        </div>
+      </div>`;
+  }
+
+  async addFilterLists_() {
+    const inputs = [...new Set(this.addDraft_.split(/\s+/).filter(Boolean))];
+    const failed = [];
+    this.addErrors_ = [];
+    for (let i = 0; i < inputs.length; ++i) {
+      this.adding_ = {current: i + 1, total: inputs.length};
+      const added = await sendWithPromise('addFilterList', inputs[i]);
+      if (added && added.error) {
+        failed.push({input: inputs[i], error: added.error});
+      }
+    }
+    this.adding_ = null;
+    if (failed.length) {
+      this.addDraft_ = failed.map((failure) => failure.input).join('\n');
+      this.addErrors_ = failed;
+    } else {
+      this.addDraft_ = null;
+    }
+    if (failed.length < inputs.length) {
+      this.setCategoryOpen_('custom', true);
     }
   }
 
@@ -1757,7 +1907,7 @@ class StarrySettings extends LitElement {
   async editCustomRules_() {
     this.customDraft_ = await sendWithPromise('getCustomRules');
     await this.updateComplete;
-    const editor = this.querySelector('.custom-rules textarea');
+    const editor = this.querySelector('.custom-rules:not(.add-lists) textarea');
     if (editor) {
       editor.focus();
     }

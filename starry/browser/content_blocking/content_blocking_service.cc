@@ -38,10 +38,10 @@
 #include "services/network/public/cpp/simple_url_loader.h"
 #include "services/network/public/mojom/url_response_head.mojom.h"
 #include "starry/browser/content_blocking/filter_config.h"
+#include "starry/browser/l10n/interface_language.h"
 #include "starry/browser/l10n/l10n.h"
 #include "starry/components/content_filter/domain_set.h"
 #include "starry/components/content_filter/filter_list.h"
-#include "url/url_util.h"
 
 #if defined(STARRY_DEVTOOLS)
 #include "starry_internal/browser/devtools.h"
@@ -102,60 +102,368 @@ struct CatalogEntry {
   const char* homepage;
   const char* summary_key;
   bool enabled;
+  const char* languages = nullptr;
+  bool by_language = false;
 };
+
+constexpr char kAdGuardHomepage[] =
+    "https://github.com/AdguardTeam/AdguardFilters";
+constexpr char kUBlockHomepage[] = "https://github.com/uBlockOrigin/uAssets";
+constexpr char kDandelionSproutHomepage[] =
+    "https://github.com/DandelionSprout/adfilt";
+
+constexpr CatalogEntry Region(const char* id,
+                              const char* title,
+                              const char* url,
+                              const char* homepage,
+                              const char* languages,
+                              bool by_language = true) {
+  return {id,
+          title,
+          nullptr,
+          Category::kRegions,
+          url,
+          homepage,
+          nullptr,
+          /*enabled=*/false,
+          languages,
+          by_language};
+}
 
 // 内置订阅目录。列表均在运行时下载，不随浏览器打包（它们采用
 // CC BY-SA 或 GPLv3 许可）。
 constexpr CatalogEntry kCatalog[] = {
+    // ---- 广告 ----
     {"easylist", "EasyList", nullptr, Category::kAds,
      "https://easylist.to/easylist/easylist.txt", "https://easylist.to/",
      "contentBlocking.list.easylist.summary", true},
-    {"easylist-china", "EasyList China", nullptr, Category::kAds,
-     "https://easylist-downloads.adblockplus.org/easylistchina.txt",
-     "https://github.com/easylist/easylistchina",
-     "contentBlocking.list.easylistChina.summary", true},
-    {"adguard-chinese", nullptr, "contentBlocking.list.adguardChinese.title",
-     Category::kAds, "https://filters.adtidy.org/extension/ublock/filters/224.txt",
-     "https://github.com/AdguardTeam/AdguardFilters",
-     "contentBlocking.list.adguardChinese.summary", false},
     {"ublock-filters", nullptr, "contentBlocking.list.ublockFilters.title",
-     Category::kAds, "https://ublockorigin.github.io/uAssets/filters/filters.txt",
-     "https://github.com/uBlockOrigin/uAssets",
-     "contentBlocking.list.ublockFilters.summary", false},
+     Category::kAds,
+     "https://ublockorigin.github.io/uAssets/filters/filters.txt",
+     kUBlockHomepage, "contentBlocking.list.ublockFilters.summary", false},
     {"ublock-unbreak", nullptr, "contentBlocking.list.ublockUnbreak.title",
-     Category::kAds, "https://ublockorigin.github.io/uAssets/filters/unbreak.txt",
-     "https://github.com/uBlockOrigin/uAssets",
-     "contentBlocking.list.ublockUnbreak.summary", false},
+     Category::kAds,
+     "https://ublockorigin.github.io/uAssets/filters/unbreak.txt",
+     kUBlockHomepage, "contentBlocking.list.ublockUnbreak.summary", false},
     // YouTube 等频繁变动网站的快速修复规则（主要为脚本片段），每数小时更新。
     {"ublock-quick-fixes", nullptr,
      "contentBlocking.list.ublockQuickFixes.title", Category::kAds,
      "https://ublockorigin.github.io/uAssets/filters/quick-fixes.txt",
-     "https://github.com/uBlockOrigin/uAssets",
-     "contentBlocking.list.ublockQuickFixes.summary", false},
+     kUBlockHomepage, "contentBlocking.list.ublockQuickFixes.summary", false},
+    {"adguard-ads", nullptr, "contentBlocking.list.adguardAds.title",
+     Category::kAds,
+     "https://filters.adtidy.org/extension/ublock/filters/"
+     "2_without_easylist.txt",
+     kAdGuardHomepage, "contentBlocking.list.adguardAds.summary", false},
+    {"adguard-mobile", nullptr, "contentBlocking.list.adguardMobile.title",
+     Category::kAds,
+     "https://filters.adtidy.org/extension/ublock/filters/11.txt",
+     kAdGuardHomepage, "contentBlocking.list.adguardMobile.summary", false},
+
+    // ---- 隐私 ----
     {"easyprivacy", "EasyPrivacy", nullptr, Category::kPrivacy,
      "https://easylist.to/easylist/easyprivacy.txt", "https://easylist.to/",
      "contentBlocking.list.easyprivacy.summary", true},
     {"ublock-privacy", nullptr, "contentBlocking.list.ublockPrivacy.title",
-     Category::kPrivacy, "https://ublockorigin.github.io/uAssets/filters/privacy.txt",
-     "https://github.com/uBlockOrigin/uAssets",
-     "contentBlocking.list.ublockPrivacy.summary", false},
-    {"peter-lowe", nullptr, "contentBlocking.list.peterLowe.title",
      Category::kPrivacy,
+     "https://ublockorigin.github.io/uAssets/filters/privacy.txt",
+     kUBlockHomepage, "contentBlocking.list.ublockPrivacy.summary", false},
+    {"url-tracking", nullptr, "contentBlocking.list.urlTracking.title",
+     Category::kPrivacy,
+     "https://ublockorigin.github.io/uAssets/filters/privacy-removeparam.txt",
+     kUBlockHomepage, "contentBlocking.list.urlTracking.summary", false},
+    {"block-lan", nullptr, "contentBlocking.list.blockLan.title",
+     Category::kPrivacy,
+     "https://ublockorigin.github.io/uAssets/filters/lan-block.txt",
+     kUBlockHomepage, "contentBlocking.list.blockLan.summary", false},
+
+    // ---- 多用途 ----
+    {"peter-lowe", nullptr, "contentBlocking.list.peterLowe.title",
+     Category::kMultipurpose,
      "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=adblockplus&"
      "showintro=1&mimetype=plaintext",
-     "https://pgl.yoyo.org/adservers/", "contentBlocking.list.peterLowe.summary",
-     false},
+     "https://pgl.yoyo.org/adservers/",
+     "contentBlocking.list.peterLowe.summary", false},
+    {"dan-pollock", nullptr, "contentBlocking.list.danPollock.title",
+     Category::kMultipurpose, "https://someonewhocares.org/hosts/hosts",
+     "https://someonewhocares.org/hosts/",
+     "contentBlocking.list.danPollock.summary", false},
+
+    // ---- Cookie 提示 ----
     {"easylist-cookie", nullptr, "contentBlocking.list.easylistCookie.title",
-     Category::kAnnoyances, "https://secure.fanboy.co.nz/fanboy-cookiemonster.txt",
-     "https://easylist.to/", "contentBlocking.list.easylistCookie.summary", false},
+     Category::kCookies, "https://secure.fanboy.co.nz/fanboy-cookiemonster.txt",
+     "https://easylist.to/", "contentBlocking.list.easylistCookie.summary",
+     false},
+    {"adguard-cookies", nullptr, "contentBlocking.list.adguardCookies.title",
+     Category::kCookies,
+     "https://filters.adtidy.org/extension/ublock/filters/18.txt",
+     kAdGuardHomepage, "contentBlocking.list.adguardCookies.summary", false},
+    {"ublock-cookies", nullptr, "contentBlocking.list.ublockCookies.title",
+     Category::kCookies,
+     "https://ublockorigin.github.io/uAssets/filters/annoyances-cookies.txt",
+     kUBlockHomepage, "contentBlocking.list.ublockCookies.summary", false},
+
+    // ---- 社交组件 ----
+    {"easylist-social", nullptr, "contentBlocking.list.easylistSocial.title",
+     Category::kSocial, "https://easylist.to/easylist/fanboy-social.txt",
+     "https://easylist.to/", "contentBlocking.list.easylistSocial.summary",
+     false},
+    {"adguard-social", nullptr, "contentBlocking.list.adguardSocial.title",
+     Category::kSocial,
+     "https://filters.adtidy.org/extension/ublock/filters/4.txt",
+     kAdGuardHomepage, "contentBlocking.list.adguardSocial.summary", false},
+    {"fanboy-antifacebook", nullptr,
+     "contentBlocking.list.fanboyAntiFacebook.title", Category::kSocial,
+     "https://secure.fanboy.co.nz/fanboy-antifacebook.txt",
+     "https://github.com/ryanbr/fanboy-adblock",
+     "contentBlocking.list.fanboyAntiFacebook.summary", false},
+
+    // ---- 干扰元素 ----
     {"fanboy-annoyance", nullptr, "contentBlocking.list.fanboyAnnoyance.title",
      Category::kAnnoyances, "https://secure.fanboy.co.nz/fanboy-annoyance.txt",
      "https://easylist.to/", "contentBlocking.list.fanboyAnnoyance.summary",
      false},
+    {"ublock-annoyances", nullptr,
+     "contentBlocking.list.ublockAnnoyances.title", Category::kAnnoyances,
+     "https://ublockorigin.github.io/uAssets/filters/annoyances.txt",
+     kUBlockHomepage, "contentBlocking.list.ublockAnnoyances.summary", false},
+    {"adguard-popups", nullptr, "contentBlocking.list.adguardPopups.title",
+     Category::kAnnoyances,
+     "https://filters.adtidy.org/extension/ublock/filters/19.txt",
+     kAdGuardHomepage, "contentBlocking.list.adguardPopups.summary", false},
+    {"adguard-app-banners", nullptr,
+     "contentBlocking.list.adguardAppBanners.title", Category::kAnnoyances,
+     "https://filters.adtidy.org/extension/ublock/filters/20.txt",
+     kAdGuardHomepage, "contentBlocking.list.adguardAppBanners.summary", false},
+    {"adguard-widgets", nullptr, "contentBlocking.list.adguardWidgets.title",
+     Category::kAnnoyances,
+     "https://filters.adtidy.org/extension/ublock/filters/22.txt",
+     kAdGuardHomepage, "contentBlocking.list.adguardWidgets.summary", false},
+    {"adguard-other-annoyances", nullptr,
+     "contentBlocking.list.adguardOtherAnnoyances.title", Category::kAnnoyances,
+     "https://filters.adtidy.org/extension/ublock/filters/21.txt",
+     kAdGuardHomepage, "contentBlocking.list.adguardOtherAnnoyances.summary",
+     false},
+
+    // ---- 地区和语言 ----
+    Region("easylist-china",
+           "EasyList China",
+           "https://easylist-downloads.adblockplus.org/easylistchina.txt",
+           "https://github.com/easylist/easylistchina",
+           "zh"),
+    {"adguard-chinese", nullptr, "contentBlocking.list.adguardChinese.title",
+     Category::kRegions,
+     "https://filters.adtidy.org/extension/ublock/filters/224.txt",
+     kAdGuardHomepage, nullptr, false, "zh ug", /*by_language=*/false},
+    Region("albania",
+           "Adblock List for Albania",
+           "https://raw.githubusercontent.com/AnXh3L0/blocklist/master/"
+           "albanian-easylist-addition/Albania.txt",
+           "https://github.com/AnXh3L0/blocklist",
+           "sq"),
+    Region("liste-ar",
+           "Liste AR",
+           "https://easylist-downloads.adblockplus.org/Liste_AR.txt",
+           "https://forums.lanik.us/viewforum.php?f=98",
+           "ar kab"),
+    Region("bulgarian",
+           "Bulgarian Adblock List",
+           "https://stanev.org/abp/adblock_bg.txt",
+           "https://stanev.org/abp/",
+           "bg mk"),
+    Region("easylist-czech-slovak",
+           "EasyList Czech and Slovak",
+           "https://raw.githubusercontent.com/tomasko126/"
+           "easylistczechandslovak/master/filters.txt",
+           "https://github.com/tomasko126/easylistczechandslovak",
+           "cs sk"),
+    Region("easylist-germany",
+           "EasyList Germany",
+           "https://easylist.to/easylistgermany/easylistgermany.txt",
+           "https://forums.lanik.us/viewforum.php?f=90",
+           "de lb rm dsb hsb"),
+    Region("estonian",
+           "Eesti saitidele kohandatud filter",
+           "https://ubo-et.lepik.io/list.txt",
+           "https://github.com/sander85/uBO-et",
+           "et"),
+    Region("finnish",
+           "Adblock List for Finland",
+           "https://raw.githubusercontent.com/finnish-easylist-addition/"
+           "finnish-easylist-addition/gh-pages/Finland_adb.txt",
+           "https://github.com/finnish-easylist-addition/"
+           "finnish-easylist-addition",
+           "fi"),
+    Region("adguard-french",
+           "AdGuard French",
+           "https://filters.adtidy.org/extension/ublock/filters/16.txt",
+           kAdGuardHomepage,
+           "fr br oc kab lb ff son"),
+    Region("greek",
+           "Greek AdBlock Filter",
+           "https://www.void.gr/kargig/void-gr-filters.txt",
+           "https://github.com/kargig/greek-adblockplus-filter",
+           "el"),
+    Region("serbo-croatian",
+           "Dandelion Sprout's Serbo-Croatian Filters",
+           "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/"
+           "SerboCroatianList.txt",
+           kDandelionSproutHomepage,
+           "hr sr bs"),
+    Region("hufilter",
+           "hufilter",
+           "https://cdn.jsdelivr.net/gh/hufilter/hufilter@gh-pages/"
+           "hufilter-ublock.txt",
+           "https://github.com/hufilter/hufilter",
+           "hu"),
+    Region("abpindo",
+           "ABPindo",
+           "https://raw.githubusercontent.com/ABPindo/indonesianadblockrules/"
+           "master/subscriptions/abpindo.txt",
+           "https://github.com/ABPindo/indonesianadblockrules",
+           "id ms"),
+    Region("indianlist",
+           "IndianList",
+           "https://easylist-downloads.adblockplus.org/indianlist.txt",
+           "https://github.com/mediumkreation/IndianList",
+           "hi bn ta te mr gu kn ml pa ne si as sat"),
+    Region("persian",
+           "PersianBlocker",
+           "https://raw.githubusercontent.com/PersianBlocker/PersianBlocker/"
+           "main/PersianBlocker.txt",
+           "https://github.com/PersianBlocker/PersianBlocker",
+           "fa ps tg"),
+    Region("icelandic",
+           "Icelandic ABP List",
+           "https://raw.githubusercontent.com/brave/adblock-lists/master/"
+           "custom/is.txt",
+           "https://github.com/brave/adblock-lists",
+           "is"),
+    Region("easylist-hebrew",
+           "EasyList Hebrew",
+           "https://raw.githubusercontent.com/easylist/EasyListHebrew/master/"
+           "EasyListHebrew.txt",
+           "https://github.com/easylist/EasyListHebrew",
+           "he"),
+    Region("easylist-italy",
+           "EasyList Italy",
+           "https://easylist-downloads.adblockplus.org/easylistitaly.txt",
+           "https://forums.lanik.us/viewforum.php?f=96",
+           "it fur lij sc"),
+    Region("adguard-japanese",
+           "AdGuard Japanese",
+           "https://filters.adtidy.org/extension/ublock/filters/7.txt",
+           kAdGuardHomepage,
+           "ja"),
+    Region("korean",
+           "filterslists-KO",
+           "https://cdn.jsdelivr.net/npm/@filteringdev/filterslists-ko@latest/"
+           "dist/filterslist-uBlockOrigin-classic.txt",
+           "https://github.com/FilteringDev/filterslists-KO",
+           "ko"),
+    Region("easylist-lithuania",
+           "EasyList Lithuania",
+           "https://raw.githubusercontent.com/EasyList-Lithuania/"
+           "easylist_lithuania/master/easylistlithuania.txt",
+           "https://github.com/EasyList-Lithuania/easylist_lithuania",
+           "lt"),
+    Region("latvian",
+           "Latvian List",
+           "https://raw.githubusercontent.com/Latvian-List/adblock-latvian/"
+           "master/lists/latvian-list.txt",
+           "https://github.com/Latvian-List/adblock-latvian",
+           "lv"),
+    Region("macedonian",
+           "Macedonian adBlock Filters",
+           "https://raw.githubusercontent.com/DeepSpaceHarbor/"
+           "Macedonian-adBlock-Filters/master/Filters",
+           "https://github.com/DeepSpaceHarbor/Macedonian-adBlock-Filters",
+           "mk"),
+    Region("adguard-dutch",
+           "AdGuard Dutch",
+           "https://filters.adtidy.org/extension/ublock/filters/8.txt",
+           kAdGuardHomepage,
+           "nl fy af"),
+    Region("nordic",
+           "Dandelion Sprout's Nordic Filters",
+           "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/"
+           "NorwegianList.txt",
+           kDandelionSproutHomepage,
+           "nb nn no da is"),
+    Region("polish",
+           "Oficjalne Polskie Filtry",
+           "https://raw.githubusercontent.com/MajkiIT/polish-ads-filter/master/"
+           "polish-adblock-filters/adblock.txt",
+           "https://github.com/MajkiIT/polish-ads-filter",
+           "pl szl"),
+    Region("romanian",
+           "ROad-Block Light",
+           "https://raw.githubusercontent.com/tcptomato/ROad-Block/master/"
+           "road-block-filters-light.txt",
+           "https://github.com/tcptomato/ROad-Block",
+           "ro"),
+    Region("ruadlist",
+           "RU AdList",
+           "https://raw.githubusercontent.com/easylist/ruadlist/master/"
+           "RuAdList-uBO.txt",
+           "https://forums.lanik.us/viewforum.php?f=102",
+           "ru be kk uz tt"),
+    Region("ruadlist-counters",
+           "RU AdList: Counters",
+           "https://raw.githubusercontent.com/easylist/ruadlist/master/"
+           "cntblock.txt",
+           "https://forums.lanik.us/viewforum.php?f=102",
+           "ru be kk uz tt",
+           /*by_language=*/false),
+    Region("easylist-spanish",
+           "EasyList Spanish",
+           "https://easylist-downloads.adblockplus.org/easylistspanish.txt",
+           "https://forums.lanik.us/viewforum.php?f=103",
+           "es ca gl eu ast an gn quz cak trs"),
+    Region("adguard-spanish-portuguese",
+           "AdGuard Spanish/Portuguese",
+           "https://filters.adtidy.org/extension/ublock/filters/9.txt",
+           kAdGuardHomepage,
+           "es pt ca gl eu ast an gn quz cak trs"),
+    Region("slovenian",
+           "Slovenian List",
+           "https://raw.githubusercontent.com/betterwebleon/slovenian-list/"
+           "master/filters.txt",
+           "https://github.com/betterwebleon/slovenian-list",
+           "sl"),
+    Region("swedish",
+           "Frellwit's Swedish Filter",
+           "https://raw.githubusercontent.com/lassekongo83/"
+           "Frellwits-filter-lists/master/Frellwits-Swedish-Filter.txt",
+           "https://github.com/lassekongo83/Frellwits-filter-lists",
+           "sv"),
+    Region("easylist-thailand",
+           "EasyList Thailand",
+           "https://raw.githubusercontent.com/easylist-thailand/"
+           "easylist-thailand/master/subscription/easylist-thailand.txt",
+           "https://github.com/easylist-thailand/easylist-thailand",
+           "th"),
+    Region("adguard-turkish",
+           "AdGuard Turkish",
+           "https://filters.adtidy.org/extension/ublock/filters/13.txt",
+           kAdGuardHomepage,
+           "tr"),
+    Region("adguard-ukrainian",
+           "AdGuard Ukrainian",
+           "https://filters.adtidy.org/extension/ublock/filters/23.txt",
+           kAdGuardHomepage,
+           "uk"),
+    Region("abpvn",
+           "ABPVN List",
+           "https://raw.githubusercontent.com/abpvn/abpvn/master/filter/"
+           "abpvn_ublock.txt",
+           "https://abpvn.com/",
+           "vi"),
 };
 
-// 跟着别的列表一起开的内置列表：开 uBlock 过滤器时一起开快速修复（uBlock Origin 默认两个都开着，
-// YouTube 的假缓冲要快速修复里的规则）。关掉时不跟着关。跟着的列表在目录里排在后面。
+constexpr int kCatalogVersion = 2;
+
+// 启用 leader 时一并启用的配套列表（关闭时不联动），须排在目录后面。
 struct CompanionEntry {
   const char* id;
   const char* leader;
@@ -163,53 +471,78 @@ struct CompanionEntry {
 
 constexpr CompanionEntry kCompanions[] = {
     {"ublock-quick-fixes", "ublock-filters"},
+    {"ublock-cookies", "easylist-cookie"},
+    {"ublock-cookies", "adguard-cookies"},
 };
 
-const char* LeaderOf(std::string_view id) {
+bool LeaderEnabled(std::string_view id,
+                   const std::vector<Subscription>& subscriptions) {
   for (const CompanionEntry& companion : kCompanions) {
-    if (id == companion.id) {
-      return companion.leader;
+    if (id == companion.id &&
+        std::ranges::any_of(subscriptions, [&](const Subscription& s) {
+          return s.id == companion.leader && s.enabled;
+        })) {
+      return true;
     }
   }
-  return nullptr;
-}
-
-const char* CategoryName(Category category) {
-  switch (category) {
-    case Category::kAds:
-      return "ads";
-    case Category::kPrivacy:
-      return "privacy";
-    case Category::kAnnoyances:
-      return "annoyances";
-    case Category::kCustom:
-      return "custom";
-  }
+  return false;
 }
 
 Category CategoryFromName(std::string_view name) {
-  if (name == "ads") {
-    return Category::kAds;
-  }
-  if (name == "privacy") {
-    return Category::kPrivacy;
-  }
-  if (name == "annoyances") {
-    return Category::kAnnoyances;
+  for (Category category :
+       {Category::kAds, Category::kPrivacy, Category::kMultipurpose,
+        Category::kCookies, Category::kSocial, Category::kAnnoyances,
+        Category::kRegions}) {
+    if (name == ContentBlockingService::CategoryName(category)) {
+      return category;
+    }
   }
   return Category::kCustom;
 }
 
-Subscription FromCatalog(const CatalogEntry& entry) {
+std::vector<std::string> UserLanguages() {
+  std::vector<std::string> tags = {g_browser_process->GetApplicationLocale()};
+  for (std::string& tag : l10n::SystemLanguages()) {
+    tags.push_back(std::move(tag));
+  }
+  std::vector<std::string> codes;
+  for (const std::string& tag : tags) {
+    std::string code =
+        base::ToLowerASCII(tag.substr(0, tag.find_first_of("-_")));
+    if (code == "iw") {
+      code = "he";
+    } else if (code == "in") {
+      code = "id";
+    }
+    if (code.empty() || code == "c" || code == "posix" ||
+        std::ranges::contains(codes, code)) {
+      continue;
+    }
+    codes.push_back(std::move(code));
+  }
+  return codes;
+}
+
+Subscription FromCatalog(const CatalogEntry& entry,
+                         const std::vector<std::string>& languages) {
   Subscription subscription;
   subscription.id = entry.id;
   subscription.url = GURL(entry.url);
   subscription.title = entry.title ? entry.title : "";
   subscription.title_key = entry.title_key ? entry.title_key : "";
-  subscription.summary_key = entry.summary_key;
+  subscription.summary_key = entry.summary_key ? entry.summary_key : "";
   subscription.homepage = GURL(entry.homepage);
   subscription.category = entry.category;
-  subscription.enabled = entry.enabled;
+  if (entry.languages) {
+    subscription.languages = base::SplitString(
+        entry.languages, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+  }
+  const bool matches_language =
+      entry.by_language &&
+      std::ranges::any_of(subscription.languages, [&](const std::string& code) {
+        return std::ranges::contains(languages, code);
+      });
+  subscription.enabled = entry.enabled || matches_language;
   subscription.builtin = true;
   return subscription;
 }
@@ -231,6 +564,12 @@ std::string GetString(const base::DictValue& dict, std::string_view key) {
 
 std::string ContentHash(std::string_view text) {
   return base::NumberToString(base::FastHash(base::as_byte_span(text)));
+}
+
+void StripByteOrderMark(std::string& text) {
+  if (text.starts_with("\xEF\xBB\xBF")) {
+    text.erase(0, 3);
+  }
 }
 
 // ---- 文件（在 file_runner_ 上）----
@@ -395,6 +734,7 @@ class ListDownload {
     result_.last_modified =
         headers->GetNormalizedHeader("Last-Modified").value_or("");
     result_.text = std::move(*body);
+    StripByteOrderMark(result_.text);
     // `!#include`：只跟同一网站、同一协议的文件，最多 40 个，不再往下展开。
     for (const std::string& path :
          content_filter::IncludeDirectives(result_.text)) {
@@ -439,6 +779,7 @@ class ListDownload {
   void OnInclude(std::optional<std::string> body) {
     if (body && ResponseCode() == net::HTTP_OK &&
         content_filter::LooksLikeFilterList(*body)) {
+      StripByteOrderMark(*body);
       included_[includes_[next_include_].first] = std::move(*body);
     }
     ++next_include_;
@@ -483,6 +824,28 @@ bool Subscription::IsDue(base::Time now) const {
 }
 
 // static
+const char* ContentBlockingService::CategoryName(Category category) {
+  switch (category) {
+    case Category::kAds:
+      return "ads";
+    case Category::kPrivacy:
+      return "privacy";
+    case Category::kMultipurpose:
+      return "multipurpose";
+    case Category::kCookies:
+      return "cookies";
+    case Category::kSocial:
+      return "social";
+    case Category::kAnnoyances:
+      return "annoyances";
+    case Category::kRegions:
+      return "regions";
+    case Category::kCustom:
+      return "custom";
+  }
+}
+
+// static
 ContentBlockingService* ContentBlockingService::Get() {
   static base::NoDestructor<ContentBlockingService> service;
   return service.get();
@@ -503,6 +866,7 @@ void ContentBlockingService::Start() {
   base::FilePath user_data;
   base::PathService::Get(chrome::DIR_USER_DATA, &user_data);
   directory_ = user_data.Append(kDirectoryName);
+  languages_ = UserLanguages();
 
 #if defined(STARRY_DEVTOOLS)
   local_lists_ = devtools::ContentBlockingLocalLists();
@@ -541,8 +905,10 @@ void ContentBlockingService::OnStateLoaded(std::unique_ptr<LoadedState> loaded) 
   DiskState& disk = loaded->disk;
   custom_rules_ = std::move(disk.custom_rules);
   std::vector<Subscription> saved;
+  int catalog_version = kCatalogVersion;
   if (disk.state && disk.state->is_dict()) {
     const base::DictValue& state = disk.state->GetDict();
+    catalog_version = state.FindInt("catalogVersion").value_or(1);
     enabled_ = state.FindBool("enabled").value_or(true);
     strip_tracking_parameters_ =
         state.FindBool("stripTrackingParameters").value_or(true);
@@ -606,7 +972,7 @@ void ContentBlockingService::OnStateLoaded(std::unique_ptr<LoadedState> loaded) 
     // 内置的按目录更新网址和说明，保留开关和更新情况；目录里新加的按默认开关加入；
     // 目录里去掉的丢掉；自己添加的原样放在后面。
     for (const CatalogEntry& entry : kCatalog) {
-      Subscription subscription = FromCatalog(entry);
+      Subscription subscription = FromCatalog(entry, languages_);
       auto it = std::find_if(saved.begin(), saved.end(), [&](const auto& s) {
         return s.builtin && s.id == subscription.id;
       });
@@ -621,17 +987,16 @@ void ContentBlockingService::OnStateLoaded(std::unique_ptr<LoadedState> loaded) 
         existing.title = subscription.title;
         existing.title_key = subscription.title_key;
         existing.summary_key = subscription.summary_key;
+        existing.languages = subscription.languages;
         existing.homepage = subscription.homepage;
         existing.category = subscription.category;
-        subscription = std::move(existing);
-      } else if (const char* leader = LeaderOf(subscription.id)) {
-        // 目录里新加的、跟着别的列表开的：那个开着就一起开（以前就开了 uBlock 过滤器的
-        // 升级以后也有快速修复）。
-        for (const Subscription& added : subscriptions_) {
-          if (added.id == leader && added.enabled) {
-            subscription.enabled = true;
-          }
+        if (catalog_version < 2 && existing.id == "easylist-china" &&
+            existing.enabled && !subscription.enabled) {
+          existing.enabled = false;
         }
+        subscription = std::move(existing);
+      } else if (LeaderEnabled(subscription.id, subscriptions_)) {
+        subscription.enabled = true;
       }
       subscriptions_.push_back(std::move(subscription));
     }
@@ -646,6 +1011,9 @@ void ContentBlockingService::OnStateLoaded(std::unique_ptr<LoadedState> loaded) 
           std::find(disk.lists.begin(), disk.lists.end(), subscription.id) !=
           disk.lists.end();
     }
+  }
+  if (catalog_version < kCatalogVersion) {
+    SaveState();
   }
   if (enabled_) {
     Rebuild();
@@ -687,6 +1055,7 @@ base::DictValue ContentBlockingService::SerializeState() const {
     allowlist.Append(site);
   }
   base::DictValue state;
+  state.Set("catalogVersion", kCatalogVersion);
   state.Set("enabled", enabled_);
   state.Set("stripTrackingParameters", strip_tracking_parameters_);
   state.Set("allowlist", std::move(allowlist));
@@ -828,17 +1197,27 @@ void ContentBlockingService::AddSubscription(
     base::OnceCallback<void(std::string error)> callback) {
   std::string text(base::TrimWhitespaceASCII(input, base::TRIM_ALL));
   // Adblock Plus 的订阅链接 `abp:subscribe?location=…`。
+  std::string link_title;
   if (base::StartsWith(text, "abp:", base::CompareCase::INSENSITIVE_ASCII)) {
     const size_t query = text.find('?');
     if (query != std::string::npos) {
+      std::string location;
       for (std::string_view pair : base::SplitStringPiece(
                std::string_view(text).substr(query + 1), "&",
                base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY)) {
-        if (pair.starts_with("location=")) {
-          text = base::UnescapeBinaryURLComponent(pair.substr(9));
-          break;
+        if (pair.starts_with("location=") && location.empty()) {
+          location = base::UnescapeBinaryURLComponent(pair.substr(9));
+        } else if (pair.starts_with("title=") && link_title.empty()) {
+          link_title = base::UnescapeBinaryURLComponent(pair.substr(6));
         }
       }
+      text = location;
+    }
+    base::ReplaceChars(link_title, "\r\n\t", " ", &link_title);
+    link_title =
+        std::string(base::TrimWhitespaceASCII(link_title, base::TRIM_ALL));
+    if (!base::IsStringUTF8(link_title) || link_title.size() > 200) {
+      link_title.clear();
     }
   }
   const GURL url(text);
@@ -860,7 +1239,8 @@ void ContentBlockingService::AddSubscription(
   Subscription subscription;
   subscription.id = "custom-" + base::Uuid::GenerateRandomV4().AsLowercaseString();
   subscription.url = url;
-  subscription.title = std::string(url.host());
+  subscription.title =
+      link_title.empty() ? std::string(url.host()) : link_title;
   subscription.category = Category::kCustom;
   subscription.enabled = true;
   const std::string id = subscription.id;
