@@ -3,12 +3,12 @@
 #include "starry/renderer/fingerprint_protection.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <limits>
 #include <map>
 #include <optional>
-#include <vector>
 
 #include "base/command_line.h"
 #include "base/containers/span.h"
@@ -23,12 +23,9 @@
 #include "starry/common/fingerprint_values.h"
 #include "starry/components/privacy/mojom/fingerprint_protection.mojom.h"
 #include "third_party/blink/public/common/device_memory/approximated_device_memory.h"
-#include "third_party/blink/public/common/fingerprinting_protection/noise_token.h"
 #include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
 #include "third_party/blink/public/platform/platform.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_binding_for_core.h"
-#include "third_party/blink/renderer/core/canvas_interventions/noise_hash.h"
-#include "third_party/blink/renderer/core/canvas_interventions/noise_helper.h"
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/frame/frame.h"
@@ -154,17 +151,74 @@ SkColorType ReadbackColorType(SkColorType source) {
   }
 }
 
-// Float canvases must not be silently quantized to 8-bit sRGB. Change a low
-// mantissa bit of finite, nonzero RGB samples, leaving alpha and empty pixels
-// intact. Select the bit by exponent (about 1/256 when representable), so a
-// subsequent 8-bit read/PNG conversion does not simply round away the noise.
-// A pixel's original values and the site seed determine its noise.
 uint64_t MixCanvasBits(uint64_t value) {
   value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
   value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
   return value ^ (value >> 31);
 }
 
+// Group nearby premultiplied RGB values. PNG decoding followed by drawImage
+// recovers the same premultiplied bytes, including at very low opacity.
+uint32_t CanvasColorBucket(base::span<const uint8_t, 4> rgba, uint64_t seed) {
+  uint32_t bucket = rgba[3];
+  for (size_t c = 0; c < 3; ++c) {
+    const unsigned phase = (seed >> (2 * c)) & 3;
+    bucket = (bucket << 8) | ((rgba[c] + phase) >> 2);
+  }
+  return bucket;
+}
+
+// Uniform backgrounds make even small color shifts visible. Identify the
+// predominant color group using values that survive a PNG round trip.
+std::optional<uint32_t> CanvasBackground(base::span<const uint8_t> pixels,
+                                         uint64_t seed) {
+  std::array<uint32_t, 64> samples;
+  const size_t count = pixels.size() / 4;
+  auto used = base::span(samples).first(std::min(count, samples.size()));
+  for (size_t i = 0; i < used.size(); ++i) {
+    const size_t index = static_cast<uint64_t>(i) * count / used.size();
+    used[i] = CanvasColorBucket(pixels.subspan(4 * index).first<4>(), seed);
+  }
+  std::ranges::sort(used);
+  const uint32_t middle = used[used.size() / 2];
+  if (std::ranges::count(used, middle) > std::ssize(used) / 2) {
+    return middle;
+  }
+  return std::nullopt;
+}
+
+void ProtectPremultipliedPixels(base::span<uint8_t> pixels, uint64_t seed) {
+  const auto background = CanvasBackground(pixels, seed);
+  while (!pixels.empty()) {
+    auto pixel = pixels.take_first<4>();
+    const int alpha = pixel[3];
+    if (!alpha) {
+      continue;
+    }
+    const uint32_t bucket = CanvasColorBucket(pixel, seed);
+    const uint64_t noise = MixCanvasBits(seed ^ bucket);
+    // Use a narrower sub-bucket for the background. One premultiplied
+    // step would exceed two straight RGB levels below half opacity.
+    const int mask =
+        bucket == background ? (alpha >= 128 ? 1 : 0) : (alpha >= 128 ? 3 : 1);
+    for (size_t c = 0; c < 3; ++c) {
+      // Sub-buckets use the same phase as the coarse group. Selecting
+      // another member therefore leaves both group identities intact.
+      const int phase = (seed >> (2 * c)) & mask;
+      const int start = ((pixel[c] + phase) & ~mask) - phase;
+      const int value = std::clamp(
+          start + static_cast<int>((noise >> (2 * c)) & mask), 0, alpha);
+      // Return straight RGBA to both the PNG encoder and getImageData.
+      pixel[c] = static_cast<uint8_t>(std::nearbyint(value * 255.0 / alpha));
+    }
+  }
+}
+
+// Float canvases must not be silently quantized to 8-bit sRGB. Change a low
+// mantissa bit of finite, nonzero RGB samples, leaving alpha and empty pixels
+// intact. Select the bit by exponent (about 1/256 when representable), so a
+// subsequent 8-bit read/PNG conversion does not simply round away the noise.
+// A pixel's original values and the site seed determine its noise.
 void NoiseFloatPixels(base::span<uint8_t> pixels,
                       uint64_t seed,
                       bool half_float) {
@@ -227,26 +281,19 @@ scoped_refptr<blink::StaticBitmapImage> NoiseImage(
                             std::numeric_limits<int>::max() / 4) {
     return nullptr;
   }
-  info = info.makeColorType(ReadbackColorType(info.colorType()))
-             .makeAlphaType(kUnpremul_SkAlphaType);
+  const SkColorType color_type = ReadbackColorType(info.colorType());
+  const bool rgba8 = color_type == kRGBA_8888_SkColorType;
+  info = info.makeColorType(color_type).makeAlphaType(
+      rgba8 ? kPremul_SkAlphaType : kUnpremul_SkAlphaType);
   SkBitmap bitmap;
   if (!bitmap.tryAllocPixels(info, info.minRowBytes()) ||
       !source.readPixels(info, bitmap.getPixels(), bitmap.rowBytes(), 0, 0)) {
     return nullptr;
   }
   auto pixels = gfx::SkPixmapToWritableSpan(bitmap.pixmap());
-  if (info.colorType() == kRGBA_8888_SkColorType) {
-    // Chromium's canvas-interventions algorithm gives identical output for the
-    // same input and seed. Preserve alpha so exports do not gain translucency.
-    std::vector<uint8_t> alpha(pixels.size() / 4);
-    for (size_t i = 0; i < alpha.size(); ++i) {
-      alpha[i] = pixels[i * 4 + 3];
-    }
-    blink::NoisePixels(blink::NoiseHash(blink::NoiseToken(seed)), pixels,
-                       info.width(), info.height());
-    for (size_t i = 0; i < alpha.size(); ++i) {
-      pixels[i * 4 + 3] = alpha[i];
-    }
+  if (rgba8) {
+    ProtectPremultipliedPixels(pixels, seed);
+    bitmap.setAlphaType(kUnpremul_SkAlphaType);
   } else {
     NoiseFloatPixels(pixels, seed, info.colorType() == kRGBA_F16_SkColorType);
   }
