@@ -784,9 +784,6 @@ void CommandBarView::Close() {
   if (dock_closed_) {
     std::move(dock_closed_).Run();
   }
-  if (home_enabled_) {
-    home_->SetCanProcessEventsWithinSubtree(false);
-  }
   controller_->Stop(AutocompleteStopReason::kInteraction);
   const int generation = ++close_generation_;
 
@@ -800,6 +797,9 @@ void CommandBarView::Close() {
 
   // 关闭时整个命令栏原地淡出，面板不做位移动画。
   const MotionCurve curve = MotionCurve::Of(motion::kCommandBarClose);
+  if (home_enabled_) {
+    home_->FadeOut(curve);
+  }
   backdrop_motion_.AnimateOpacity(backdrop_->layer(), 0, curve);
   glass_motion_.AnimateOpacity(
       glass_->layer(), 0, curve,

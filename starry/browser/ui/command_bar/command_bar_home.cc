@@ -498,7 +498,13 @@ void CommandBarHome::Refresh(bool reveal) {
   }
   shown_ = true;
   SetCanProcessEventsWithinSubtree(true);
-  motion_.SetOpacity(layer(), 1);
+  if (reveal) {
+    motion_.SetOpacity(layer(), 1);
+  } else {
+    // 退场中重新打开时，从当前透明度接回去。
+    motion_.AnimateOpacity(layer(), 1,
+                           MotionCurve::Of(motion::kCommandBarOpen));
+  }
   motion_.SetTransform(layer(), LayerPose());
   RebuildTiles(reveal);
   RebuildCards(reveal);
@@ -658,6 +664,11 @@ void CommandBarHome::SetShown(bool shown) {
   motion_.AnimateOpacity(layer(), shown ? 1 : 0, curve);
   motion_.AnimateTransform(layer(), pose, curve,
                            gfx::PointF(width() / 2.0f, panel_bottom_));
+}
+
+void CommandBarHome::FadeOut(const MotionCurve& curve) {
+  SetCanProcessEventsWithinSubtree(false);
+  motion_.AnimateOpacity(layer(), 0, curve);
 }
 
 void CommandBarHome::Layout(PassKey) {

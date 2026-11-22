@@ -48,6 +48,7 @@ class CommandBarHome : public views::View,
   void Refresh(bool reveal);
   void SetPanelBottom(int bottom);
   void SetShown(bool shown);
+  void FadeOut(const MotionCurve& curve);
 
   // views::View:
   void Layout(PassKey) override;
