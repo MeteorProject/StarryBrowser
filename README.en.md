@@ -1,74 +1,108 @@
 <div align="center">
-  <img src="starry/app/icon/icon.svg" alt="" width="96" height="96">
-  <h1>Starry Browser</h1>
-  <p>A modern desktop browser built for clean workflows, native speed, and AI agents.</p>
-  <p>
-    <a href="chromium.version"><img src="https://img.shields.io/badge/Chromium-158.0.8127.37-4285F4?logo=googlechrome&logoColor=white" alt="Chromium 158.0.8127.37"></a>
-    <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-475569" alt="Platform: macOS | Windows">
-    <img src="https://img.shields.io/badge/Native%20UI-C%2B%2B-00599C?logo=cplusplus&logoColor=white" alt="Native UI: C++">
-    <img src="https://img.shields.io/badge/MCP-Supported-0D9488" alt="MCP Supported">
-  </p>
-  <p><a href="README.md">简体中文</a> · English</p>
+
+<img src="starry/app/icon/icon.svg" width="96" height="96" alt="Starry Browser">
+
+# Starry Browser
+
+A modern desktop browser built for clean workflows, native speed, and AI agents
+
+[简体中文](README.md) · [English](README.en.md)
+
+[![Chromium 158.0.8127.37](https://img.shields.io/badge/Chromium-158.0.8127.37-4285F4?logo=googlechrome&logoColor=white)](chromium.version)
+![Platform: macOS | Windows | Linux](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-475569)
+![Native UI: C++](https://img.shields.io/badge/Native%20UI-C%2B%2B-00599C?logo=cplusplus&logoColor=white)
+![MCP Supported](https://img.shields.io/badge/MCP-Supported-0D9488)
+
 </div>
 
-![Starry Browser main window](docs/images/en/hero.webp)
+## Screenshots
 
-## Tabs & Split View
+<!-- Screenshots are 1800 × 1202; GitHub renders them with height: auto. -->
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/en/hero.webp"><img src="docs/images/en/hero.webp" width="400" height="267" alt="Starry Browser main window"></a>
+      <p><strong>Main window</strong><br>Vertical sidebar navigation, favorite tiles, and pinned folders</p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/en/layout-top.webp"><img src="docs/images/en/layout-top.webp" width="400" height="267" alt="Top tabs in light mode"></a>
+      <p><strong>Top tab layout</strong><br>Switch anytime to classic top tabs and light mode</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/en/tabs.webp"><img src="docs/images/en/tabs.webp" width="400" height="267" alt="Nested tabs and hover preview"></a>
+      <p><strong>Tree tabs &amp; hover preview</strong><br>Collapsible tab trees with live thumbnails and CPU/memory stats</p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/en/split.webp"><img src="docs/images/en/split.webp" width="400" height="267" alt="Three pages side by side in split view"></a>
+      <p><strong>Split view</strong><br>View up to three pages side by side in a single window</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/en/assistant.webp"><img src="docs/images/en/assistant.webp" width="400" height="267" alt="AI assistant summarizing the current page"></a>
+      <p><strong>Built-in AI assistant</strong><br>Summarize pages, ask in context, or act with approval controls</p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/en/media.webp"><img src="docs/images/en/media.webp" width="400" height="267" alt="Mini audio player and automatic picture-in-picture"></a>
+      <p><strong>Media &amp; picture-in-picture</strong><br>Floating media island, live waveforms, and automatic PiP</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/en/layout-glass.webp"><img src="docs/images/en/layout-glass.webp" width="400" height="267" alt="Floating Liquid Glass sidebar in dark mode"></a>
+      <p><strong>Floating Liquid Glass sidebar</strong><br>Auto-hides cleanly and slides out on hover</p>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/en/privacy.webp"><img src="docs/images/en/privacy.webp" width="400" height="267" alt="Built-in ad and tracker blocking"></a>
+      <p><strong>Privacy &amp; content blocking</strong><br>Built-in ad and tracker blocking with per-site controls</p>
+    </td>
+  </tr>
+</table>
 
-<p>
-  <img src="docs/images/en/tabs.webp" width="49%" alt="Nested tabs and hover preview">
-  <img src="docs/images/en/split.webp" width="49%" alt="Three pages side by side in split view">
-</p>
+## Features
 
-Stay organized no matter how many tabs you open, and view up to three pages side by side in a single window.
+- 🗂️ **Tabs & split view**: Top favorite tiles, pinned folders, collapsible tab trees, and hover previews with live thumbnails and CPU/memory stats; supports idle tab sleeping, automatic archiving of stale or duplicate tabs, one-click AI tab grouping, and up to three-pane split view in a single window
+- ✨ **AI assistant & MCP**: Built-in floating or docked assistant to summarize, reference, or act on pages under granular approval modes (Ask, Agent, Auto-review); supports cloud and local models (OpenAI, DeepSeek, OpenRouter, Ollama, LM Studio, and custom OpenAI-compatible APIs) as well as local Claude Code and Codex installations, plus native MCP support for external agents
+- 🏠 **New Tab**: Choose from Minimal command bar, Card dashboard (with drag-reorderable widgets for clock, shortcuts, now playing, recently closed, archive, weekly blocked stats, and notes), or blurred Overlay home, with glow, starry sky, solid, or custom image backgrounds
+- 🎨 **Interface & layouts**: Switch between a docked sidebar, an auto-hiding Liquid Glass floating sidebar, and classic top tabs, with sidebar, top, or compact merged address bar options; supports dynamic tinting from the active site, plus floating glass pill or slim top-rail window controls on Windows and Linux
+- 🎬 **Media & picture-in-picture**: Switching away from a video tab automatically docks it into a corner PiP player that snaps back on return or detaches to the desktop; includes a floating media island, an expandable sidebar media dock, and audio-driven wave progress with live scrolling loudness waveforms
+- 🛡️ **Ad & tracker blocking**: Built-in native content filter compatible with EasyList, AdGuard, uBlock, and regional filter lists, with cookie-notice and annoyance filtering, custom subscriptions and rules, plus automatic URL tracking parameter stripping
+- 🔒 **Anti-fingerprinting & location simulation**: Site-partitioned Canvas, WebGL, WebGPU, and audio fingerprint protection; simulate geolocation globally or per site with a built-in interactive map (including offline city search and fallback map) that automatically syncs the page's time zone
+- 🚀 **Everyday tools**: Links opened from other apps launch in a lightweight peek window you can dismiss or promote to a full tab anytime; includes a multithreaded segmented downloader (resume, queuing, and speed limits) and a task manager with live resource charts
+- 🧩 **Extensions & migration**: Full Chrome Web Store extension support, a first-launch setup assistant, and one-click import of bookmarks, history, and passwords from Chrome, Edge, Arc, Brave, Safari, and Firefox; localized in 简体中文, 繁體中文, English, 日本語, and 한국어
+- ⚡ **Native cross-platform**: Built on Chromium with a native C++ Views UI for macOS, Windows, and Linux
 
-- **Structured by default**: Keep favorite sites as top tiles, organize pinned tabs into folders, and follow links in collapsible tab trees—with live thumbnails and CPU/memory stats on hover.
-- **Self-cleaning workspace**: Idle tabs automatically sleep to save memory, stale or duplicate tabs are archived out of the way, and AI can group cluttered tabs by topic in one click.
+## Installation
 
-## AI Assistant
+Download the package for your platform from [Releases](https://github.com/MeteorProject/StarryBrowser/releases):
 
-![AI assistant summarizing the current page](docs/images/en/assistant.webp)
+- **macOS**: Open the `.dmg` and drag Starry Browser into **Applications** (builds are not notarized yet—if macOS blocks the first launch, right-click the app in Finder and choose **Open**, or go to **System Settings › Privacy & Security** and click **Open Anyway**)
+- **Windows** (Windows 10+): Available as an installer (`setup.exe`) and a portable archive (`portable.zip`); builds are currently unsigned, so Windows SmartScreen may prompt on first run
+- **Linux**: Available as `.deb` and `.rpm` packages
 
-Summarize pages, ask questions in context, or let the assistant click, type, and navigate on your behalf with granular permission controls.
+## Development
 
-- **Bring your own model**: Works with OpenAI, DeepSeek, OpenRouter, and other cloud APIs, local models via Ollama or LM Studio, as well as Claude Code and Codex installed on your machine.
-- **MCP ready**: External agents like Claude Code and Codex in your terminal can connect over MCP to drive the browser directly.
+Quick start on macOS (requires Xcode and the Metal toolchain, at least 16 GB RAM, and 100 GB+ free disk space):
 
-## Media
+```bash
+scripts/bootstrap.sh       # Fetch depot_tools into vendor/depot_tools
+scripts/sync.sh            # Sync Chromium source, link starry/, and apply patches/
+scripts/build.sh Release   # Build chrome (use Dev for faster incremental builds)
+scripts/run.sh Release     # Launch with a temporary user data directory
+```
 
-![Mini audio player and automatic picture-in-picture](docs/images/en/media.webp)
+For Windows and Linux build steps, build configuration, patch management, and localization checks, see [Development & Building](docs/development.md).
 
-Switch away from a video tab and it automatically docks to the corner—snapping right back when you return, or detaching into a floating desktop window. Background audio gets a compact corner player so you can pause or skip tracks without hunting for the tab.
+## Acknowledgments
 
-## Appearance
-
-<p>
-  <img src="docs/images/en/layout-top.webp" width="49%" alt="Top tabs in light mode">
-  <img src="docs/images/en/layout-glass.webp" width="49%" alt="Floating Liquid Glass sidebar in dark mode">
-</p>
-
-Switch freely between vertical sidebar tabs and classic top tabs, or auto-hide the sidebar into a floating Liquid Glass drawer. Beyond light and dark themes, the window frame can dynamically tint itself to match the current site.
-
-## Privacy
-
-![Built-in ad and tracker blocking](docs/images/en/privacy.webp)
-
-Built-in ad and tracker blocking powered by EasyList, AdGuard, and uBlock filter lists, paired with fingerprinting protection and automatic stripping of URL tracking parameters—ready out of the box.
-
-## Everyday Essentials
-
-- **Peek windows**: Links opened from other apps launch in a lightweight preview window—close it when done, or promote it to a full browser tab anytime.
-- **Fast downloads**: Built-in multithreaded downloader with resume support and speed limits.
-- **Easy migration & extensions**: Full support for Chrome Web Store extensions, plus one-click import of bookmarks, history, and passwords from Chrome, Edge, Arc, Brave, Safari, and Firefox.
-- **Multilingual UI**: Available in 简体中文, 繁體中文, English, 日本語, and 한국어.
-
-## Building & Docs
-
-Starry currently needs to be built from source. See [Development & Building](docs/development.md).
+- [Chromium](https://www.chromium.org/): Core browser engine and cross-platform framework
+- [MapLibre GL JS](https://maplibre.org/), [OpenFreeMap](https://openfreemap.org/), [GeoNames](https://www.geonames.org/) (CC BY 4.0), and [Natural Earth](https://www.naturalearthdata.com/): Interactive map and offline city data for location simulation
+- [EasyList](https://easylist.to/), [AdGuard Filters](https://github.com/AdguardTeam/AdguardFilters), [uBlock Origin uAssets](https://github.com/uBlockOrigin/uAssets), and community filter lists: Ad and tracker blocking rules
+- [Big Buck Bunny](https://peach.blender.org): Sample film shown in screenshots (© Blender Foundation, CC BY 3.0)
 
 ## License
 
 - Original Starry Browser code (`starry/`, `scripts/`, etc.) is licensed under [MPL-2.0](LICENSE).
 - Upstream Chromium patches under `patches/` remain licensed under [BSD-3-Clause](patches/LICENSE).
-
-<sub>The film shown in screenshots is <a href="https://peach.blender.org">Big Buck Bunny</a>, © Blender Foundation, CC BY 3.0.</sub>
